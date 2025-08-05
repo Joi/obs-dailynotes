@@ -1,0 +1,60 @@
+{
+  "filters": {
+    "eventTitles": ["Example Filter", "Lunch", "Blocked"],
+    "eventRegex": "^(Draft|Tentative)",
+    "includeAllDay": false,
+    "minDurationMinutes": 15,
+    "maxDurationHours": 8,
+    "businessHoursOnly": true,
+    "businessHours": {
+      "start": 9,
+      "end": 17
+    }
+  },
+  "formatting": {
+    "dateFormat": "YYYY-MM-DD",
+    "timeFormat24h": true,
+    "showAttendees": true,
+    "maxAttendeesShown": 5,
+    "showLocation": true,
+    "showMeetingLinks": true,
+    "meetingLinkText": "Join Call",
+    "groupByTimeOfDay": true,
+    "includeEmojis": {
+      "videoCall": "🎥",
+      "phoneCall": "☎️",
+      "inPerson": "👥",
+      "unknown": "📅"
+    }
+  },
+  "output": {
+    "headerTemplate": {
+      "includeNavigation": true,
+      "includeTasks": true,
+      "taskCategories": [
+        {
+          "name": "Today",
+          "query": "not done\nheading includes Today"
+        },
+        {
+          "name": "This Week", 
+          "query": "not done\nheading includes This Week"
+        }
+      ]
+    },
+    "meetingTemplate": {
+      "format": "### {emoji} {title} #{tag}",
+      "includeTime": true,
+      "includeAttendees": true,
+      "includeLink": true,
+      "includeNoteLink": true,
+      "includeLocation": true
+    }
+  },
+  "advanced": {
+    "cacheEnabled": true,
+    "cacheDurationMinutes": 10,
+    "retryAttempts": 5,
+    "retryDelayMs": 2000
+  }
+}
