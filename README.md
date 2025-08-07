@@ -117,6 +117,37 @@ heading includes ASAP
 - 10:00 - 11:00 (Attendee1, Attendee2) [Call Link](https://meet.google.com/...) [[2024-01-15-1000]]
 ````
 
+## Tasks integration (Obsidian Tasks)
+
+- Requires the Obsidian community plugin: Tasks.
+- This tool writes a `# Tasks` section with one or more Tasks query blocks, driven by `output.headerTemplate.taskCategories` in `config.json`.
+- To customize, edit `config.json` and adjust categories. Example:
+
+```json
+{
+  "output": {
+    "headerTemplate": {
+      "taskCategories": [
+        { "name": "Today", "query": "not done\ndue today" },
+        { "name": "Overdue", "query": "not done\ndue before today" }
+      ]
+    }
+  }
+}
+```
+
+- Each Tasks block renders a live query of checklist items (`- [ ] ...`) across your vault. Common query lines:
+
+```tasks
+not done
+due today
+path includes "journal"
+group by filename
+sort by due
+```
+
+- Effective use: write tasks anywhere as `- [ ] Do thing 📅 2025-01-15`. The daily note shows them via queries; completing a task updates it in its original note.
+
 ## File Structure
 
 ```text
