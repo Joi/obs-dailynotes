@@ -148,6 +148,33 @@ sort by due
 
 - Effective use: write tasks anywhere as `- [ ] Do thing 📅 2025-01-15`. The daily note shows them via queries; completing a task updates it in its original note.
 
+## Apple Reminders (optional)
+
+- macOS only. Uses AppleScript (JXA) via `osascript` to read Reminders locally. On first run, macOS may prompt to allow Terminal/Node to access Reminders (System Settings → Privacy & Security → Automation).
+- Enable and configure via `.env`:
+
+```env
+# Enable reading Apple Reminders and appending to the daily note
+REMINDERS_ENABLED=true
+
+# Optional: comma-separated Reminders lists to include (empty = all)
+REMINDERS_LISTS=Inbox,Personal
+
+# Include reminders due today? (default true)
+REMINDERS_INCLUDE_TODAY=true
+
+# Also include overdue reminders? (default false unless set to true)
+REMINDERS_INCLUDE_OVERDUE=false
+```
+
+- Output example:
+
+```markdown
+## Reminders
+- [ ] Call accountant (Personal) 📅 2025-08-12
+- [ ] Renew license (Inbox) 📅 2025-08-10
+```
+
 ## File Structure
 
 ```text
