@@ -34,11 +34,17 @@
       "taskCategories": [
         {
           "name": "Today",
-          "query": "not done\nheading includes Today"
+          "query": "not done\ndue today",
+          "pathIncludes": ["journal", "02-Projects"],
+          "tagIncludes": ["#today"],
+          "groupBy": "filename",
+          "sortBy": ["due", "priority"]
         },
         {
           "name": "This Week", 
-          "query": "not done\nheading includes This Week"
+          "query": "not done\ndue before in 7 days",
+          "groupBy": "heading",
+          "sortBy": ["due"]
         }
       ]
     },

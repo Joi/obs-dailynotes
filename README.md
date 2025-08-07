@@ -123,13 +123,13 @@ heading includes ASAP
 - This tool writes a `# Tasks` section with one or more Tasks query blocks, driven by `output.headerTemplate.taskCategories` in `config.json`.
 - To customize, edit `config.json` and adjust categories. Example:
 
-```json
+```jsonc
 {
   "output": {
     "headerTemplate": {
       "taskCategories": [
-        { "name": "Today", "query": "not done\ndue today" },
-        { "name": "Overdue", "query": "not done\ndue before today" }
+        { "name": "Today", "query": "not done\ndue today", "pathIncludes": ["journal", "02-Projects"], "groupBy": "filename", "sortBy": ["due", "priority"] },
+        { "name": "Overdue", "query": "not done\ndue before today", "tagIncludes": ["#overdue"], "groupBy": "heading", "sortBy": ["due"] }
       ]
     }
   }
