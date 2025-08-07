@@ -12,6 +12,7 @@ const { fetchTodayEvents } = require('./lib/calendar');
 const { loadConfig, createFilterRegex, shouldFilterEvent } = require('./lib/config');
 const { parseGoogleHangout, parseZoom, parseOtherMeetingType } = require('./lib/parsers');
 const { writeToFile, formatHeader, formatOutput } = require('./lib/writer');
+const { fetchAppleReminders } = require('./lib/reminders');
 
 // Load environment variables
 const dotenvPath = path.join(__dirname, '.env');
@@ -93,6 +94,33 @@ async function main() {
         const header = formatHeader(config);
         await writeToFile(header, PATH_PREFIX);
         
+        // Optionally append Apple Reminders section
+        if (process.env.REMINDERS_ENABLED === 'true') {
+            try {
+                const lists = (process.env.REMINDERS_LISTS || '')
+                    .split(',')
+                    .map(s => s.trim())
+                    .filter(Boolean);
+                const includeToday = process.env.REMINDERS_INCLUDE_TODAY !== 'false';
+                const includeOverdue = process.env.REMINDERS_INCLUDE_OVERDUE === 'true';
+                const reminders = await fetchAppleReminders({ lists, includeToday, includeOverdue });
+                if (reminders.length > 0) {
+                    const lines = ['\n## Reminders'];
+                    for (const r of reminders) {
+                        const date = r.due ? new Date(r.due) : null;
+                        const yyyy = date ? date.getFullYear() : '';
+                        const mm = date ? String(date.getMonth() + 1).padStart(2, '0') : '';
+                        const dd = date ? String(date.getDate()).padStart(2, '0') : '';
+                        const dueStr = date ? ` 📅 ${yyyy}-${mm}-${dd}` : '';
+                        lines.push(`- [ ] ${r.title} (${r.list})${dueStr}`);
+                    }
+                    await writeToFile(lines.join('\n'), PATH_PREFIX);
+                }
+            } catch (remErr) {
+                console.warn('Reminders: unable to read Apple Reminders:', remErr.message);
+            }
+        }
+
         // Process each event
         let processedCount = 0;
         for (const event of events) {
