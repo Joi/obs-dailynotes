@@ -111,7 +111,7 @@ async function main() {
             }
         }
         meetingBlocks.sort((a, b) => a.start - b.start);
-        const meetingsSection = meetingBlocks.map(b => b.content).join('\n');
+        const meetingsSection = ['## Meetings', meetingBlocks.map(b => b.content).join('\n')].filter(Boolean).join('\n');
         await upsertTodaySection('MEETINGS', meetingsSection, PATH_PREFIX);
         
         // Append Reminders tasks query at the very bottom so Tasks plugin shows macOS reminders
