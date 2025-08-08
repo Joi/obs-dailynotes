@@ -53,10 +53,12 @@ if (fs.existsSync(peopleDir)) {
     const content = fs.readFileSync(filePath, 'utf8');
     const fm = parseFrontmatter(content);
     const name = fm.name || path.basename(f, '.md');
+    const tags = Array.isArray(fm.tags) ? fm.tags : (typeof fm.tags === 'string' ? [fm.tags] : []);
+    const hasPeopleTag = tags.includes('people');
     const hasPersonId = typeof fm.personId === 'string' && fm.personId.length > 0;
     const hasRemindersList = fm.reminders && typeof fm.reminders.listName === 'string' && fm.reminders.listName.length > 0;
-    // Only include when there is a strong signal (ID or reminders list). Ignore tag-only pages.
-    if (!hasPersonId && !hasRemindersList) continue;
+    // Include if explicitly tagged people OR has strong signal (personId or reminders list)
+    if (!hasPeopleTag && !hasPersonId && !hasRemindersList) continue;
     const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];
     const personId = fm.personId || '';
     const pagePath = `${path.basename(f)}`;
