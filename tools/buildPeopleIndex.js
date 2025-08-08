@@ -12,7 +12,7 @@ if (!dailyDir) {
 }
 
 const vaultRoot = path.resolve(dailyDir, '..');
-const peopleDir = path.join(vaultRoot, 'People');
+const peopleDir = vaultRoot; // scan root-level for person pages
 const indexPath = path.join(vaultRoot, 'people.index.json');
 
 function parseFrontmatter(content) {
@@ -39,14 +39,19 @@ function parseFrontmatter(content) {
 
 const index = {};
 if (fs.existsSync(peopleDir)) {
-  const files = fs.readdirSync(peopleDir).filter(f => f.endsWith('.md'));
+  const dailyDirName = path.basename(dailyDir);
+  const files = fs.readdirSync(peopleDir)
+    .filter(f => f.endsWith('.md'))
+    .filter(f => f !== `${new Date().toISOString().slice(0,10)}.md`)
+    .filter(f => f !== 'reminders.md' && f !== 'people.index.json')
+    .filter(f => f !== dailyDirName && f !== path.basename(indexPath));
   for (const f of files) {
     const filePath = path.join(peopleDir, f);
     const content = fs.readFileSync(filePath, 'utf8');
     const fm = parseFrontmatter(content);
     const name = fm.name || path.basename(f, '.md');
     const personId = fm.personId || '';
-    const pagePath = `People/${path.basename(f)}`;
+    const pagePath = `${path.basename(f)}`;
     index[personId || name] = {
       name,
       pagePath,

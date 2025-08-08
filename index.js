@@ -12,7 +12,6 @@ const { fetchTodayEvents } = require('./lib/calendar');
 const { loadConfig, createFilterRegex, shouldFilterEvent } = require('./lib/config');
 const { parseGoogleHangout, parseZoom, parseOtherMeetingType } = require('./lib/parsers');
 const { writeToFile, formatHeader, formatOutput, upsertTodaySection, upsertTodayMeeting } = require('./lib/writer');
-const path = require('path');
 
 // Load environment variables
 const dotenvPath = path.join(__dirname, '.env');
@@ -118,7 +117,7 @@ async function main() {
                         const agendaLines = [];
                         for (const [personId, info] of Object.entries(remindersCache.byPerson)) {
                             if (personNames.includes(info.name) && Array.isArray(info.items) && info.items.length) {
-                                agendaLines.push(`\n- Agenda for [[People/${info.name}|${info.name}]]:`);
+                                agendaLines.push(`\n- Agenda for [[${info.name}|${info.name}]]:`);
                                 for (const it of info.items.slice(0, 5)) {
                                     agendaLines.push(`  - [ ] ${it.title} (${it.list}) <!--reminders-id:${it.id} list:${it.list} person-id:${personId}-->`);
                                 }
