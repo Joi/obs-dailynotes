@@ -180,3 +180,56 @@ Tokens are refreshed automatically when expired.
 ## License
 
 MIT
+
+## Automation with Keyboard Maestro (macOS)
+
+This project includes shell scripts you can trigger from Keyboard Maestro for a one-click workflow.
+
+### Prerequisites
+
+- Ensure `reminders` CLI is installed and in PATH (Homebrew installs to `/opt/homebrew/bin` on Apple Silicon).
+- `.env` is configured and `DAILY_NOTE_PATH` points to your Obsidian daily notes folder.
+
+### 1) Daily update macro (pull Reminders → build note)
+
+Creates/updates today’s note with meetings, attendees (wikilinks), and per‑person agendas.
+
+Steps in Keyboard Maestro:
+
+1. Create a new Macro (e.g., “Daily Note – Update”).
+2. Add action: “Execute Shell Script”.
+3. Command:
+
+   ```bash
+   /Users/joi/obs-dailynotes/tools/run_daily.sh
+   ```
+
+4. Optional: assign a hotkey (e.g., Ctrl + Option + D).
+
+What it does:
+
+- Builds People index from `People/*.md` frontmatter (non-fatal if empty).
+- Pulls Apple Reminders into `reminders/` (cache, per‑person agendas, full mirror).
+- Runs the daily generator silently.
+
+### 2) Sync macro (checkboxes → Apple Reminders)
+
+Checks off items in Reminders that you completed in Obsidian, then refreshes the local snapshot.
+
+Steps in Keyboard Maestro:
+
+1. Create a new Macro (e.g., “Reminders – Sync”).
+2. Add action: “Execute Shell Script”.
+3. Command:
+
+   ```bash
+   /Users/joi/obs-dailynotes/tools/run_sync.sh
+   ```
+
+4. Optional: run it at the end of the day or bind to a hotkey.
+
+Result:
+
+- Completed checkboxes in `reminders/reminders.md` are marked done in Apple Reminders.
+- Local cache and agenda files are refreshed.
+
