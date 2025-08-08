@@ -110,7 +110,8 @@ async function main() {
             '```tasks',
             'no global filter',
             'not done',
-            'path includes "reminders.md"',
+            'path includes {{query.file.folder}}',
+            'filename includes "reminders"',
             '```'
         ].join('\n');
         await writeToFile(remindersQuery, PATH_PREFIX);
