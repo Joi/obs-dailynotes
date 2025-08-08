@@ -94,17 +94,34 @@ async function main() {
         const header = formatHeader(config);
         await writeToFile(header, PATH_PREFIX);
         
-        // Optionally append Apple Reminders section
-        if (process.env.REMINDERS_ENABLED === 'true') {
+        // Process each event
+        let processedCount = 0;
+        for (const event of events) {
             try {
-                const lists = (process.env.REMINDERS_LISTS || '')
-                    .split(',')
-                    .map(s => s.trim())
-                    .filter(Boolean);
-                const includeToday = process.env.REMINDERS_INCLUDE_TODAY !== 'false';
-                const includeOverdue = process.env.REMINDERS_INCLUDE_OVERDUE === 'true';
-                const reminders = await fetchAppleReminders({ lists, includeToday, includeOverdue });
-                if (reminders.length > 0) {
+                await processEvent(event);
+                processedCount++;
+            } catch (error) {
+                console.error(`Error processing event "${event.summary}":`, error.message);
+            }
+        }
+
+        // Optionally append Apple Reminders section (after events), with timeout to avoid blocking
+        if (process.env.REMINDERS_ENABLED === 'true') {
+            const lists = (process.env.REMINDERS_LISTS || '')
+                .split(',')
+                .map(s => s.trim())
+                .filter(Boolean);
+            const includeToday = process.env.REMINDERS_INCLUDE_TODAY !== 'false';
+            const includeOverdue = process.env.REMINDERS_INCLUDE_OVERDUE === 'true';
+            const remindersTimeoutMs = parseInt(process.env.REMINDERS_TIMEOUT_MS || '3000', 10);
+
+            try {
+                const reminders = await Promise.race([
+                    fetchAppleReminders({ lists, includeToday, includeOverdue }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), remindersTimeoutMs))
+                ]);
+
+                if (Array.isArray(reminders) && reminders.length > 0) {
                     const lines = ['\n## Reminders'];
                     for (const r of reminders) {
                         const date = r.due ? new Date(r.due) : null;
@@ -117,21 +134,10 @@ async function main() {
                     await writeToFile(lines.join('\n'), PATH_PREFIX);
                 }
             } catch (remErr) {
-                console.warn('Reminders: unable to read Apple Reminders:', remErr.message);
+                console.warn('Reminders: skipped (', remErr.message, ')');
             }
         }
 
-        // Process each event
-        let processedCount = 0;
-        for (const event of events) {
-            try {
-                await processEvent(event);
-                processedCount++;
-            } catch (error) {
-                console.error(`Error processing event "${event.summary}":`, error.message);
-            }
-        }
-        
         console.log(`Successfully processed ${processedCount} events.`);
         
     } catch (error) {
