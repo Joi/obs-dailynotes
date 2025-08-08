@@ -12,11 +12,7 @@ if (!dailyDir) {
 }
 const vaultRoot = path.resolve(dailyDir, '..');
 
-function isLikelyPersonFile(fileName) {
-  const base = path.basename(fileName, '.md');
-  // Two or more words with letters, spaces or punctuation commonly in names
-  return /[A-Za-z].*\s+.*[A-Za-z]/.test(base);
-}
+// Removed filename heuristics to avoid false positives
 
 function extractFrontmatter(content) {
   const m = content.match(/^---[\r\n]([\s\S]*?)[\r\n]---[\r\n]?/);
@@ -106,15 +102,13 @@ function processFile(filePath) {
   const raw = fs.readFileSync(filePath, 'utf8');
   const { frontmatter, body } = extractFrontmatter(raw);
 
-  // Identify person pages: by tag in FM or filename heuristic
-  let isPerson = false;
-  if (frontmatter) {
-    const hasPeopleTag = /\btags:\s*\[([^\]]*)\]/.test(frontmatter) &&
-      (parseInlineArray(frontmatter.match(/\btags:\s*\[([^\]]*)\]/)[0].split(':')[1]).includes('people'));
-    isPerson = hasPeopleTag || isLikelyPersonFile(base);
-  } else {
-    isPerson = isLikelyPersonFile(base);
-  }
+  // Identify person pages ONLY if frontmatter exists and explicitly marks as people or has person signals
+  if (!frontmatter) return false;
+  const tagsMatch = frontmatter.match(/\btags:\s*\[([^\]]*)\]/);
+  const hasPeopleTag = !!(tagsMatch && parseInlineArray(tagsMatch[0].split(':')[1]).includes('people'));
+  const hasPersonId = /\bpersonId:\s*\S+/.test(frontmatter);
+  const hasRemindersList = /\breminders:\s*[\s\S]*?\blistName:\s*\S+/.test(frontmatter);
+  const isPerson = hasPeopleTag || hasPersonId || hasRemindersList;
   if (!isPerson) return false;
 
   let newContent;

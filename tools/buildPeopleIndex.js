@@ -55,10 +55,9 @@ if (fs.existsSync(peopleDir)) {
     const name = fm.name || path.basename(f, '.md');
     const tags = Array.isArray(fm.tags) ? fm.tags : [];
     const isPeopleTagged = tags.includes('people');
-    const looksLikeName = /[A-Za-z].*\s+.*[A-Za-z]/.test(path.basename(f, '.md'));
-    if (!isPeopleTagged && !looksLikeName && !fm.personId && !(fm.reminders && fm.reminders.listName)) {
-      continue;
-    }
+    const hasPersonId = typeof fm.personId === 'string' && fm.personId.length > 0;
+    const hasRemindersList = fm.reminders && typeof fm.reminders.listName === 'string' && fm.reminders.listName.length > 0;
+    if (!isPeopleTagged && !hasPersonId && !hasRemindersList) continue;
     const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];
     const personId = fm.personId || '';
     const pagePath = `${path.basename(f)}`;
