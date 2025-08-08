@@ -16,6 +16,7 @@ const remindersDir = path.join(vaultRoot, 'reminders');
 const agendasDir = path.join(remindersDir, 'agendas');
 const cachePath = path.join(remindersDir, 'reminders_cache.json');
 const fullMdPath = path.join(remindersDir, 'reminders.md');
+const inboxMdPath = path.join(remindersDir, 'reminders_inbox.md');
 const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
 
 function runRemindersShowAll() {
@@ -82,6 +83,15 @@ function normalizeItem(it) {
     lines.push(`- [ ] ${it.title} (${it.list}) ${meta}`);
   }
   fs.writeFileSync(fullMdPath, lines.join('\n') + '\n', 'utf8');
+
+  // Write Inbox-only mirror
+  const linesInbox = ['# Reminders – Inbox', ''];
+  for (const it of normalized) {
+    if (it.list !== 'Inbox') continue;
+    const meta = `<!--reminders-id:${it.id} list:${it.list}${it.due ? ' due:'+it.due : ''}${it.flagged ? ' flagged:true' : ''}-->`;
+    linesInbox.push(`- [ ] ${it.title} (${it.list}) ${meta}`);
+  }
+  fs.writeFileSync(inboxMdPath, linesInbox.join('\n') + '\n', 'utf8');
 
   // Write per-person agendas
   for (const [personId, info] of Object.entries(byPerson)) {

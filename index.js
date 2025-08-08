@@ -146,16 +146,8 @@ async function main() {
         // Append Reminders tasks query at the very bottom so Tasks plugin shows macOS reminders
         const remindersQuery = [
             '',
-            '## Reminders (macOS)',
-            // Transclude the file directly so checkboxes are editable inline
-            '![[reminders.md]]',
-            '',
-            '```tasks',
-            'not done',
-            // Fallback query if transclusion is disabled; match current folder + file name
-            'folder includes {{query.file.folder}}',
-            'filename includes "reminders"',
-            '```'
+            '## Reminders (Inbox only)',
+            '![[reminders_inbox.md]]'
         ].join('\n');
         await upsertTodaySection('REMINDERS', remindersQuery, PATH_PREFIX);
 
