@@ -23,6 +23,7 @@ Control which events are included or excluded:
 }
 ```
 
+
 ### Formatting
 
 Control how events are displayed:
