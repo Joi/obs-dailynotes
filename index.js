@@ -122,7 +122,6 @@ async function main() {
             '![[reminders.md]]',
             '',
             '```tasks',
-            'no global filter',
             'not done',
             // Fallback query if transclusion is disabled; match current folder + file name
             'folder includes {{query.file.folder}}',
