@@ -109,7 +109,8 @@ async function main() {
             '## Reminders (macOS)',
             '```tasks',
             'not done',
-            'path includes "reminders.md"',
+            'path includes "switchboard"',
+            'filename includes "reminders"',
             '```'
         ].join('\n');
         await writeToFile(remindersQuery, PATH_PREFIX);
