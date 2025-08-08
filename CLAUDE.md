@@ -9,6 +9,7 @@ This is a Google Calendar integration tool that fetches today's calendar events 
 ## Commands
 
 ### Running the application
+
 ```bash
 # Direct execution
 node index.js
@@ -18,6 +19,7 @@ node index.js
 ```
 
 ### Installing dependencies
+
 ```bash
 npm install
 ```
@@ -51,9 +53,11 @@ npm install
 ### Output Format
 
 Daily notes are created with filename pattern: `YYYY-MM-DD.md` and include:
+
 - Header with navigation links to previous/next days
 - Task sections (ASAP, Email for Reply, Some Day) with task queries
 - Meeting entries formatted as:
+
   ```markdown
   ### Meeting Title #mtg
   - HH:MM - HH:MM (Attendee1, Attendee2) [Call Link](url) [[YYYY-MM-DD-HHMM]]
@@ -65,3 +69,5 @@ Daily notes are created with filename pattern: `YYYY-MM-DD.md` and include:
 - Authentication flow requires manual code entry on first run
 - Meeting URLs are extracted from location, description, or summary fields
 - Non-VC meetings display physical location instead of call link
+
+- the script is called in Keyboard Maestro so make sure it executes silently from running dailynotejs.sh
