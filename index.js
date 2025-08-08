@@ -11,7 +11,7 @@ const { authorize, resolveHome } = require('./lib/auth');
 const { fetchTodayEvents } = require('./lib/calendar');
 const { loadConfig, createFilterRegex, shouldFilterEvent } = require('./lib/config');
 const { parseGoogleHangout, parseZoom, parseOtherMeetingType } = require('./lib/parsers');
-const { writeToFile, formatHeader, formatOutput } = require('./lib/writer');
+const { writeToFile, formatHeader, formatOutput, upsertTodaySection } = require('./lib/writer');
 
 // Load environment variables
 const dotenvPath = path.join(__dirname, '.env');
@@ -90,7 +90,7 @@ async function main() {
         
         // Write header to file
         const header = formatHeader(config);
-        await writeToFile(header, PATH_PREFIX);
+        await upsertTodaySection('HEADER', header, PATH_PREFIX);
         
         // Process each event
         let processedCount = 0;
@@ -118,7 +118,7 @@ async function main() {
             'filename includes "reminders"',
             '```'
         ].join('\n');
-        await writeToFile(remindersQuery, PATH_PREFIX);
+        await upsertTodaySection('REMINDERS', remindersQuery, PATH_PREFIX);
 
         // silent by default
         
