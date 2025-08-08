@@ -85,7 +85,6 @@ async function main() {
         const events = await fetchTodayEvents(auth);
         
         if (events.length === 0) {
-            console.log('No events found for today.');
             return;
         }
         
@@ -104,10 +103,12 @@ async function main() {
             }
         }
         
-        console.log(`Successfully processed ${processedCount} events.`);
+        // silent by default
         
     } catch (error) {
-        console.error('Error:', error.message);
+        if (process.env.VERBOSE === 'true') {
+            console.error('Error:', error.message);
+        }
         process.exit(1);
     }
 }
