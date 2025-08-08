@@ -93,7 +93,7 @@ function normalizeItem(it) {
     const safeName = info.name.replace(/[\/:*?"<>|]/g, '-');
     fs.writeFileSync(path.join(agendasDir, `${safeName}.md`), md.join('\n') + '\n', 'utf8');
 
-    // Also upsert agenda into the person's actual page
+    // Also upsert agenda into the person's actual page (at top, after frontmatter if present)
     try {
       const personMdPath = path.join(vaultRoot, info.pagePath);
       if (fs.existsSync(personMdPath)) {
@@ -111,9 +111,15 @@ function normalizeItem(it) {
         if (regex.test(existing)) {
           existing = existing.replace(regex, section);
         } else {
-          // Append a newline if file does not end with one
-          if (!existing.endsWith('\n')) existing += '\n';
-          existing += '\n' + section + '\n';
+          // Insert at top, but keep frontmatter if present
+          const fmMatch = existing.match(/^---[\r\n][\s\S]*?[\r\n]---\r?\n?/);
+          if (fmMatch) {
+            const head = fmMatch[0];
+            const body = existing.slice(head.length);
+            existing = head + '\n' + section + '\n' + body;
+          } else {
+            existing = section + '\n' + existing;
+          }
         }
         fs.writeFileSync(personMdPath, existing, 'utf8');
       }
