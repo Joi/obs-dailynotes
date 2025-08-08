@@ -89,7 +89,7 @@ async function main() {
         }
         
         // Write header to file
-        const header = formatHeader(config);
+        const header = formatHeader(config, PATH_PREFIX);
         await upsertTodaySection('HEADER', header, PATH_PREFIX);
         
         // Optionally load reminders cache for agendas

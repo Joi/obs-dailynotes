@@ -11,6 +11,7 @@ const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/joi/switchboard/dailynot
 const vaultRoot = path.resolve(dailyDir, '..');
 const inboxPath = path.join(vaultRoot, 'reminders', 'reminders_inbox.md');
 const fullPath = path.join(vaultRoot, 'reminders', 'reminders.md');
+const todoTodayPath = path.join(vaultRoot, 'reminders', 'todo-today.md');
 
 function getTodayDailyNotePath() {
   const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/joi/switchboard/dailynote';
@@ -82,6 +83,8 @@ function completeByIndex(list, index) {
   try { if (fs.existsSync(inboxPath)) addTasks(parseTasksFromFile(inboxPath)); } catch {}
   // Collect from reminders.md (if exists)
   try { if (fs.existsSync(fullPath)) addTasks(parseTasksFromFile(fullPath)); } catch {}
+  // Collect from todo-today.md (if exists)
+  try { if (fs.existsSync(todoTodayPath)) addTasks(parseTasksFromFile(todoTodayPath)); } catch {}
   // Collect from today's daily note (meeting agendas)
   try {
     const todayPath = getTodayDailyNotePath();
