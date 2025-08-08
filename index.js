@@ -89,9 +89,18 @@ async function main() {
         }
         
         // Write header to file
-        const header = formatHeader(config);
+        const header = formatHeader(config, PATH_PREFIX);
         await upsertTodaySection('HEADER', header, PATH_PREFIX);
         
+        // Optionally load reminders cache for agendas
+        let remindersCache = null;
+        try {
+            const vaultRoot = path.resolve(PATH_PREFIX, '..');
+            const cachePath = path.join(vaultRoot, 'reminders', 'reminders_cache.json');
+            const raw = await fs.promises.readFile(cachePath, 'utf8');
+            remindersCache = JSON.parse(raw);
+        } catch (_) {}
+
         // Build and upsert a single MEETINGS section in chronological order
         let processedCount = 0;
         const meetingBlocks = [];
@@ -101,10 +110,30 @@ async function main() {
             for (const parser of parsers) {
                 const result = parser(event);
                 if (result) {
-                    meetingBlocks.push({
-                        start: result.fullStartDate,
-                        content: formatOutput(result, config)
-                    });
+                    let content = formatOutput(result, config);
+                    // Inject per-person agenda items under meeting when cache is present
+                    if (remindersCache && remindersCache.byPerson && Array.isArray(event.attendees)) {
+                        const attendeeNames = event.attendees.map(a => a.displayName || '').filter(Boolean);
+                        const attendeeEmails = event.attendees.map(a => a.email || '').filter(Boolean);
+                        const agendaLines = [];
+                        for (const [personId, info] of Object.entries(remindersCache.byPerson)) {
+                            const aliasSet = new Set([info.name, ...(Array.isArray(info.aliases) ? info.aliases : [])]);
+                            const emailSet = new Set(Array.isArray(info.emails) ? info.emails : []);
+                            const matchedByEmail = attendeeEmails.some(e => emailSet.has(e));
+                            const matchedByName = attendeeNames.some(n => aliasSet.has(n));
+                            const matched = matchedByEmail || matchedByName;
+                            if (matched && Array.isArray(info.items) && info.items.length) {
+                                agendaLines.push(`\n- Agenda for [[${info.name}|${info.name}]]:`);
+                                for (const it of info.items.slice(0, 5)) {
+                                    agendaLines.push(`  - [ ] ${it.title} (${it.list}) <!--reminders-id:${it.id} list:${it.list} person-id:${personId}-->`);
+                                }
+                            }
+                        }
+                        if (agendaLines.length) {
+                            content += `\n${agendaLines.join('\n')}`;
+                        }
+                    }
+                    meetingBlocks.push({ start: result.fullStartDate, content });
                     processedCount++;
                     break;
                 }
@@ -117,16 +146,8 @@ async function main() {
         // Append Reminders tasks query at the very bottom so Tasks plugin shows macOS reminders
         const remindersQuery = [
             '',
-            '## Reminders (macOS)',
-            // Transclude the file directly so checkboxes are editable inline
-            '![[reminders.md]]',
-            '',
-            '```tasks',
-            'not done',
-            // Fallback query if transclusion is disabled; match current folder + file name
-            'folder includes {{query.file.folder}}',
-            'filename includes "reminders"',
-            '```'
+            '## Reminders (Inbox only)',
+            '![[reminders_inbox.md]]'
         ].join('\n');
         await upsertTodaySection('REMINDERS', remindersQuery, PATH_PREFIX);
 

@@ -54,18 +54,7 @@ Control the output structure:
 ```json
 "output": {
   "headerTemplate": {
-    "includeNavigation": true,                   // Include prev/next day links
-    "includeTasks": true,                        // Include task sections
-    "taskCategories": [                          // Task categories to include
-      {
-        "name": "ASAP",
-        "query": "tag:ASAP/TODO"
-      },
-      {
-        "name": "Email for Reply",
-        "query": "(path:/emails) AND (tag:send/TODO)"
-      }
-    ]
+    "includeNavigation": true
   },
   "meetingTemplate": {
     "format": "### {emoji} {title} #{tag}",      // Meeting header format

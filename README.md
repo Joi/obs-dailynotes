@@ -12,7 +12,6 @@ A Node.js tool that fetches Google Calendar events and creates formatted daily n
   - Physical meeting locations
 - Creates markdown-formatted daily notes with:
   - Navigation links to previous/next days
-  - Task sections with Obsidian queries
   - Meeting entries with timestamps, attendees, and links
 
 ## Prerequisites
@@ -21,6 +20,8 @@ A Node.js tool that fetches Google Calendar events and creates formatted daily n
 - Google Calendar API access
 - Google Cloud project with Calendar API enabled
 - OAuth2 credentials
+- macOS Command Line Tools (for reminders-cli installation)
+- Homebrew (for installing reminders-cli)
 
 ## Installation
 
@@ -31,13 +32,21 @@ git clone <repository-url>
 cd obs-dailynotes
 ```
 
-1. Install dependencies:
+2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-1. Set up Google Calendar API credentials:
+3. Install reminders-cli (for Apple Reminders integration):
+
+```bash
+brew install keith/formulae/reminders-cli
+```
+
+The `reminders-cli` tool will be installed at: `/opt/homebrew/bin/reminders`
+
+4. Set up Google Calendar API credentials:
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Create a new project or select existing
    - Enable Google Calendar API
@@ -67,7 +76,7 @@ EVENTS_FILTER=
 
 ### 2) App configuration (config.json)
 
-Copy `config.example.json` to `config.json` and adjust filters/formatting/output as desired. This file controls event filtering, meeting formatting, and the Tasks sections rendered in your note.
+Copy `config.example.json` to `config.json` and adjust filters/formatting/output as desired. This file controls event filtering and meeting formatting.
 
 ## Usage
 
@@ -105,48 +114,10 @@ date: 2024-01-15
 
 [[2024-01-14]] << Previous | Next >> [[2024-01-16]]
 
-# Tasks
-### ASAP
-```tasks
-not done
-heading includes ASAP
-```
-
 ## Meetings
 ### 🎥 Meeting Title #mtg
 - 10:00 - 11:00 (Attendee1, Attendee2) [Call Link](https://meet.google.com/...) [[2024-01-15-1000]]
 ````
-
-## Tasks integration (Obsidian Tasks)
-
-- Requires the Obsidian community plugin: Tasks.
-- This tool writes a `# Tasks` section with one or more Tasks query blocks, driven by `output.headerTemplate.taskCategories` in `config.json`.
-- To customize, edit `config.json` and adjust categories. Example:
-
-```jsonc
-{
-  "output": {
-    "headerTemplate": {
-      "taskCategories": [
-        { "name": "Today", "query": "not done\ndue today", "pathIncludes": ["journal", "02-Projects"], "groupBy": "filename", "sortBy": ["due", "priority"] },
-        { "name": "Overdue", "query": "not done\ndue before today", "tagIncludes": ["#overdue"], "groupBy": "heading", "sortBy": ["due"] }
-      ]
-    }
-  }
-}
-```
-
-- Each Tasks block renders a live query of checklist items (`- [ ] ...`) across your vault. Common query lines:
-
-```tasks
-not done
-due today
-path includes "journal"
-group by filename
-sort by due
-```
-
-- Effective use: write tasks anywhere as `- [ ] Do thing 📅 2025-01-15`. The daily note shows them via queries; completing a task updates it in its original note.
 
 ## File Structure
 
@@ -173,10 +144,181 @@ Tokens are refreshed automatically when expired.
 
 ## Troubleshooting
 
+### Google Calendar Issues
+
 - **Authentication errors**: Delete the file at `GCAL_TOKEN_PATH` and re-authenticate
 - **Missing events**: Check system timezone and your `config.json` filters; verify `EVENTS_FILTER` if set in `.env`
 - **File write errors**: Verify `DAILY_NOTE_PATH` exists and is writable
 
+### macOS Command Line Tools Issues
+
+If you encounter an error like "Your Command Line Tools (CLT) does not support macOS 15" when installing reminders-cli:
+
+1. Remove the outdated Command Line Tools:
+   ```bash
+   sudo rm -rf /Library/Developer/CommandLineTools
+   ```
+
+2. Install fresh Command Line Tools:
+   ```bash
+   sudo xcode-select --install
+   ```
+   
+3. A dialog will appear - click "Install" and accept the license agreement
+
+4. Wait for the installation to complete (10-30 minutes)
+
+5. Verify the installation:
+   ```bash
+   xcode-select --version
+   ```
+
+6. Retry the reminders-cli installation:
+   ```bash
+   brew install keith/formulae/reminders-cli
+   ```
+
+### Reminders CLI Path
+
+The `reminders-cli` tool installs to `/opt/homebrew/bin/reminders` on Apple Silicon Macs or `/usr/local/bin/reminders` on Intel Macs. Ensure this directory is in your PATH or use the full path when calling the tool.
+
 ## License
 
 MIT
+
+## GTD Reminders integration (Apple Reminders)
+
+This project can mirror Apple Reminders into your Obsidian vault, inject per‑person agendas into meetings, and sync completed items back to Reminders.
+
+- Requirements: `reminders` CLI (`brew install reminders-cli`). Ensure it’s on PATH (`/opt/homebrew/bin`).
+- Scripts:
+  - `npm run people:index` → builds `people.index.json` from person page frontmatter.
+  - `npm run reminders:pull` → writes `reminders/reminders_cache.json`, `reminders/reminders.md`, and `reminders/agendas/<Full Name>.md`.
+  - `npm run reminders:sync` → completes checked items in `reminders/reminders.md` back to Apple Reminders.
+  - Automation scripts: `tools/run_daily.sh`, `tools/run_sync.sh`.
+
+### Person pages and aliases
+
+Create one markdown file per person (at your vault root or preferred folder). Include frontmatter:
+
+```markdown
+---
+personId: email@example.com       # optional but recommended; stable identifier
+name: Full Name                   # must match your preferred display
+aliases: [Nickname, Kanji Name]   # optional; used for matching attendees and lists
+reminders:
+  listName: "Full Name"           # the Apple Reminders list to use for this person
+---
+```
+
+Notes:
+- You can keep Reminders list names pretty (e.g., just the full name). Matching also supports aliases.
+- Our index uses `name`, `aliases`, and `reminders.listName` to match meeting attendees and route agenda items.
+
+### Daily note rendering
+
+- Today’s todos are rendered from the Reminders cache (via `![[reminders.md]]`).
+- For each meeting, if any attendee matches a person page (by `name` or `aliases`), the script injects:
+  - An “Agenda for [[Full Name]]” sub-list with up to 5 open items from that person’s list.
+
+### Two‑way sync
+
+- Editing `reminders/reminders.md` checkboxes and running `npm run reminders:sync` will mark those tasks complete in Apple Reminders and refresh the cache.
+- The daily note includes a transclusion of `reminders.md` so you can check items inline and then run sync.
+
+### Example flow (<Colleague> Hoffman)
+
+1) Create a person page (e.g., `<Colleague> Hoffman.md`) with frontmatter:
+
+```markdown
+---
+personId: <Colleague>@example.com
+name: <Colleague> Hoffman
+aliases: [<Colleague>, R. Hoffman]
+reminders:
+  listName: "<Colleague> Hoffman"
+---
+```
+
+2) In Apple Reminders, create a list named `<Colleague> Hoffman` and add agenda items there.
+
+3) Generate data and today’s note:
+
+```bash
+npm run people:index
+npm run reminders:pull
+node index.js
+```
+
+4) Open today’s daily note. Under any meeting with <Colleague>, you’ll see:
+
+- Attendees as wikilinks (e.g., `[[<Colleague> Hoffman]]`).
+- An “Agenda for [[<Colleague> Hoffman]]” section with items from the `<Colleague> Hoffman` Reminders list.
+
+5) To complete tasks:
+
+- Check off boxes in `reminders.md` (transcluded in the daily note), then run:
+
+```bash
+npm run reminders:sync
+npm run reminders:pull
+```
+
+6) Optional: Use Keyboard Maestro
+
+- Daily update: `/Users/<Owner>/obs-dailynotes/tools/run_daily.sh`
+- Sync back: `/Users/<Owner>/obs-dailynotes/tools/run_sync.sh`
+
+
+## Automation with Keyboard Maestro (macOS)
+
+This project includes shell scripts you can trigger from Keyboard Maestro for a one-click workflow.
+
+### Prerequisites
+
+- Ensure `reminders` CLI is installed and in PATH (Homebrew installs to `/opt/homebrew/bin` on Apple Silicon).
+- `.env` is configured and `DAILY_NOTE_PATH` points to your Obsidian daily notes folder.
+
+### 1) Daily update macro (pull Reminders → build note)
+
+Creates/updates today’s note with meetings, attendees (wikilinks), and per‑person agendas.
+
+Steps in Keyboard Maestro:
+
+1. Create a new Macro (e.g., “Daily Note – Update”).
+2. Add action: “Execute Shell Script”.
+3. Command:
+
+   ```bash
+   /Users/<Owner>/obs-dailynotes/tools/run_daily.sh
+   ```
+
+4. Optional: assign a hotkey (e.g., Ctrl + Option + D).
+
+What it does:
+
+- Builds People index from `People/*.md` frontmatter (non-fatal if empty).
+- Pulls Apple Reminders into `reminders/` (cache, per‑person agendas, full mirror).
+- Runs the daily generator silently.
+
+### 2) Sync macro (checkboxes → Apple Reminders)
+
+Checks off items in Reminders that you completed in Obsidian, then refreshes the local snapshot.
+
+Steps in Keyboard Maestro:
+
+1. Create a new Macro (e.g., “Reminders – Sync”).
+2. Add action: “Execute Shell Script”.
+3. Command:
+
+   ```bash
+   /Users/<Owner>/obs-dailynotes/tools/run_sync.sh
+   ```
+
+4. Optional: run it at the end of the day or bind to a hotkey.
+
+Result:
+
+- Completed checkboxes in `reminders/reminders.md` are marked done in Apple Reminders.
+- Local cache and agenda files are refreshed.
+
