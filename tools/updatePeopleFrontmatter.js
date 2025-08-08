@@ -137,6 +137,7 @@ function main() {
     if (e.isDirectory()) continue;
     if (!e.name.endsWith('.md')) continue;
     if (ignoreNames.has(e.name)) continue;
+    if (/^\d{4}[-_]/.test(e.name)) continue; // ignore date-like files
     const full = path.join(vaultRoot, e.name);
     try {
       if (processFile(full)) updatedCount++;

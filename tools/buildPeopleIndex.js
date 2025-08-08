@@ -44,12 +44,21 @@ if (fs.existsSync(peopleDir)) {
     .filter(f => f.endsWith('.md'))
     .filter(f => f !== `${new Date().toISOString().slice(0,10)}.md`)
     .filter(f => f !== 'reminders.md' && f !== 'people.index.json')
-    .filter(f => f !== dailyDirName && f !== path.basename(indexPath));
+    .filter(f => f !== dailyDirName && f !== path.basename(indexPath))
+    // Ignore obvious non-person files by prefix patterns
+    .filter(f => !/^\d{4}[-_]/.test(f))
+    .filter(f => !/^\d/.test(f));
   for (const f of files) {
     const filePath = path.join(peopleDir, f);
     const content = fs.readFileSync(filePath, 'utf8');
     const fm = parseFrontmatter(content);
     const name = fm.name || path.basename(f, '.md');
+    const tags = Array.isArray(fm.tags) ? fm.tags : [];
+    const isPeopleTagged = tags.includes('people');
+    const looksLikeName = /[A-Za-z].*\s+.*[A-Za-z]/.test(path.basename(f, '.md'));
+    if (!isPeopleTagged && !looksLikeName && !fm.personId && !(fm.reminders && fm.reminders.listName)) {
+      continue;
+    }
     const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];
     const personId = fm.personId || '';
     const pagePath = `${path.basename(f)}`;
