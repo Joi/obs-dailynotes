@@ -5,6 +5,9 @@
   },
   "scripts": {
     "reminders:generate": "node tools/generateReminders.js",
-    "reminders:sync": "node tools/syncReminders.js"
+    "reminders:pull": "node tools/pullReminders.js",
+    "reminders:sync": "node tools/syncReminders.js",
+    "people:index": "node tools/buildPeopleIndex.js",
+    "people:generate-from-dailies": "node tools/generatePeopleFromDailyNotes.js"
   }
 }

@@ -30,23 +30,7 @@
   "output": {
     "headerTemplate": {
       "includeNavigation": true,
-      "includeTasks": true,
-      "taskCategories": [
-        {
-          "name": "Today",
-          "query": "not done\ndue today",
-          "pathIncludes": ["journal", "02-Projects"],
-          "tagIncludes": ["#today"],
-          "groupBy": "filename",
-          "sortBy": ["due", "priority"]
-        },
-        {
-          "name": "This Week", 
-          "query": "not done\ndue before in 7 days",
-          "groupBy": "heading",
-          "sortBy": ["due"]
-        }
-      ]
+      "includeTasks": false
     },
     "meetingTemplate": {
       "format": "### {emoji} {title} #{tag}",

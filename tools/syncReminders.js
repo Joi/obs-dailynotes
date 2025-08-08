@@ -3,14 +3,36 @@ const fs = require('fs');
 const readline = require('readline');
 const { execFile } = require('child_process');
 
-const inputPath = '/Users/joi/switchboard/reminders.md';
+const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/joi/switchboard/dailynote';
+const vaultRoot = path.resolve(dailyDir, '..');
+const inboxPath = path.join(vaultRoot, 'reminders', 'reminders_inbox.md');
+const fullPath = path.join(vaultRoot, 'reminders', 'reminders.md');
+const todoTodayPath = path.join(vaultRoot, 'reminders', 'todo-today.md');
+
+function getTodayDailyNotePath() {
+  const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/joi/switchboard/dailynote';
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return path.join(dailyDir, `${yyyy}-${mm}-${dd}.md`);
+}
 
 function parseTasksFromFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
+  return parseTasksFromContent(content);
+}
+
+function parseTasksFromContent(content) {
   const lines = content.split(/\r?\n/);
   const tasks = [];
   for (const line of lines) {
-    const m = line.match(/^\- \[( |x)\] (.*) \(([^)]+)\) <!--reminders-id:([A-F0-9\-]+)-->$/);
+    // Allow leading spaces before dash and capture both unchecked and checked
+    const m = line.match(/^[\t ]*- \[( |x)\] (.*) \(([^)]+)\) <!--reminders-id:([^\s>]+)[^>]*-->$/);
     if (!m) continue;
     const done = m[1] === 'x';
     const title = m[2];
@@ -48,7 +70,31 @@ function completeByIndex(list, index) {
 }
 
 (async () => {
-  const tasks = parseTasksFromFile(inputPath);
+  const aggregated = new Map(); // key: list|id
+  const addTasks = (arr) => {
+    for (const t of arr) {
+      const key = `${t.list}|${t.id}`;
+      if (!aggregated.has(key)) aggregated.set(key, t);
+      else if (t.done) aggregated.set(key, t); // prefer done state if any source shows done
+    }
+  };
+
+  // Collect from reminders_inbox.md (if exists)
+  try { if (fs.existsSync(inboxPath)) addTasks(parseTasksFromFile(inboxPath)); } catch {}
+  // Collect from reminders.md (if exists)
+  try { if (fs.existsSync(fullPath)) addTasks(parseTasksFromFile(fullPath)); } catch {}
+  // Collect from todo-today.md (if exists)
+  try { if (fs.existsSync(todoTodayPath)) addTasks(parseTasksFromFile(todoTodayPath)); } catch {}
+  // Collect from today's daily note (meeting agendas)
+  try {
+    const todayPath = getTodayDailyNotePath();
+    if (fs.existsSync(todayPath)) {
+      const content = fs.readFileSync(todayPath, 'utf8');
+      addTasks(parseTasksFromContent(content));
+    }
+  } catch {}
+
+  const tasks = Array.from(aggregated.values());
   for (const t of tasks) {
     if (!t.done) continue;
     try {
