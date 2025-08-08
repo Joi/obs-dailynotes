@@ -107,19 +107,17 @@ function normalizeItem(it) {
           endMarker
         ].join('\n');
         let existing = fs.readFileSync(personMdPath, 'utf8');
-        const regex = new RegExp(`${startMarker}[\n\r\s\S]*?${endMarker}`, 'm');
-        if (regex.test(existing)) {
-          existing = existing.replace(regex, section);
+        // Remove ALL previous agenda sections anywhere in the file
+        const regexAll = new RegExp(`${startMarker}[\n\r\s\S]*?${endMarker}\n?`, 'g');
+        existing = existing.replace(regexAll, '');
+        // Insert at top, but keep frontmatter if present
+        const fmMatch = existing.match(/^---[\r\n][\s\S]*?[\r\n]---\r?\n?/);
+        if (fmMatch) {
+          const head = fmMatch[0];
+          const body = existing.slice(head.length);
+          existing = head + '\n' + section + '\n' + body;
         } else {
-          // Insert at top, but keep frontmatter if present
-          const fmMatch = existing.match(/^---[\r\n][\s\S]*?[\r\n]---\r?\n?/);
-          if (fmMatch) {
-            const head = fmMatch[0];
-            const body = existing.slice(head.length);
-            existing = head + '\n' + section + '\n' + body;
-          } else {
-            existing = section + '\n' + existing;
-          }
+          existing = section + '\n' + existing;
         }
         fs.writeFileSync(personMdPath, existing, 'utf8');
       }
