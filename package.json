@@ -7,7 +7,6 @@
     "reminders:generate": "node tools/generateReminders.js",
     "reminders:pull": "node tools/pullReminders.js",
     "reminders:sync": "node tools/syncReminders.js",
-    "people:index": "node tools/buildPeopleIndex.js",
-    "people:update-frontmatter": "node tools/updatePeopleFrontmatter.js"
+    "people:index": "node tools/buildPeopleIndex.js"
   }
 }
