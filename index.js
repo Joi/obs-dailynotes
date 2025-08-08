@@ -107,9 +107,13 @@ async function main() {
         const remindersQuery = [
             '',
             '## Reminders (macOS)',
+            // Transclude the file directly so checkboxes are editable inline
+            '![[reminders.md]]',
+            '',
             '```tasks',
             'no global filter',
             'not done',
+            // Fallback query if transclusion is disabled; match current folder + file name
             'folder includes {{query.file.folder}}',
             'filename includes "reminders"',
             '```'
