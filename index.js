@@ -103,6 +103,18 @@ async function main() {
             }
         }
         
+        // Append Reminders tasks query at the very bottom so Tasks plugin shows macOS reminders
+        const remindersQuery = [
+            '',
+            '## Reminders (macOS)',
+            '```tasks',
+            'not done',
+            'path includes "switchboard"',
+            'filename includes "reminders"',
+            '```'
+        ].join('\n');
+        await writeToFile(remindersQuery, PATH_PREFIX);
+
         // silent by default
         
     } catch (error) {
