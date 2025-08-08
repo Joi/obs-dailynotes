@@ -2,8 +2,12 @@
 const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
 
-const outputPath = '/Users/<Owner>/switchboard/reminders.md';
+// Load .env beside project, fallback silently
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/<Owner>/switchboard/dailynote';
+const outputPath = path.join(dailyDir, 'reminders.md');
 
 execFile('reminders', ['show-all', '--format', 'json'], (err, stdout, stderr) => {
   if (err) {
