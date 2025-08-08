@@ -92,30 +92,27 @@ async function main() {
         const header = formatHeader(config);
         await upsertTodaySection('HEADER', header, PATH_PREFIX);
         
-        // Process each event (idempotent by meeting key)
+        // Build and upsert a single MEETINGS section in chronological order
         let processedCount = 0;
+        const meetingBlocks = [];
         for (const event of events) {
-            try {
-                if (shouldFilterEvent(event, config, eventsFilterRegex)) continue;
-                const parsers = [parseGoogleHangout, parseZoom, parseOtherMeetingType];
-                let formattedOutput = '';
-                for (const parser of parsers) {
-                    const result = parser(event);
-                    if (result) {
-                        formattedOutput = formatOutput(result, config);
-                        break;
-                    }
-                }
-                if (formattedOutput) {
-                    const start = new Date(event.start.dateTime || event.start.date);
-                    const key = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}-${String(start.getHours()).padStart(2,'0')}${String(start.getMinutes()).padStart(2,'0')}::${event.summary}`;
-                    await upsertTodayMeeting(key, formattedOutput, PATH_PREFIX);
+            if (shouldFilterEvent(event, config, eventsFilterRegex)) continue;
+            const parsers = [parseGoogleHangout, parseZoom, parseOtherMeetingType];
+            for (const parser of parsers) {
+                const result = parser(event);
+                if (result) {
+                    meetingBlocks.push({
+                        start: result.fullStartDate,
+                        content: formatOutput(result, config)
+                    });
                     processedCount++;
+                    break;
                 }
-            } catch (error) {
-                console.error(`Error processing event "${event.summary}":`, error.message);
             }
         }
+        meetingBlocks.sort((a, b) => a.start - b.start);
+        const meetingsSection = meetingBlocks.map(b => b.content).join('\n');
+        await upsertTodaySection('MEETINGS', meetingsSection, PATH_PREFIX);
         
         // Append Reminders tasks query at the very bottom so Tasks plugin shows macOS reminders
         const remindersQuery = [
