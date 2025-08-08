@@ -11,7 +11,7 @@ const { authorize, resolveHome } = require('./lib/auth');
 const { fetchTodayEvents } = require('./lib/calendar');
 const { loadConfig, createFilterRegex, shouldFilterEvent } = require('./lib/config');
 const { parseGoogleHangout, parseZoom, parseOtherMeetingType } = require('./lib/parsers');
-const { writeToFile, formatHeader, formatOutput, upsertTodaySection } = require('./lib/writer');
+const { writeToFile, formatHeader, formatOutput, upsertTodaySection, upsertTodayMeeting } = require('./lib/writer');
 
 // Load environment variables
 const dotenvPath = path.join(__dirname, '.env');
@@ -92,12 +92,26 @@ async function main() {
         const header = formatHeader(config);
         await upsertTodaySection('HEADER', header, PATH_PREFIX);
         
-        // Process each event
+        // Process each event (idempotent by meeting key)
         let processedCount = 0;
         for (const event of events) {
             try {
-                await processEvent(event);
-                processedCount++;
+                if (shouldFilterEvent(event, config, eventsFilterRegex)) continue;
+                const parsers = [parseGoogleHangout, parseZoom, parseOtherMeetingType];
+                let formattedOutput = '';
+                for (const parser of parsers) {
+                    const result = parser(event);
+                    if (result) {
+                        formattedOutput = formatOutput(result, config);
+                        break;
+                    }
+                }
+                if (formattedOutput) {
+                    const start = new Date(event.start.dateTime || event.start.date);
+                    const key = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}-${String(start.getHours()).padStart(2,'0')}${String(start.getMinutes()).padStart(2,'0')}::${event.summary}`;
+                    await upsertTodayMeeting(key, formattedOutput, PATH_PREFIX);
+                    processedCount++;
+                }
             } catch (error) {
                 console.error(`Error processing event "${event.summary}":`, error.message);
             }
