@@ -110,7 +110,7 @@ async function main() {
             '```tasks',
             'no global filter',
             'not done',
-            'path includes {{query.file.folder}}',
+            'folder includes {{query.file.folder}}',
             'filename includes "reminders"',
             '```'
         ].join('\n');
