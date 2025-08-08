@@ -203,17 +203,28 @@ Create one markdown file per person (at your vault root or preferred folder). In
 
 ```markdown
 ---
-personId: email@example.com       # optional but recommended; stable identifier
-name: Full Name                   # must match your preferred display
+tags: people                      # recommended to identify person pages
+name: Full Name                   # must match your preferred display name
 aliases: [Nickname, Kanji Name]   # optional; used for matching attendees and lists
+emails: [email@example.com]       # optional; email addresses for this person
 reminders:
   listName: "Full Name"           # the Apple Reminders list to use for this person
 ---
 ```
 
+Alternative minimal frontmatter (auto-detected as person page):
+```markdown
+---
+reminders:
+  listName: "Full Name"           # having a reminders list auto-identifies as person page
+---
+```
+
 Notes:
-- You can keep Reminders list names pretty (e.g., just the full name). Matching also supports aliases.
-- Our index uses `name`, `aliases`, and `reminders.listName` to match meeting attendees and route agenda items.
+- Pages are auto-detected as person pages if they have: `tags: people`, or a `reminders.listName` field
+- The `personId` field is deprecated but still supported for backwards compatibility
+- You can keep Reminders list names pretty (e.g., just the full name). Matching also supports aliases
+- Our index uses `name`, `aliases`, and `reminders.listName` to match meeting attendees and route agenda items
 
 ### Daily note rendering
 
@@ -232,9 +243,10 @@ Notes:
 
 ```markdown
 ---
-personId: reid@example.com
+tags: people
 name: Reid Hoffman
 aliases: [Reid, R. Hoffman]
+emails: [reid@example.com]
 reminders:
   listName: "Reid Hoffman"
 ---
