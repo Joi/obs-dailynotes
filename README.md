@@ -181,6 +181,90 @@ Tokens are refreshed automatically when expired.
 
 MIT
 
+## GTD Reminders integration (Apple Reminders)
+
+This project can mirror Apple Reminders into your Obsidian vault, inject per‑person agendas into meetings, and sync completed items back to Reminders.
+
+- Requirements: `reminders` CLI (`brew install reminders-cli`). Ensure it’s on PATH (`/opt/homebrew/bin`).
+- Scripts:
+  - `npm run people:index` → builds `people.index.json` from person page frontmatter.
+  - `npm run reminders:pull` → writes `reminders/reminders_cache.json`, `reminders/reminders.md`, and `reminders/agendas/<Full Name>.md`.
+  - `npm run reminders:sync` → completes checked items in `reminders/reminders.md` back to Apple Reminders.
+  - Automation scripts: `tools/run_daily.sh`, `tools/run_sync.sh`.
+
+### Person pages and aliases
+
+Create one markdown file per person (at your vault root or preferred folder). Include frontmatter:
+
+```markdown
+---
+personId: email@example.com       # optional but recommended; stable identifier
+name: Full Name                   # must match your preferred display
+aliases: [Nickname, Kanji Name]   # optional; used for matching attendees and lists
+reminders:
+  listName: "Full Name"           # the Apple Reminders list to use for this person
+---
+```
+
+Notes:
+- You can keep Reminders list names pretty (e.g., just the full name). Matching also supports aliases.
+- Our index uses `name`, `aliases`, and `reminders.listName` to match meeting attendees and route agenda items.
+
+### Daily note rendering
+
+- Today’s todos are rendered from the Reminders cache (via `![[reminders.md]]`).
+- For each meeting, if any attendee matches a person page (by `name` or `aliases`), the script injects:
+  - An “Agenda for [[Full Name]]” sub-list with up to 5 open items from that person’s list.
+
+### Two‑way sync
+
+- Editing `reminders/reminders.md` checkboxes and running `npm run reminders:sync` will mark those tasks complete in Apple Reminders and refresh the cache.
+- The daily note includes a transclusion of `reminders.md` so you can check items inline and then run sync.
+
+### Example flow (Reid Hoffman)
+
+1) Create a person page (e.g., `Reid Hoffman.md`) with frontmatter:
+
+```markdown
+---
+personId: reid@example.com
+name: Reid Hoffman
+aliases: [Reid, R. Hoffman]
+reminders:
+  listName: "Reid Hoffman"
+---
+```
+
+2) In Apple Reminders, create a list named `Reid Hoffman` and add agenda items there.
+
+3) Generate data and today’s note:
+
+```bash
+npm run people:index
+npm run reminders:pull
+node index.js
+```
+
+4) Open today’s daily note. Under any meeting with Reid, you’ll see:
+
+- Attendees as wikilinks (e.g., `[[Reid Hoffman]]`).
+- An “Agenda for [[Reid Hoffman]]” section with items from the `Reid Hoffman` Reminders list.
+
+5) To complete tasks:
+
+- Check off boxes in `reminders.md` (transcluded in the daily note), then run:
+
+```bash
+npm run reminders:sync
+npm run reminders:pull
+```
+
+6) Optional: Use Keyboard Maestro
+
+- Daily update: `/Users/joi/obs-dailynotes/tools/run_daily.sh`
+- Sync back: `/Users/joi/obs-dailynotes/tools/run_sync.sh`
+
+
 ## Automation with Keyboard Maestro (macOS)
 
 This project includes shell scripts you can trigger from Keyboard Maestro for a one-click workflow.
