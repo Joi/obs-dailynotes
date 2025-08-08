@@ -92,6 +92,34 @@ function normalizeItem(it) {
     }
     const safeName = info.name.replace(/[\/:*?"<>|]/g, '-');
     fs.writeFileSync(path.join(agendasDir, `${safeName}.md`), md.join('\n') + '\n', 'utf8');
+
+    // Also upsert agenda into the person's actual page
+    try {
+      const personMdPath = path.join(vaultRoot, info.pagePath);
+      if (fs.existsSync(personMdPath)) {
+        const startMarker = '<!-- BEGIN REMINDERS AGENDA -->';
+        const endMarker = '<!-- END REMINDERS AGENDA -->';
+        const section = [
+          startMarker,
+          '## Agenda (from Apple Reminders)',
+          '',
+          ...md.slice(3), // skip the header lines we added for the standalone agenda file
+          endMarker
+        ].join('\n');
+        let existing = fs.readFileSync(personMdPath, 'utf8');
+        const regex = new RegExp(`${startMarker}[\n\r\s\S]*?${endMarker}`, 'm');
+        if (regex.test(existing)) {
+          existing = existing.replace(regex, section);
+        } else {
+          // Append a newline if file does not end with one
+          if (!existing.endsWith('\n')) existing += '\n';
+          existing += '\n' + section + '\n';
+        }
+        fs.writeFileSync(personMdPath, existing, 'utf8');
+      }
+    } catch (_) {
+      // ignore errors updating person page
+    }
   }
 
   // Write cache
