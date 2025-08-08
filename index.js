@@ -113,11 +113,15 @@ async function main() {
                     let content = formatOutput(result, config);
                     // Inject per-person agenda items under meeting when cache is present
                     if (remindersCache && remindersCache.byPerson && Array.isArray(event.attendees)) {
-                        const personNames = event.attendees.map(a => a.displayName || a.email).filter(Boolean);
+                        const attendeeNames = event.attendees.map(a => a.displayName || '').filter(Boolean);
+                        const attendeeEmails = event.attendees.map(a => a.email || '').filter(Boolean);
                         const agendaLines = [];
                         for (const [personId, info] of Object.entries(remindersCache.byPerson)) {
                             const aliasSet = new Set([info.name, ...(Array.isArray(info.aliases) ? info.aliases : [])]);
-                            const matched = personNames.some(n => aliasSet.has(n));
+                            const emailSet = new Set(Array.isArray(info.emails) ? info.emails : []);
+                            const matchedByEmail = attendeeEmails.some(e => emailSet.has(e));
+                            const matchedByName = attendeeNames.some(n => aliasSet.has(n));
+                            const matched = matchedByEmail || matchedByName;
                             if (matched && Array.isArray(info.items) && info.items.length) {
                                 agendaLines.push(`\n- Agenda for [[${info.name}|${info.name}]]:`);
                                 for (const it of info.items.slice(0, 5)) {

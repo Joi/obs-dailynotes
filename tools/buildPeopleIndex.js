@@ -60,12 +60,14 @@ if (fs.existsSync(peopleDir)) {
     // Include if explicitly tagged people OR has strong signal (personId or reminders list)
     if (!hasPeopleTag && !hasPersonId && !hasRemindersList) continue;
     const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];
+    const emails = Array.isArray(fm.emails) ? fm.emails : [];
     const personId = fm.personId || '';
     const pagePath = `${path.basename(f)}`;
     index[personId || name] = {
       name,
       pagePath,
       aliases,
+      emails,
       reminders: {
         listName: fm.reminders && fm.reminders.listName ? fm.reminders.listName : name
       }
