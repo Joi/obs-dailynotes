@@ -29,3 +29,6 @@ npm-debug.log*
 # Temporary files
 *.tmp
 *.temp
+
+# Local docs not to commit
+SCRIPTS.md
