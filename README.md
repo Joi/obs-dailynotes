@@ -20,6 +20,8 @@ A Node.js tool that fetches Google Calendar events and creates formatted daily n
 - Google Calendar API access
 - Google Cloud project with Calendar API enabled
 - OAuth2 credentials
+- macOS Command Line Tools (for reminders-cli installation)
+- Homebrew (for installing reminders-cli)
 
 ## Installation
 
@@ -30,13 +32,21 @@ git clone <repository-url>
 cd obs-dailynotes
 ```
 
-1. Install dependencies:
+2. Install dependencies:
 
 ```bash
 npm install
 ```
 
-1. Set up Google Calendar API credentials:
+3. Install reminders-cli (for Apple Reminders integration):
+
+```bash
+brew install keith/formulae/reminders-cli
+```
+
+The `reminders-cli` tool will be installed at: `/opt/homebrew/bin/reminders`
+
+4. Set up Google Calendar API credentials:
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Create a new project or select existing
    - Enable Google Calendar API
@@ -134,9 +144,43 @@ Tokens are refreshed automatically when expired.
 
 ## Troubleshooting
 
+### Google Calendar Issues
+
 - **Authentication errors**: Delete the file at `GCAL_TOKEN_PATH` and re-authenticate
 - **Missing events**: Check system timezone and your `config.json` filters; verify `EVENTS_FILTER` if set in `.env`
 - **File write errors**: Verify `DAILY_NOTE_PATH` exists and is writable
+
+### macOS Command Line Tools Issues
+
+If you encounter an error like "Your Command Line Tools (CLT) does not support macOS 15" when installing reminders-cli:
+
+1. Remove the outdated Command Line Tools:
+   ```bash
+   sudo rm -rf /Library/Developer/CommandLineTools
+   ```
+
+2. Install fresh Command Line Tools:
+   ```bash
+   sudo xcode-select --install
+   ```
+   
+3. A dialog will appear - click "Install" and accept the license agreement
+
+4. Wait for the installation to complete (10-30 minutes)
+
+5. Verify the installation:
+   ```bash
+   xcode-select --version
+   ```
+
+6. Retry the reminders-cli installation:
+   ```bash
+   brew install keith/formulae/reminders-cli
+   ```
+
+### Reminders CLI Path
+
+The `reminders-cli` tool installs to `/opt/homebrew/bin/reminders` on Apple Silicon Macs or `/usr/local/bin/reminders` on Intel Macs. Ensure this directory is in your PATH or use the full path when calling the tool.
 
 ## License
 
