@@ -3,14 +3,20 @@ const fs = require('fs');
 const readline = require('readline');
 const { execFile } = require('child_process');
 
-const inputPath = '/Users/joi/switchboard/reminders.md';
+const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/joi/switchboard/dailynote';
+const vaultRoot = path.resolve(dailyDir, '..');
+const inputPath = path.join(vaultRoot, 'reminders', 'reminders.md');
 
 function parseTasksFromFile(filePath) {
   const content = fs.readFileSync(filePath, 'utf8');
   const lines = content.split(/\r?\n/);
   const tasks = [];
   for (const line of lines) {
-    const m = line.match(/^\- \[( |x)\] (.*) \(([^)]+)\) <!--reminders-id:([A-F0-9\-]+)-->$/);
+    const m = line.match(/^\- \[( |x)\] (.*) \(([^)]+)\) <!--reminders-id:([^\s>]+)[^>]*-->$/);
     if (!m) continue;
     const done = m[1] === 'x';
     const title = m[2];

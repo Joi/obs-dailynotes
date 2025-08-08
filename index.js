@@ -12,6 +12,7 @@ const { fetchTodayEvents } = require('./lib/calendar');
 const { loadConfig, createFilterRegex, shouldFilterEvent } = require('./lib/config');
 const { parseGoogleHangout, parseZoom, parseOtherMeetingType } = require('./lib/parsers');
 const { writeToFile, formatHeader, formatOutput, upsertTodaySection, upsertTodayMeeting } = require('./lib/writer');
+const path = require('path');
 
 // Load environment variables
 const dotenvPath = path.join(__dirname, '.env');
@@ -92,6 +93,15 @@ async function main() {
         const header = formatHeader(config);
         await upsertTodaySection('HEADER', header, PATH_PREFIX);
         
+        // Optionally load reminders cache for agendas
+        let remindersCache = null;
+        try {
+            const vaultRoot = path.resolve(PATH_PREFIX, '..');
+            const cachePath = path.join(vaultRoot, 'reminders', 'reminders_cache.json');
+            const raw = await fs.promises.readFile(cachePath, 'utf8');
+            remindersCache = JSON.parse(raw);
+        } catch (_) {}
+
         // Build and upsert a single MEETINGS section in chronological order
         let processedCount = 0;
         const meetingBlocks = [];
@@ -101,10 +111,24 @@ async function main() {
             for (const parser of parsers) {
                 const result = parser(event);
                 if (result) {
-                    meetingBlocks.push({
-                        start: result.fullStartDate,
-                        content: formatOutput(result, config)
-                    });
+                    let content = formatOutput(result, config);
+                    // Inject per-person agenda items under meeting when cache is present
+                    if (remindersCache && remindersCache.byPerson && Array.isArray(event.attendees)) {
+                        const personNames = event.attendees.map(a => a.displayName || a.email).filter(Boolean);
+                        const agendaLines = [];
+                        for (const [personId, info] of Object.entries(remindersCache.byPerson)) {
+                            if (personNames.includes(info.name) && Array.isArray(info.items) && info.items.length) {
+                                agendaLines.push(`\n- Agenda for [[People/${info.name}|${info.name}]]:`);
+                                for (const it of info.items.slice(0, 5)) {
+                                    agendaLines.push(`  - [ ] ${it.title} (${it.list}) <!--reminders-id:${it.id} list:${it.list} person-id:${personId}-->`);
+                                }
+                            }
+                        }
+                        if (agendaLines.length) {
+                            content += `\n${agendaLines.join('\n')}`;
+                        }
+                    }
+                    meetingBlocks.push({ start: result.fullStartDate, content });
                     processedCount++;
                     break;
                 }
