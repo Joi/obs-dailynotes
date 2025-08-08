@@ -27,7 +27,7 @@ function parseFrontmatter(content) {
     const key = m[1];
     let val = m[2];
     if (val.startsWith('[') && val.endsWith(']')) {
-      try { obj[key] = JSON.parse(val.replace(/([A-Za-z0-9_.@-]+)/g, '"$1"')); } catch { obj[key] = []; }
+      try { obj[key] = JSON.parse(val.replace(/([A-Za-z0-9_.@\-\s]+)/g, '"$1"')); } catch { obj[key] = []; }
     } else if (val === 'true' || val === 'false') {
       obj[key] = val === 'true';
     } else {
@@ -50,11 +50,13 @@ if (fs.existsSync(peopleDir)) {
     const content = fs.readFileSync(filePath, 'utf8');
     const fm = parseFrontmatter(content);
     const name = fm.name || path.basename(f, '.md');
+    const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];
     const personId = fm.personId || '';
     const pagePath = `${path.basename(f)}`;
     index[personId || name] = {
       name,
       pagePath,
+      aliases,
       reminders: {
         listName: fm.reminders && fm.reminders.listName ? fm.reminders.listName : name
       }

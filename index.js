@@ -116,7 +116,9 @@ async function main() {
                         const personNames = event.attendees.map(a => a.displayName || a.email).filter(Boolean);
                         const agendaLines = [];
                         for (const [personId, info] of Object.entries(remindersCache.byPerson)) {
-                            if (personNames.includes(info.name) && Array.isArray(info.items) && info.items.length) {
+                            const aliasSet = new Set([info.name, ...(Array.isArray(info.aliases) ? info.aliases : [])]);
+                            const matched = personNames.some(n => aliasSet.has(n));
+                            if (matched && Array.isArray(info.items) && info.items.length) {
                                 agendaLines.push(`\n- Agenda for [[${info.name}|${info.name}]]:`);
                                 for (const it of info.items.slice(0, 5)) {
                                     agendaLines.push(`  - [ ] ${it.title} (${it.list}) <!--reminders-id:${it.id} list:${it.list} person-id:${personId}-->`);

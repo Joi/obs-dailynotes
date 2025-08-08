@@ -57,8 +57,14 @@ function normalizeItem(it) {
     if (!byList[it.list]) byList[it.list] = [];
     byList[it.list].push(it);
 
-    // Person resolution by list name match
-    const match = Object.entries(peopleIndex).find(([pid, info]) => info.reminders && info.reminders.listName === it.list);
+    // Person resolution by list name or alias match
+    const match = Object.entries(peopleIndex).find(([pid, info]) => {
+      if (info.reminders && info.reminders.listName === it.list) return true;
+      if (Array.isArray(info.aliases)) {
+        return info.aliases.includes(it.list);
+      }
+      return false;
+    });
     if (match) {
       const [personId, info] = match;
       if (!byPerson[personId]) byPerson[personId] = { name: info.name, pagePath: info.pagePath, items: [] };
