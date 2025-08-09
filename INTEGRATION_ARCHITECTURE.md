@@ -72,7 +72,7 @@ Note: The index key is the person's `name`, not an ID. The `emails` field is alw
 ### Person Page (<Colleague> Hoffman.md)
 ```markdown
 ---
-tags: people
+tags: [people]
 name: <Colleague> Hoffman
 emails: [<Colleague>@example.com, <Colleague>@linkedin.com]
 aliases: [<Colleague>, R. Hoffman]
@@ -109,7 +109,7 @@ To create a specialized email reminders system:
 2. **Create Special Person Pages**:
 ```markdown
 ---
-tags: people, system
+tags: [people, system]
 name: Email Tasks
 emails: [email-tasks@system.local]
 reminders:
@@ -126,7 +126,7 @@ reminders:
 A person can have multiple contexts with different reminder lists:
 ```markdown
 ---
-tags: people
+tags: [people]
 name: Jane Smith
 emails: [jane@company.com, jane@personal.com]
 aliases: [Jane, J. Smith]
