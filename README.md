@@ -68,6 +68,16 @@ See [ROADMAP.md](ROADMAP.md) for planned features, improvements, and sync strate
 - Two-way sync between Obsidian and Apple Reminders
 - Comprehensive dashboard with all GTD categories
 
+**Why Apple Reminders?**
+Apple Reminders serves as the "ground truth" for tasks because it:
+- **Shares with others** - Create shared lists with family, teammates, or assistants
+- **Syncs across devices** - iPhone, iPad, Mac, Apple Watch all stay in sync
+- **Works with Siri** - Capture tasks hands-free while driving or walking
+- **Collaborative editing** - Multiple people can add/complete tasks in real-time
+- **Native notifications** - System-level alerts that don't require Obsidian to be open
+
+This creates a reliable, shared task system where Obsidian provides the thinking/linking layer while Apple Reminders handles the operational layer.
+
 ### Person Page Management
 - Standardized person page format with frontmatter
 - Email-based linking to calendar attendees
