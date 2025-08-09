@@ -71,3 +71,7 @@ Daily notes are created with filename pattern: `YYYY-MM-DD.md` and include:
 - Non-VC meetings display physical location instead of call link
 
 - the script is called in Keyboard Maestro so make sure it executes silently from running dailynotejs.sh
+
+## Workflow Reminders
+
+- Remember not to commit and push until I tell you

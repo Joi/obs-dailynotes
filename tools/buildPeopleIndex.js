@@ -55,15 +55,24 @@ if (fs.existsSync(peopleDir)) {
     const name = fm.name || path.basename(f, '.md');
     const tags = Array.isArray(fm.tags) ? fm.tags : (typeof fm.tags === 'string' ? [fm.tags] : []);
     const hasPeopleTag = tags.includes('people');
-    const hasPersonId = typeof fm.personId === 'string' && fm.personId.length > 0;
     const hasRemindersList = fm.reminders && typeof fm.reminders.listName === 'string' && fm.reminders.listName.length > 0;
-    // Include if explicitly tagged people OR has strong signal (personId or reminders list)
-    if (!hasPeopleTag && !hasPersonId && !hasRemindersList) continue;
+    // Ensure emails is always an array
+    let emails = [];
+    if (Array.isArray(fm.emails)) {
+      emails = fm.emails;
+    } else if (typeof fm.emails === 'string' && fm.emails.length > 0) {
+      emails = [fm.emails];
+    }
+    const hasEmails = emails.length > 0;
+    
+    // Include if explicitly tagged people OR has strong signal (emails or reminders list)
+    if (!hasPeopleTag && !hasEmails && !hasRemindersList) continue;
+    
     const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];
-    const emails = Array.isArray(fm.emails) ? fm.emails : [];
-    const personId = fm.personId || '';
     const pagePath = `${path.basename(f)}`;
-    index[personId || name] = {
+    
+    // Use name as the key in the index (not personId)
+    index[name] = {
       name,
       pagePath,
       aliases,

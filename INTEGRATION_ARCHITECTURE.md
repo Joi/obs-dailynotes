@@ -1,0 +1,232 @@
+# Integration Architecture: Reminders, People, and Daily Notes
+
+## Overview
+This document explains how the obs-dailynotes system integrates Apple Reminders with Obsidian daily notes through a people-centric architecture. The system uses email addresses and full names as primary identifiers to link reminders, person pages, and calendar events.
+
+## Core Concepts
+
+### 1. Person Pages
+Person pages are Markdown files in the Obsidian vault root that represent individuals. Each person page contains frontmatter metadata that defines how to identify and link that person across different systems.
+
+**Key Fields:**
+- `name`: The person's full display name (e.g., "<Colleague> Hoffman")
+- `emails`: List of email addresses associated with this person (can be single string or array)
+- `aliases`: Alternative names/nicknames used in calendar invites
+- `reminders.listName`: The Apple Reminders list name for this person's agenda items
+- `tags`: Include "people" to explicitly mark as a person page
+
+### 2. Linking Mechanisms
+
+#### Email-Based Linking
+- **Google Calendar → Person Page**: When calendar events include attendees with email addresses, the system matches these emails against the `emails` field in person pages
+- **Person Page → Reminders List**: Each person page specifies a `reminders.listName` that corresponds to an Apple Reminders list
+
+#### Name-Based Linking
+- **Calendar Attendee Names → Person Page**: If an attendee's display name matches a person's `name` or `aliases`, they are linked
+- **Reminders List Name → Person Page**: The `reminders.listName` creates a direct mapping to Apple Reminders
+
+## Data Flow
+
+### Daily Note Generation Flow
+1. **Google Calendar API** → Fetch today's events with attendee details
+2. **Attendee Matching** → For each attendee email/name:
+   - Search `people.index.json` for matching email in `emails` array
+   - Fallback to name matching against `name` and `aliases`
+3. **Reminder Injection** → For matched attendees:
+   - Look up their `reminders.listName`
+   - Pull uncompleted tasks from that Apple Reminders list
+   - Inject as agenda items under the meeting in the daily note
+
+### Two-Way Sync Flow
+1. **Reminders → Obsidian**:
+   - `reminders-cli` exports all lists as JSON
+   - Tasks are written to `reminders/reminders.md` with embedded IDs
+   - Per-person agendas written to `reminders/agendas/<name>.md`
+   - Today's priorities filtered to `reminders/todo-today.md`
+
+2. **Obsidian → Reminders**:
+   - Checked tasks in Obsidian include `<!--reminders-id:UUID-->`
+   - Sync script finds checked items by ID
+   - Marks corresponding items complete in Apple Reminders via CLI
+
+## File Structure and Formats
+
+### people.index.json
+Generated from person page frontmatter. Uses the person's name as the key:
+```json
+{
+  "<Colleague> Hoffman": {
+    "name": "<Colleague> Hoffman",
+    "pagePath": "<Colleague> Hoffman.md",
+    "aliases": ["<Colleague>", "R. Hoffman"],
+    "emails": ["<Colleague>@example.com", "<Colleague>@linkedin.com"],
+    "reminders": {
+      "listName": "<Colleague> Hoffman"
+    }
+  }
+}
+```
+
+Note: The index key is the person's `name`, not an ID. The `emails` field is always an array, even if defined as a single string in the frontmatter.
+
+### Person Page (<Colleague> Hoffman.md)
+```markdown
+---
+tags: people
+name: <Colleague> Hoffman
+emails: [<Colleague>@example.com, <Colleague>@linkedin.com]
+aliases: [<Colleague>, R. Hoffman]
+reminders:
+  listName: "<Colleague> Hoffman"
+---
+```
+
+### Daily Note Meeting Section
+```markdown
+### Strategy Meeting #mtg
+- 14:00 - 15:00 ([[<Colleague> Hoffman]], [[<Owner Name>]])
+- Agenda for [[<Colleague> Hoffman]]:
+  - [ ] Review Q4 strategy <!--reminders-id:UUID1-->
+  - [ ] Discuss partnership proposal <!--reminders-id:UUID2-->
+```
+
+### Reminders File Structure
+- `reminders_cache.json` - Raw JSON from reminders-cli
+- `reminders.md` - All uncompleted tasks with embedded IDs
+- `todo-today.md` - Filtered urgent/due today items
+- `agendas/<name>.md` - Per-person agenda files
+
+## Special Use Cases
+
+### Email Reminders System
+To create a specialized email reminders system:
+
+1. **Create Email Lists in Apple Reminders**:
+   - "Email - Reply Required"
+   - "Email - Follow Up"
+   - "Email - Waiting For Response"
+
+2. **Create Special Person Pages**:
+```markdown
+---
+tags: people, system
+name: Email Tasks
+emails: [email-tasks@system.local]
+reminders:
+  listName: "Email - Reply Required"
+---
+```
+
+3. **Tag Integration**:
+   - Tasks in these lists can include tags like `#email-urgent`
+   - The sync system preserves these tags in Obsidian
+   - Can create filtered views using Obsidian's search/query features
+
+### Multi-List Person
+A person can have multiple contexts with different reminder lists:
+```markdown
+---
+tags: people
+name: Jane Smith
+emails: [jane@company.com, jane@personal.com]
+aliases: [Jane, J. Smith]
+reminders:
+  listName: "Jane Smith - Work"
+  personalListName: "Jane Smith - Personal"  # Custom field
+---
+```
+
+## Key Algorithms
+
+### Attendee Matching Algorithm
+```
+1. For each calendar attendee:
+   a. Extract email address
+   b. Search all person pages for email in `emails` array
+   c. If no email match, try name match against `name` and `aliases`
+   d. Return matched person's reminders.listName
+```
+
+### Task Sync Algorithm
+```
+1. Parse all Obsidian files for tasks with <!--reminders-id:-->
+2. Build map of ID → completion status
+3. For each completed task:
+   a. Find task in Apple Reminders by ID
+   b. Mark as complete via reminders-cli
+4. Regenerate reminder files to reflect new state
+```
+
+## Bulk Import Tools
+
+### CSV Contact Import
+The system includes a tool for bulk importing contacts from CSV exports (e.g., from Outlook, Google Contacts):
+
+```bash
+node tools/importContactsFromCSV.js /path/to/contacts.csv
+```
+
+**Features**:
+- Parses CSV with headers: First Name, Last Name, Email Addresses, Primary Email
+- Creates person pages using `Firstname Lastname.md` format
+- Updates existing pages by merging email addresses
+- Handles multiple emails per contact (semicolon-separated)
+- Sanitizes filenames for filesystem compatibility
+- Preserves existing page content while updating frontmatter
+
+**Import Process**:
+1. Read CSV and identify name/email columns
+2. For each row with valid name and email:
+   - Check if person page exists
+   - Create or update frontmatter with emails list
+   - Maintain standard person page structure
+3. Rebuild people index after import
+
+## Extension Points
+
+### Custom Tags and Filters
+- **Due Date Parsing**: Tasks with `@today`, `@tomorrow` patterns
+- **Priority Markers**: `!!` for high priority, `!` for medium
+- **Context Tags**: `#email`, `#phone`, `#waiting-for`
+- **Project Links**: `[[Project Name]]` for cross-referencing
+
+### Automation Triggers
+- **Morning Routine**: Generate todo-today.md with urgent items
+- **Meeting Prep**: Pull agendas 15 minutes before meetings
+- **End of Day**: Sync completed items back to Reminders
+- **Weekly Review**: Archive completed tasks, generate reports
+
+## Implementation Notes
+
+### Performance Considerations
+- People index is cached and only rebuilt when person pages change
+- Reminders cache has 10-minute TTL to avoid API rate limits
+- Batch operations for marking multiple tasks complete
+
+### Error Handling
+- Missing person pages don't break the system (graceful fallback)
+- Invalid email formats are skipped silently
+- Reminders without IDs can't be synced back (one-way only)
+
+### Security
+- No credentials stored in person pages
+- Email addresses only used for matching, not for sending
+- Reminder IDs are UUIDs, no sensitive data exposed
+
+## Example Workflow for Email Reminders
+
+1. **Setup Phase**:
+   - Create Apple Reminders list: "Email - Action Required"
+   - Create person page: `System - Email.md` with `reminders.listName: "Email - Action Required"`
+   - Add emails to track as tasks in Apple Reminders
+
+2. **Daily Process**:
+   - Morning: Run `npm run reminders:pull` to fetch email tasks
+   - Throughout day: Check off completed email tasks in Obsidian
+   - Evening: Run `npm run reminders:sync` to update Apple Reminders
+
+3. **Integration with Calendar**:
+   - Before meetings, relevant email action items appear as agenda
+   - Can create "Email Review" calendar blocks that pull all email tasks
+
+This architecture enables flexible, extensible integration between Apple Reminders and Obsidian while maintaining clean separation of concerns and data sovereignty.
