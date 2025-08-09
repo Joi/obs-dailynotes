@@ -32,3 +32,20 @@ npm-debug.log*
 
 # Local docs not to commit
 SCRIPTS.md
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# pytest
+.pytest_cache/
+htmlcov/
+
+# Test output
+fix_prompt_for_claude.md
+fix_links_prompt.md
+fix_people_prompt.md
