@@ -1,6 +1,16 @@
 # Testing requirements for obs-dailynotes
-pytest>=7.0.0
-pytest-cov>=4.0.0
-pytest-watch>=4.2.0
-pytest-json-report>=1.5.0
-pyyaml>=6.0
+#
+# NOTE: pytest can be installed via Homebrew instead:
+#   brew install pytest
+#
+# These are only needed if you're running tests and developing.
+# Use within a virtual environment:
+#   python3 -m venv venv
+#   source venv/bin/activate
+#   pip install -r requirements-test.txt
+#
+pytest>=7.0.0        # Can use brew install pytest instead
+pytest-cov>=4.0.0    # For coverage reports
+pytest-watch>=4.2.0  # For auto-running tests on file changes
+pytest-json-report>=1.5.0  # For JSON test reports
+pyyaml>=6.0         # For YAML parsing in tests
