@@ -1,10 +1,46 @@
 # Obsidian Daily Notes & GTD System
 
-A comprehensive Node.js toolkit that integrates Google Calendar events, Apple Reminders, and Getting Things Done (GTD) methodology to create an organized daily workflow in Obsidian.
+A Node.js toolkit that integrates Google Calendar events, Apple Reminders, and Getting Things Done (GTD) methodology to create an organized daily workflow in Obsidian.
+
+## What This Does
+
+This toolkit automatically:
+- Pulls your Google Calendar events into daily markdown notes
+- Syncs Apple Reminders as GTD-organized tasks
+- Links meeting attendees to person pages with contact information
+- Generates agenda items for each person you're meeting
+- Creates task dashboards organized by context and project
+
+All data is stored as plain Markdown files in your Obsidian vault, giving you full control over your information.
+
+## About Obsidian
+
+[Obsidian](https://obsidian.md) is a note-taking application that works with local Markdown files. It features bidirectional linking, graph visualization, and extensive customization through plugins. Your data stays on your computer as plain text files.
+
+To get started:
+1. Download Obsidian from [obsidian.md](https://obsidian.md)
+2. Create a vault (a folder on your computer)
+3. Configure this toolkit to point to your vault
+
+## Why Markdown
+
+Markdown is a plain text format that:
+- Works in any text editor
+- Tracks well in Git
+- Will be readable decades from now
+- Converts easily to HTML, PDF, or other formats
+
+Example:
+```markdown
+# Meeting Notes
+- [[John Smith]], [[Sarah Chen]]
+- [ ] Send proposal #email @computer
+- [ ] Review budget #task
+```
 
 ## Architecture
 
-This system follows a modular architecture designed for extensibility and maintainability. The codebase uses a hybrid approach with JavaScript for the main application logic and Python for utility scripts (link fixing, switchboard organization). This allows leveraging the strengths of each language - Node.js for Google Calendar API integration and real-time processing, Python for file manipulation and batch operations.
+This codebase uses JavaScript for API integrations and Python for file operations. Scripts run on-demand or via automation to keep your notes synchronized with external services while maintaining all data locally in an open format.
 
 See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for detailed system design and [GTD_SYSTEM_DESIGN.md](GTD_SYSTEM_DESIGN.md) for the complete GTD implementation guide.
 
