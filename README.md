@@ -117,7 +117,7 @@ brew install pytest
 
 1. **Clone the repository:**
 ```bash
-git clone <repository-url>
+git clone https://github.com/Joi/obs-dailynotes
 cd obs-dailynotes
 ```
 
