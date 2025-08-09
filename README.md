@@ -273,14 +273,6 @@ The `tools/` directory contains automation scripts:
 - Run `npm run people:index` to rebuild index
 - Verify email addresses in frontmatter
 
-### macOS Command Line Tools
-
-If you see "CLT does not support macOS 15":
-```bash
-sudo rm -rf /Library/Developer/CommandLineTools
-sudo xcode-select --install
-```
-
 ## Person Pages Example
 
 ### Creating a Person Page
