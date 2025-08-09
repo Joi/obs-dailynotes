@@ -9,7 +9,7 @@ This document explains how the obs-dailynotes system integrates Apple Reminders 
 Person pages are Markdown files in the Obsidian vault root that represent individuals. Each person page contains frontmatter metadata that defines how to identify and link that person across different systems.
 
 **Key Fields:**
-- `name`: The person's full display name (e.g., "<Colleague> Hoffman")
+- `name`: The person's full display name (e.g., "Taro Chiba")
 - `emails`: List of email addresses associated with this person (can be single string or array)
 - `aliases`: Alternative names/nicknames used in calendar invites
 - `reminders.listName`: The Apple Reminders list name for this person's agenda items
@@ -55,13 +55,13 @@ Person pages are Markdown files in the Obsidian vault root that represent indivi
 Generated from person page frontmatter. Uses the person's name as the key:
 ```json
 {
-  "<Colleague> Hoffman": {
-    "name": "<Colleague> Hoffman",
-    "pagePath": "<Colleague> Hoffman.md",
-    "aliases": ["<Colleague>", "R. Hoffman"],
-    "emails": ["<Colleague>@example.com", "<Colleague>@linkedin.com"],
+  "Taro Chiba": {
+    "name": "Taro Chiba",
+    "pagePath": "Taro Chiba.md",
+    "aliases": ["Taro", "T. Chiba"],
+    "emails": ["taro@example.com", "taro@cit.ac.jp"],
     "reminders": {
-      "listName": "<Colleague> Hoffman"
+      "listName": "Taro Chiba"
     }
   }
 }
@@ -69,23 +69,23 @@ Generated from person page frontmatter. Uses the person's name as the key:
 
 Note: The index key is the person's `name`, not an ID. The `emails` field is always an array, even if defined as a single string in the frontmatter.
 
-### Person Page (<Colleague> Hoffman.md)
+### Person Page (Taro Chiba.md)
 ```markdown
 ---
 tags: [people]
-name: <Colleague> Hoffman
-emails: [<Colleague>@example.com, <Colleague>@linkedin.com]
-aliases: [<Colleague>, R. Hoffman]
+name: Taro Chiba
+emails: [taro@example.com, taro@cit.ac.jp]
+aliases: [Taro, T. Chiba]
 reminders:
-  listName: "<Colleague> Hoffman"
+  listName: "Taro Chiba"
 ---
 ```
 
 ### Daily Note Meeting Section
 ```markdown
 ### Strategy Meeting #mtg
-- 14:00 - 15:00 ([[<Colleague> Hoffman]], [[<Owner Name>]])
-- Agenda for [[<Colleague> Hoffman]]:
+- 14:00 - 15:00 ([[Taro Chiba]], [[<Owner Name>]])
+- Agenda for [[Taro Chiba]]:
   - [ ] Review Q4 strategy <!--reminders-id:UUID1-->
   - [ ] Discuss partnership proposal <!--reminders-id:UUID2-->
 ```
