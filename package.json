@@ -1,6 +1,6 @@
 {
   "name": "obs-dailynotes",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Google Calendar integration with full two-way macOS Reminders sync for Obsidian daily notes",
   "main": "index.js",
   "dependencies": {

@@ -123,14 +123,28 @@ date: 2024-01-15
 
 ```text
 obs-dailynotes/
-├── index.js             # Main application logic
-├── lib/                 # Auth, calendar, parsers, writer, utils
-├── package.json         # Node dependencies
-├── dailynotejs.sh       # Shell script wrapper
-├── config.example.json  # Sample application config
-├── config.json          # Your application config (not in repo)
-├── .env                 # Your environment configuration (not in repo)
-└── README.md            # This file
+├── index.js                    # Main application logic
+├── lib/                        # Auth, calendar, parsers, writer, utils
+├── tools/                      # Utility scripts
+│   ├── importContactsFromCSV.js   # CSV contact importer
+│   ├── generateTodayTodos.js      # Today's priorities generator
+│   └── syncReminders.js           # Two-way reminder sync
+├── obsidian-scripts/           # Obsidian integration helpers
+│   └── HOTKEY_SETUP.md            # Hotkey configuration guide
+├── package.json                # Node dependencies
+├── dailynotejs.sh              # Shell script wrapper
+├── config.example.json         # Sample application config
+├── config.json                 # Your application config (not in repo)
+├── .env                        # Your environment configuration (not in repo)
+└── README.md                   # This file
+
+In your Obsidian vault:
+switchboard/
+├── templates/
+│   ├── person.md               # Basic person template
+│   ├── person-smart.md         # Auto-extracting person template
+│   └── person-quick.md         # Quick-add person template
+└── people.index.json           # Generated person index
 ```
 
 ## Authentication
@@ -284,6 +298,41 @@ npm run reminders:pull
 
 - Daily update: `/Users/joi/obs-dailynotes/tools/run_daily.sh`
 - Sync back: `/Users/joi/obs-dailynotes/tools/run_sync.sh`
+
+### Creating Person Pages from Daily Notes (Obsidian)
+
+When you mention someone in a daily note without an existing person page, you can quickly create one with automatic email extraction using Obsidian's Templater plugin.
+
+**Setup (one-time)**:
+1. Install Templater plugin from Community Plugins
+2. Configure Templater Settings:
+   - Template folder location: `templates` or `switchboard/templates`
+   - Enable: "Trigger Templater on new file creation" ✓
+   - Enable: "Enable Folder Templates" ✓
+   - Timeout: `10000` (10 seconds)
+3. Add Folder Template:
+   - Folder: `/` (vault root)
+   - Template: `person-smart.md`
+
+**Usage**:
+1. In daily note, write: `Met with [[Jane Smith]] (jane@example.com)`
+2. `Cmd+Click` on `[[Jane Smith]]` to create the page
+3. Templater automatically:
+   - Applies the person template
+   - Extracts the email from the daily note context
+   - Populates the frontmatter with email
+
+**Result**: A properly formatted person page with email already filled in!
+
+**Templates provided**:
+- `person-smart.md` - Auto-extracts email from daily note context
+- `person-quick.md` - Basic template for manual entry
+- `person-extract.md` - Prompts for context line with email
+
+**Troubleshooting**:
+- If email isn't captured, check that the email is within 2 lines of the person's name
+- Ensure Templater timeout is set to 10000ms for file reading
+- Email extraction works with formats like: `name@domain.com` or `(email@domain.com)`
 
 ### Importing contacts from CSV
 

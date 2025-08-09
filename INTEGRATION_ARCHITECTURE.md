@@ -157,6 +157,40 @@ reminders:
 4. Regenerate reminder files to reflect new state
 ```
 
+## Obsidian Integration
+
+### Quick Person Page Creation from Daily Notes
+
+The system integrates with Obsidian's Templater plugin to enable instant person page creation with automatic email extraction from daily note context.
+
+**Workflow**:
+1. User writes in daily note: `Met with [[John Doe]] (john@example.com)`
+2. User Cmd+Clicks on the red/unlinked `[[John Doe]]`
+3. Templater automatically:
+   - Creates `John Doe.md` 
+   - Searches the originating daily note for emails near "John Doe"
+   - Extracts `john@example.com`
+   - Populates the person page with proper frontmatter
+
+**Template Logic** (`person-smart.md`):
+```javascript
+// Search algorithm:
+1. Get the file name (person's name)
+2. Read the last opened file (daily note)
+3. Find lines mentioning the person
+4. Search for email patterns within 2 lines
+5. Extract and normalize email
+6. Populate frontmatter with emails: [extracted@email.com]
+```
+
+**Templater Configuration**:
+- Template folder: `templates/`
+- Folder Templates: Root → `person-smart.md`
+- Trigger on file creation: Enabled
+- Timeout: 10000ms (for file reading)
+
+This creates a seamless workflow where person pages are created on-the-fly during meeting notes, with contact information automatically captured.
+
 ## Bulk Import Tools
 
 ### CSV Contact Import
