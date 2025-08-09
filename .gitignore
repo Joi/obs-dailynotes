@@ -1,3 +1,8 @@
+# Private folders (never sync to GitHub)
+_private/
+_local/
+_shared/  # May be synced to separate team repo
+
 # Environment variables
 .env
 
