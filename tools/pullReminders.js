@@ -59,7 +59,7 @@ function normalizeItem(it) {
     byList[it.list].push(it);
 
     // Person resolution by list name or alias match
-    const match = Object.entries(peopleIndex).find(([pid, info]) => {
+    const match = Object.entries(peopleIndex).find(([personKey, info]) => {
       if (info.reminders && info.reminders.listName === it.list) return true;
       if (Array.isArray(info.aliases)) {
         return info.aliases.includes(it.list);
@@ -67,9 +67,9 @@ function normalizeItem(it) {
       return false;
     });
     if (match) {
-      const [personId, info] = match;
-      if (!byPerson[personId]) byPerson[personId] = { name: info.name, pagePath: info.pagePath, items: [] };
-      byPerson[personId].items.push(it);
+      const [personKey, info] = match;
+      if (!byPerson[personKey]) byPerson[personKey] = { name: info.name, pagePath: info.pagePath, items: [], aliases: info.aliases || [] };
+      byPerson[personKey].items.push(it);
     }
   }
 
@@ -94,10 +94,10 @@ function normalizeItem(it) {
   fs.writeFileSync(inboxMdPath, linesInbox.join('\n') + '\n', 'utf8');
 
   // Write per-person agendas
-  for (const [personId, info] of Object.entries(byPerson)) {
-    const md = ['# Agenda', '', `Person: ${info.name} (${personId})`, ''];
+  for (const [personKey, info] of Object.entries(byPerson)) {
+    const md = ['# Agenda', '', `Person: ${info.name}`, ''];
     for (const it of info.items) {
-      const meta = `<!--reminders-id:${it.id} list:${it.list}${it.due ? ' due:'+it.due : ''}${it.flagged ? ' flagged:true' : ''} person-id:${personId}-->`;
+      const meta = `<!--reminders-id:${it.id} list:${it.list}${it.due ? ' due:'+it.due : ''}${it.flagged ? ' flagged:true' : ''} person:${personKey}-->`;
       md.push(`- [ ] ${it.title} (${it.list}) ${meta}`);
     }
     const safeName = info.name.replace(/[\/:*?"<>|]/g, '-');
