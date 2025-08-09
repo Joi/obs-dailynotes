@@ -8,6 +8,10 @@ This system follows a modular architecture designed for extensibility and mainta
 
 See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for detailed system design and [GTD_SYSTEM_DESIGN.md](GTD_SYSTEM_DESIGN.md) for the complete GTD implementation guide.
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features, improvements, and sync strategy including private folders and team collaboration.
+
 ## Core Features
 
 ### Daily Notes Generation
