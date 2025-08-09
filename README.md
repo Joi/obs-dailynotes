@@ -77,28 +77,78 @@ See [ROADMAP.md](ROADMAP.md) for planned features, improvements, and sync strate
 
 ## Installation
 
+### About Package Management
+
+This project follows a **Homebrew-first** approach on macOS. We prefer Homebrew for system tools and utilities because it:
+- Manages dependencies automatically
+- Keeps tools updated easily with `brew upgrade`
+- Avoids Python/Node version conflicts
+- Provides pre-compiled binaries (faster than building from source)
+
+**What is Homebrew?**
+[Homebrew](https://brew.sh) is the "missing package manager for macOS" - it installs command-line tools and applications that Apple doesn't include by default. Think of it like an app store for developer tools.
+
+To install Homebrew (if you don't have it):
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
 ### Prerequisites
-- Node.js 18+ installed
-- Google Calendar API access
+
+1. **Install system tools via Homebrew:**
+```bash
+# Install Node.js (for the main application)
+brew install node
+
+# Install reminders CLI (for Apple Reminders integration)
+brew install keith/formulae/reminders-cli
+
+# Install Python and pytest (for testing only)
+brew install python@3.12
+brew install pytest
+```
+
+2. **Required access:**
+- Google Calendar API credentials
 - macOS with Apple Reminders
 - Obsidian vault configured
-- Homebrew (for reminders-cli)
 
 ### Setup
 
-1. Clone and install:
+1. **Clone the repository:**
 ```bash
 git clone <repository-url>
 cd obs-dailynotes
+```
+
+2. **Install JavaScript dependencies (using npm):**
+```bash
+# npm (Node Package Manager) installs JavaScript libraries locally in node_modules/
+# This creates a package-lock.json to ensure everyone gets the same versions
 npm install
 ```
 
-2. Install reminders-cli:
+3. **For Python testing (optional - only if you're developing):**
 ```bash
-brew install keith/formulae/reminders-cli
+# Create a virtual environment to isolate Python dependencies
+python3 -m venv venv
+
+# Activate the virtual environment
+source venv/bin/activate  # On macOS/Linux
+# or
+venv\Scripts\activate     # On Windows
+
+# Install test dependencies
+pip install -r requirements-test.txt
+
+# When done, deactivate the virtual environment
+deactivate
 ```
 
-3. Configure environment (.env):
+**Why virtual environments?**
+Virtual environments (`venv`) create isolated Python installations for each project. This prevents conflicts when different projects need different library versions. Always use `venv` for Python development - it's like having a separate, clean Python install just for this project.
+
+4. **Configure environment (.env):**
 ```env
 # Google Calendar OAuth
 GCAL_TOKEN_PATH=~/.gcalendar/token.json
@@ -111,15 +161,40 @@ DAILY_NOTE_PATH=/path/to/your/Obsidian/vault/journal
 EVENTS_FILTER=Lunch,Focus Time
 ```
 
-4. Set up Google Calendar API:
+5. **Set up Google Calendar API:**
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Create project and enable Calendar API
    - Create OAuth2 credentials (Desktop app)
    - Download JSON to `GCAL_CREDS_PATH`
 
-5. Copy and customize config:
+6. **Copy and customize config:**
 ```bash
 cp config.example.json config.json
+```
+
+### Package Management Best Practices
+
+**Hierarchy of package managers (prefer in this order):**
+1. **Homebrew** - For system tools and utilities
+2. **npm** - For JavaScript packages (always use package.json)
+3. **pip** - For Python packages (always use venv)
+
+**When to use each:**
+- **Homebrew**: Command-line tools, system utilities, language runtimes
+- **npm**: JavaScript libraries specific to this project
+- **pip + venv**: Python libraries for testing/development only
+
+**Keeping dependencies updated:**
+```bash
+# Update Homebrew packages
+brew update && brew upgrade
+
+# Update npm packages (respects package.json version constraints)
+npm update
+
+# Update Python packages in venv
+source venv/bin/activate
+pip install --upgrade -r requirements-test.txt
 ```
 
 ## GTD Workflow

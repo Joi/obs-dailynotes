@@ -46,6 +46,11 @@ __pycache__/
 .Python
 *.so
 
+# Python virtual environment
+venv/
+env/
+.venv/
+
 # pytest
 .pytest_cache/
 htmlcov/
