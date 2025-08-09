@@ -69,8 +69,38 @@ Daily notes are created with filename pattern: `YYYY-MM-DD.md` and include:
 - Authentication flow requires manual code entry on first run
 - Meeting URLs are extracted from location, description, or summary fields
 - Non-VC meetings display physical location instead of call link
+- The script is called in Keyboard Maestro so make sure it executes silently from running dailynotejs.sh
 
-- the script is called in Keyboard Maestro so make sure it executes silently from running dailynotejs.sh
+## GTD System
+
+The project includes a comprehensive GTD (Getting Things Done) implementation:
+
+### Key Components
+
+1. **GTD Processor** (`tools/processGTD.js`)
+   - Parses Apple Reminders for GTD tags and contexts
+   - Categorizes tasks by urgency, context, project, and state
+   - Generates organized markdown files in `GTD/` folder
+
+2. **GTD Tags**
+   - Priority: `!!` (urgent), `!` (high)
+   - States: `#inbox`, `#next`, `#waiting`, `#someday`
+   - Email: `#email`, `#email-reply`, `#email-waiting`
+   - Projects: `#project:name`
+   - Contexts: `@computer`, `@home`, `@office`, `@calls`, `@errands`, `@anywhere`, `@online`
+
+3. **Generated Files**
+   - `GTD/dashboard.md` - Main GTD overview
+   - `GTD/next-actions.md` - Tasks by context
+   - `GTD/email-tasks.md` - Email-specific tasks
+   - `GTD/waiting-for.md` - Delegated items
+   - `GTD/scheduled.md` - Tasks with due dates
+   - Context and project-specific files
+
+4. **Workflows**
+   - Morning: `npm run gtd:morning` - Pull reminders, process GTD, generate priorities
+   - Evening: `npm run gtd:evening` - Sync completed, refresh views
+   - Weekly Review: Use `templates/weekly-review.md` template
 
 ## Workflow Reminders
 

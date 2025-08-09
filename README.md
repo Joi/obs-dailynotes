@@ -196,6 +196,118 @@ If you encounter an error like "Your Command Line Tools (CLT) does not support m
 
 The `reminders-cli` tool installs to `/opt/homebrew/bin/reminders` on Apple Silicon Macs or `/usr/local/bin/reminders` on Intel Macs. Ensure this directory is in your PATH or use the full path when calling the tool.
 
+## GTD System Integration
+
+This project includes a comprehensive Getting Things Done (GTD) implementation that processes Apple Reminders with tags and contexts to generate organized task views in Obsidian.
+
+### GTD Tags and Contexts
+
+The system recognizes special markers in reminder titles:
+
+**Priority Markers:**
+- `!!` - Urgent (do today)
+- `!` - High priority (this week)
+
+**GTD Tags:**
+- `#inbox` - Unprocessed items
+- `#next` - Next actions
+- `#waiting` - Waiting for someone
+- `#someday` - Someday/maybe items
+- `#email` - Email-related tasks
+- `#email-reply` - Needs email reply
+- `#email-waiting` - Sent, awaiting response
+- `#project:name` - Project-specific tasks
+
+**Context Tags:**
+- `@computer` - Requires computer
+- `@home` - Home tasks
+- `@office` - Office only
+- `@calls` - Phone calls needed
+- `@errands` - Out and about tasks
+- `@anywhere` - Can do anywhere
+- `@online` - Requires internet
+
+### GTD Scripts
+
+Process reminders with GTD methodology:
+```bash
+npm run gtd:process
+```
+
+Morning routine (pull reminders, process GTD, generate today's priorities):
+```bash
+npm run gtd:morning
+# or
+./tools/gtd_morning.sh
+```
+
+Evening routine (sync completed, refresh views):
+```bash
+npm run gtd:evening
+# or
+./tools/gtd_evening.sh
+```
+
+### Generated GTD Files
+
+The GTD processor creates organized views in the `GTD/` folder:
+- `dashboard.md` - Complete GTD dashboard with all categories
+- `next-actions.md` - Next actions organized by context
+- `email-tasks.md` - Email tasks by type (reply/waiting/action)
+- `waiting-for.md` - Items you're waiting on, grouped by person
+- `scheduled.md` - Tasks with due dates, chronologically sorted
+- `context-*.md` - Separate files for each context (@computer, @home, etc.)
+- `project-*.md` - Separate files for each project
+
+### Weekly Review Template
+
+Use the weekly review template to conduct thorough GTD reviews:
+1. Create new note from template: `templates/weekly-review.md`
+2. Follow the checklist to process all inboxes
+3. Review current state and plan ahead
+4. Use embedded buttons to sync systems
+
+### Example Workflow
+
+**Morning (5 minutes):**
+1. Run: `npm run gtd:morning`
+2. Open `GTD/dashboard.md` in Obsidian
+3. Review urgent tasks and today's priorities
+4. Check context-specific lists for current location
+
+**During the Day:**
+- Capture new tasks via Siri: "Hey Siri, remind me to email John about proposal #email @computer !"
+- Check off completed tasks in Obsidian's GTD files or daily note
+
+**Evening (10 minutes):**
+1. Process any new captures in Apple Reminders
+2. Run: `npm run gtd:evening` to sync completed items
+3. Review waiting-for list for follow-ups needed
+4. Plan tomorrow's priorities
+
+**Weekly Review (30 minutes):**
+1. Create new note from weekly review template
+2. Process all inboxes to zero
+3. Review all projects and waiting-for items
+4. Plan next week's priorities
+5. Archive completed items
+
+### Smart Capture Examples
+
+```
+"Email Sarah about budget #email @computer !!"
+→ Urgent email task, requires computer
+
+"Call dentist for appointment #call @calls"
+→ Phone call task, can do anywhere with phone
+
+"Waiting for contract from vendor #waiting #project:acquisition"
+→ Waiting-for item linked to acquisition project
+
+"Review Q4 strategy #next @computer #project:planning !"
+→ High priority next action for planning project
+```
+
 ## License
 
 MIT
@@ -261,7 +373,7 @@ Notes:
 
 ```markdown
 ---
-tags: people
+tags: [people]
 name: Reid Hoffman
 aliases: [Reid, R. Hoffman]
 emails: [reid@example.com]
