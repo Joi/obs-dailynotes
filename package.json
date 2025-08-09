@@ -1,6 +1,6 @@
 {
   "name": "obs-dailynotes",
-  "version": "2.0.4",
+  "version": "2.2.0",
   "description": "Google Calendar integration with full two-way macOS Reminders sync for Obsidian daily notes",
   "main": "index.js",
   "dependencies": {
@@ -13,6 +13,9 @@
     "reminders:sync": "node tools/syncReminders.js",
     "people:index": "node tools/buildPeopleIndex.js",
     "people:generate-from-dailies": "node tools/generatePeopleFromDailyNotes.js",
-    "people:import-csv": "node tools/importContactsFromCSV.js"
+    "people:import-csv": "node tools/importContactsFromCSV.js",
+    "gtd:process": "node tools/processGTD.js",
+    "gtd:morning": "npm run reminders:pull && npm run gtd:process && node tools/generateTodayTodos.js",
+    "gtd:evening": "npm run reminders:sync && npm run reminders:pull && npm run gtd:process"
   }
 }
