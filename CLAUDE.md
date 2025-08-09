@@ -6,6 +6,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Google Calendar integration tool that fetches today's calendar events and writes them to a daily note file in Markdown format. The tool filters out specific events and formats meetings with their details including time, attendees, and meeting links.
 
+## Package Management Philosophy
+
+**IMPORTANT: Always try Homebrew first before npm or pip**
+
+When installing any tool or dependency:
+1. First check if available via Homebrew: `brew search <package>`
+2. If not in Homebrew, use npm for JavaScript packages
+3. Only use pip as last resort, and always within a virtual environment
+
+Example:
+```bash
+# ✅ GOOD: Install system tools via Homebrew
+brew install node
+brew install pytest
+brew install keith/formulae/reminders-cli
+
+# ✅ GOOD: JavaScript project dependencies via npm
+npm install
+
+# ⚠️ ONLY if needed: Python packages in venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements-test.txt
+```
+
 ## Commands
 
 ### Running the application
@@ -21,7 +46,17 @@ node index.js
 ### Installing dependencies
 
 ```bash
+# System dependencies (Homebrew first!)
+brew install node
+brew install keith/formulae/reminders-cli
+
+# JavaScript dependencies
 npm install
+
+# Python test dependencies (only if developing)
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements-test.txt
 ```
 
 ## Architecture
