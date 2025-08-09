@@ -2,6 +2,10 @@
 
 A Node.js toolkit that integrates Google Calendar events, Apple Reminders, and Getting Things Done (GTD) methodology to create an organized daily workflow in Obsidian.
 
+## ⚠️ Active Development Notice
+
+This codebase is under active development with frequent refactoring and restructuring. If you're interested in contributing, please open an issue or reach out first so we can coordinate efforts and avoid conflicts.
+
 ## What This Does
 
 This toolkit automatically:
