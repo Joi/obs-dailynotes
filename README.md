@@ -1,526 +1,335 @@
-# Obsidian Daily Notes Calendar Integration
+# Obsidian Daily Notes & GTD System
 
-A Node.js tool that fetches Google Calendar events and creates formatted daily notes for Obsidian.
+A comprehensive Node.js toolkit that integrates Google Calendar events, Apple Reminders, and Getting Things Done (GTD) methodology to create an organized daily workflow in Obsidian.
 
-## Features
+## Architecture
 
-- Fetches today's calendar events from Google Calendar
-- Filters out specified events (configurable)
-- Parses meeting details including:
-  - Google Meet/Hangout links
-  - Zoom meeting links
-  - Physical meeting locations
-- Creates markdown-formatted daily notes with:
-  - Navigation links to previous/next days
-  - Meeting entries with timestamps, attendees, and links
+This system follows a modular architecture designed for extensibility and maintainability. The codebase uses a hybrid approach with JavaScript for the main application logic and Python for utility scripts (link fixing, switchboard organization). This allows leveraging the strengths of each language - Node.js for Google Calendar API integration and real-time processing, Python for file manipulation and batch operations.
 
-## Prerequisites
+See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for detailed system design and [GTD_SYSTEM_DESIGN.md](GTD_SYSTEM_DESIGN.md) for the complete GTD implementation guide.
 
-- Node.js installed
-- Google Calendar API access
-- Google Cloud project with Calendar API enabled
-- OAuth2 credentials
-- macOS Command Line Tools (for reminders-cli installation)
-- Homebrew (for installing reminders-cli)
+## Core Features
+
+### Daily Notes Generation
+- Fetches and formats Google Calendar events into daily notes
+- Parses meeting details (Google Meet, Zoom links, locations)
+- Creates markdown-formatted notes with navigation links
+- Automatically links attendees to person pages
+- Injects per-person agenda items from Apple Reminders
+
+### GTD Processing System
+- Full GTD implementation with contexts and projects
+- Smart parsing of tags and priorities from reminder titles
+- Generates organized task views by context, project, and status
+- Two-way sync between Obsidian and Apple Reminders
+- Comprehensive dashboard with all GTD categories
+
+### Person Page Management
+- Standardized person page format with frontmatter
+- Email-based linking to calendar attendees
+- Automatic agenda generation for meetings
+- CSV import for bulk contact creation
+- Smart templates for quick person page creation
 
 ## Installation
 
-1. Clone this repository:
+### Prerequisites
+- Node.js 18+ installed
+- Google Calendar API access
+- macOS with Apple Reminders
+- Obsidian vault configured
+- Homebrew (for reminders-cli)
 
+### Setup
+
+1. Clone and install:
 ```bash
 git clone <repository-url>
 cd obs-dailynotes
-```
-
-2. Install dependencies:
-
-```bash
 npm install
 ```
 
-3. Install reminders-cli (for Apple Reminders integration):
-
+2. Install reminders-cli:
 ```bash
 brew install keith/formulae/reminders-cli
 ```
 
-The `reminders-cli` tool will be installed at: `/opt/homebrew/bin/reminders`
-
-4. Set up Google Calendar API credentials:
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project or select existing
-   - Enable Google Calendar API
-   - Create OAuth2 credentials (Desktop app)
-   - Download the JSON credentials to a secure location (e.g., `~/.gcalendar/credentials.json`)
-
-## Configuration
-
-### 1) Environment variables (.env)
-
-Create a `.env` file in the project root:
-
+3. Configure environment (.env):
 ```env
-# Where to store the OAuth token generated after first login
+# Google Calendar OAuth
 GCAL_TOKEN_PATH=~/.gcalendar/token.json
-
-# Path to your Google OAuth credentials JSON
 GCAL_CREDS_PATH=~/.gcalendar/credentials.json
 
-# Directory where daily notes will be written (must exist)
+# Obsidian vault path
 DAILY_NOTE_PATH=/path/to/your/Obsidian/vault/journal
 
-# Optional: comma-separated list of event title snippets to filter out
-# Example: Lunch,Focus Time,OOO
-EVENTS_FILTER=
+# Optional event filters
+EVENTS_FILTER=Lunch,Focus Time
 ```
 
-### 2) App configuration (config.json)
+4. Set up Google Calendar API:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create project and enable Calendar API
+   - Create OAuth2 credentials (Desktop app)
+   - Download JSON to `GCAL_CREDS_PATH`
 
-Copy `config.example.json` to `config.json` and adjust filters/formatting/output as desired. This file controls event filtering and meeting formatting.
-
-## Usage
-
-Run the script using either method:
-
+5. Copy and customize config:
 ```bash
-# Direct execution
-node index.js
-
-# Using shell script
-./dailynotejs.sh
+cp config.example.json config.json
 ```
 
-On first run, you'll need to:
+## GTD Workflow
 
-1. Follow the authorization URL prompted in console
-2. Grant calendar access permissions
-3. Copy the authorization code
-4. Paste it back in the terminal
+### Morning Routine (5 minutes)
+```bash
+npm run gtd:morning
+```
+- Pulls latest from Apple Reminders
+- Processes GTD tags and contexts
+- Generates today's priorities
+- Creates/updates GTD dashboard
 
-The script will:
+### Evening Routine (5 minutes)
+```bash
+npm run gtd:evening
+```
+- Syncs completed tasks back to Reminders
+- Refreshes task views
+- Updates waiting-for lists
 
-- Store the authentication token at `GCAL_TOKEN_PATH`
-- Read the OAuth credentials from `GCAL_CREDS_PATH`
-- Generate or append to the daily note file under `DAILY_NOTE_PATH`
+### Smart Capture Examples
 
-## Daily Note Format
+Via Siri or manual entry:
+```
+"Email Sarah about budget #email @computer !!"
+→ Urgent email task requiring computer
 
-Generated files follow the pattern: `YYYY-MM-DD.md`
+"Waiting for contract from vendor #waiting #project:acquisition"
+→ Waiting-for item linked to project
 
-Example content (actual output depends on your `config.json`):
-
-````markdown
-date: 2024-01-15
-
-[[2024-01-14]] << Previous | Next >> [[2024-01-16]]
-
-## Meetings
-### 🎥 Meeting Title #mtg
-- 10:00 - 11:00 (Attendee1, Attendee2) [Call Link](https://meet.google.com/...) [[2024-01-15-1000]]
-````
-
-## File Structure
-
-```text
-obs-dailynotes/
-├── index.js                    # Main application logic
-├── lib/                        # Auth, calendar, parsers, writer, utils
-├── tools/                      # Utility scripts
-│   ├── importContactsFromCSV.js   # CSV contact importer
-│   ├── generateTodayTodos.js      # Today's priorities generator
-│   └── syncReminders.js           # Two-way reminder sync
-├── obsidian-scripts/           # Obsidian integration helpers
-│   └── HOTKEY_SETUP.md            # Hotkey configuration guide
-├── package.json                # Node dependencies
-├── dailynotejs.sh              # Shell script wrapper
-├── config.example.json         # Sample application config
-├── config.json                 # Your application config (not in repo)
-├── .env                        # Your environment configuration (not in repo)
-└── README.md                   # This file
-
-In your Obsidian vault:
-switchboard/
-├── templates/
-│   ├── person.md               # Basic person template
-│   ├── person-smart.md         # Auto-extracting person template
-│   └── person-quick.md         # Quick-add person template
-└── people.index.json           # Generated person index
+"Call dentist #next @calls"
+→ Next action for phone context
 ```
 
-## Authentication
-
-The tool uses OAuth2. On the first run, you will be prompted with a URL to grant access. After entering the code:
-
-- Credentials are read from `GCAL_CREDS_PATH`
-- Access token is saved to `GCAL_TOKEN_PATH` (created if missing)
-
-Tokens are refreshed automatically when expired.
-
-## Troubleshooting
-
-### Google Calendar Issues
-
-- **Authentication errors**: Delete the file at `GCAL_TOKEN_PATH` and re-authenticate
-- **Missing events**: Check system timezone and your `config.json` filters; verify `EVENTS_FILTER` if set in `.env`
-- **File write errors**: Verify `DAILY_NOTE_PATH` exists and is writable
-
-### macOS Command Line Tools Issues
-
-If you encounter an error like "Your Command Line Tools (CLT) does not support macOS 15" when installing reminders-cli:
-
-1. Remove the outdated Command Line Tools:
-   ```bash
-   sudo rm -rf /Library/Developer/CommandLineTools
-   ```
-
-2. Install fresh Command Line Tools:
-   ```bash
-   sudo xcode-select --install
-   ```
-   
-3. A dialog will appear - click "Install" and accept the license agreement
-
-4. Wait for the installation to complete (10-30 minutes)
-
-5. Verify the installation:
-   ```bash
-   xcode-select --version
-   ```
-
-6. Retry the reminders-cli installation:
-   ```bash
-   brew install keith/formulae/reminders-cli
-   ```
-
-### Reminders CLI Path
-
-The `reminders-cli` tool installs to `/opt/homebrew/bin/reminders` on Apple Silicon Macs or `/usr/local/bin/reminders` on Intel Macs. Ensure this directory is in your PATH or use the full path when calling the tool.
-
-## GTD System Integration
-
-This project includes a comprehensive Getting Things Done (GTD) implementation that processes Apple Reminders with tags and contexts to generate organized task views in Obsidian.
-
-### GTD Tags and Contexts
-
-The system recognizes special markers in reminder titles:
+### GTD Tags Reference
 
 **Priority Markers:**
 - `!!` - Urgent (do today)
 - `!` - High priority (this week)
 
-**GTD Tags:**
+**GTD Categories:**
 - `#inbox` - Unprocessed items
 - `#next` - Next actions
 - `#waiting` - Waiting for someone
-- `#someday` - Someday/maybe items
-- `#email` - Email-related tasks
-- `#email-reply` - Needs email reply
+- `#someday` - Someday/maybe
+- `#project:name` - Project-specific
+
+**Contexts:**
+- `@computer`, `@home`, `@office`, `@calls`, `@errands`, `@anywhere`, `@online`
+
+**Email Tags:**
+- `#email` - General email task
+- `#email-reply` - Needs reply
 - `#email-waiting` - Sent, awaiting response
-- `#project:name` - Project-specific tasks
 
-**Context Tags:**
-- `@computer` - Requires computer
-- `@home` - Home tasks
-- `@office` - Office only
-- `@calls` - Phone calls needed
-- `@errands` - Out and about tasks
-- `@anywhere` - Can do anywhere
-- `@online` - Requires internet
+## Generated Files
 
-### GTD Scripts
-
-Process reminders with GTD methodology:
-```bash
-npm run gtd:process
-```
-
-Morning routine (pull reminders, process GTD, generate today's priorities):
-```bash
-npm run gtd:morning
-# or
-./tools/gtd_morning.sh
-```
-
-Evening routine (sync completed, refresh views):
-```bash
-npm run gtd:evening
-# or
-./tools/gtd_evening.sh
-```
-
-### Generated GTD Files
-
-The GTD processor creates organized views in the `GTD/` folder:
-- `dashboard.md` - Complete GTD dashboard with all categories
-- `next-actions.md` - Next actions organized by context
-- `email-tasks.md` - Email tasks by type (reply/waiting/action)
-- `waiting-for.md` - Items you're waiting on, grouped by person
-- `scheduled.md` - Tasks with due dates, chronologically sorted
-- `context-*.md` - Separate files for each context (@computer, @home, etc.)
-- `project-*.md` - Separate files for each project
-
-### Weekly Review Template
-
-Use the weekly review template to conduct thorough GTD reviews:
-1. Create new note from template: `templates/weekly-review.md`
-2. Follow the checklist to process all inboxes
-3. Review current state and plan ahead
-4. Use embedded buttons to sync systems
-
-### Example Workflow
-
-**Morning (5 minutes):**
-1. Run: `npm run gtd:morning`
-2. Open `GTD/dashboard.md` in Obsidian
-3. Review urgent tasks and today's priorities
-4. Check context-specific lists for current location
-
-**During the Day:**
-- Capture new tasks via Siri: "Hey Siri, remind me to email John about proposal #email @computer !"
-- Check off completed tasks in Obsidian's GTD files or daily note
-
-**Evening (10 minutes):**
-1. Process any new captures in Apple Reminders
-2. Run: `npm run gtd:evening` to sync completed items
-3. Review waiting-for list for follow-ups needed
-4. Plan tomorrow's priorities
-
-**Weekly Review (30 minutes):**
-1. Create new note from weekly review template
-2. Process all inboxes to zero
-3. Review all projects and waiting-for items
-4. Plan next week's priorities
-5. Archive completed items
-
-### Smart Capture Examples
-
-```
-"Email Sarah about budget #email @computer !!"
-→ Urgent email task, requires computer
-
-"Call dentist for appointment #call @calls"
-→ Phone call task, can do anywhere with phone
-
-"Waiting for contract from vendor #waiting #project:acquisition"
-→ Waiting-for item linked to acquisition project
-
-"Review Q4 strategy #next @computer #project:planning !"
-→ High priority next action for planning project
-```
-
-## License
-
-MIT
-
-## GTD Reminders integration (Apple Reminders)
-
-This project can mirror Apple Reminders into your Obsidian vault, inject per‑person agendas into meetings, and sync completed items back to Reminders.
-
-- Requirements: `reminders` CLI (`brew install reminders-cli`). Ensure it’s on PATH (`/opt/homebrew/bin`).
-- Scripts:
-  - `npm run people:index` → builds `people.index.json` from person page frontmatter.
-  - `npm run people:import-csv [file.csv]` → imports contacts from CSV file, creating/updating person pages.
-  - `npm run reminders:pull` → writes `reminders/reminders_cache.json`, `reminders/reminders.md`, and `reminders/agendas/<Full Name>.md`.
-  - `npm run reminders:sync` → completes checked items in `reminders/reminders.md` back to Apple Reminders.
-  - Automation scripts: `tools/run_daily.sh`, `tools/run_sync.sh`.
-
-### Person pages
-
-Person pages are markdown files that represent individuals in your network. They use a standardized frontmatter format for integration with calendar events and reminders.
-
-**File naming convention**: `Firstname Lastname.md` (e.g., `Reid Hoffman.md`)
-
-**Standard frontmatter**:
+### Daily Notes (`YYYY-MM-DD.md`)
 ```markdown
----
-tags: people                      # required to identify as person page
-name: Full Name                   # person's display name
-emails: [email1@example.com, email2@example.com]  # list of email addresses
-aliases: [Nickname, Alternate Name]  # optional alternate names
-reminders:
-  listName: "Full Name"           # Apple Reminders list name for this person
----
+date: 2024-01-15
+
+[[2024-01-14]] << Previous | Next >> [[2024-01-16]]
+
+## Meetings
+### 🎥 Team Standup #mtg
+- 10:00 - 10:30 ([[John Smith]], [[Sarah Chen]])
+- [Meet Link](https://meet.google.com/...)
+- Agenda for [[John Smith]]:
+  - [ ] Review Q4 proposal
+  - [ ] Discuss budget allocation
 ```
 
-Alternative minimal frontmatter (auto-detected as person page):
-```markdown
----
-reminders:
-  listName: "Full Name"           # having a reminders list auto-identifies as person page
----
+### GTD Views (`GTD/`)
+- `dashboard.md` - Complete GTD overview
+- `next-actions.md` - Actions by context
+- `email-tasks.md` - Email tasks organized
+- `waiting-for.md` - Items by person
+- `scheduled.md` - Tasks with due dates
+- `context-*.md` - Per-context lists
+- `project-*.md` - Per-project views
+
+## Testing
+
+Run the comprehensive test suite:
+```bash
+# All tests
+npm test
+
+# Unit tests only
+npm run test:unit
+
+# Integration tests
+npm run test:integration
+
+# With coverage
+npm run test:coverage
 ```
 
-Notes:
-- Pages are auto-detected as person pages if they have: `tags: people`, `emails` list, or a `reminders.listName` field
-- The `emails` field accepts both single string and array format (always normalized to array internally)
-- You can keep Reminders list names pretty (e.g., just the full name). Matching also supports aliases
-- Our index uses `emails`, `name`, `aliases`, and `reminders.listName` to match meeting attendees and route agenda items
+See [TESTING.md](TESTING.md) for detailed testing documentation.
 
-### Daily note rendering
+## NPM Scripts
 
-- Today’s todos are rendered from the Reminders cache (via `![[reminders.md]]`).
-- For each meeting, if any attendee matches a person page (by `name` or `aliases`), the script injects:
-  - An “Agenda for [[Full Name]]” sub-list with up to 5 open items from that person’s list.
+### Daily Operations
+- `npm run daily` - Complete daily note generation
+- `npm run gtd:morning` - Morning GTD routine
+- `npm run gtd:evening` - Evening sync routine
+- `npm run gtd:process` - Process GTD tags only
 
-### Two‑way sync
+### People Management
+- `npm run people:index` - Build person index
+- `npm run people:import-csv [file]` - Import contacts
+- `npm run people:generate` - Extract from daily notes
 
-- Editing `reminders/reminders.md` checkboxes and running `npm run reminders:sync` will mark those tasks complete in Apple Reminders and refresh the cache.
-- The daily note includes a transclusion of `reminders.md` so you can check items inline and then run sync.
+### Reminders Sync
+- `npm run reminders:pull` - Fetch from Apple Reminders
+- `npm run reminders:sync` - Sync completed tasks back
+- `npm run reminders:generate` - Create agenda files
 
-### Example flow (Reid Hoffman)
+### Testing & Maintenance
+- `npm test` - Run all tests
+- `npm run test:watch` - Watch mode
+- `npm run fix:links` - Fix broken wiki links
+- `npm run fix:attachments` - Fix attachment paths
 
-1) Create a person page (e.g., `Reid Hoffman.md`) with frontmatter:
+## File Structure
+
+```
+obs-dailynotes/
+├── index.js                      # Main daily note generator
+├── lib/                          # Core libraries
+│   ├── auth.js                   # Google OAuth
+│   ├── calendar.js               # Calendar integration
+│   └── parsers.js                # Event parsing
+├── tools/                        # Utility scripts
+│   ├── processGTD.js             # GTD processor
+│   ├── syncReminders.js          # Two-way sync
+│   ├── buildPeopleIndex.js       # Person indexer
+│   ├── organize_switchboard.py   # Switchboard organizer
+│   └── fix_broken_links.py       # Link fixer
+├── tests/                        # Test suite
+│   ├── unit/                     # Unit tests
+│   └── integration/              # Integration tests
+├── GTD_SYSTEM_DESIGN.md          # GTD implementation guide
+├── INTEGRATION_ARCHITECTURE.md   # System architecture
+├── TESTING.md                    # Testing documentation
+└── config.json                   # Your configuration
+```
+
+## Automation
+
+### Keyboard Maestro (macOS)
+
+Create macros for one-click operations:
+
+1. **Daily Update Macro** - Pull reminders and generate note:
+```bash
+/Users/joi/obs-dailynotes/tools/run_daily.sh
+```
+
+2. **Sync Macro** - Complete tasks and refresh:
+```bash
+/Users/joi/obs-dailynotes/tools/run_sync.sh
+```
+
+### Shell Scripts
+
+The `tools/` directory contains automation scripts:
+- `gtd_morning.sh` - Complete morning routine
+- `gtd_evening.sh` - Evening sync and refresh
+- `run_daily.sh` - Full daily note generation
+- `run_sync.sh` - Sync completed tasks
+
+## Troubleshooting
+
+### Common Issues
+
+**Google Calendar Auth:**
+- Delete token at `GCAL_TOKEN_PATH` and re-authenticate
+- Check timezone settings in config.json
+
+**Reminders Sync:**
+- Ensure reminders-cli is in PATH (`/opt/homebrew/bin`)
+- Check Apple Reminders permissions in System Settings
+
+**Missing Events:**
+- Verify `EVENTS_FILTER` in .env
+- Check calendar permissions in Google
+
+**Person Page Links:**
+- Run `npm run people:index` to rebuild index
+- Verify email addresses in frontmatter
+
+### macOS Command Line Tools
+
+If you see "CLT does not support macOS 15":
+```bash
+sudo rm -rf /Library/Developer/CommandLineTools
+sudo xcode-select --install
+```
+
+## Person Pages Example
+
+### Creating a Person Page
+
+Create a file named `Taro Chiba.md` with this frontmatter:
 
 ```markdown
 ---
 tags: [people]
-name: Reid Hoffman
-aliases: [Reid, R. Hoffman]
-emails: [reid@example.com]
+name: Taro Chiba
+aliases: [Taro, T. Chiba]
+emails: [taro@example.com]
 reminders:
-  listName: "Reid Hoffman"
+  listName: "Taro Chiba"
 ---
 ```
 
-2) In Apple Reminders, create a list named `Reid Hoffman` and add agenda items there.
+### Workflow with Taro Chiba
 
-3) Generate data and today’s note:
-
-```bash
-npm run people:index
-npm run reminders:pull
-node index.js
-```
-
-4) Open today’s daily note. Under any meeting with Reid, you’ll see:
-
-- Attendees as wikilinks (e.g., `[[Reid Hoffman]]`).
-- An “Agenda for [[Reid Hoffman]]” section with items from the `Reid Hoffman` Reminders list.
-
-5) To complete tasks:
-
-- Check off boxes in `reminders.md` (transcluded in the daily note), then run:
-
-```bash
-npm run reminders:sync
-npm run reminders:pull
-```
-
-6) Optional: Use Keyboard Maestro
-
-- Daily update: `/Users/joi/obs-dailynotes/tools/run_daily.sh`
-- Sync back: `/Users/joi/obs-dailynotes/tools/run_sync.sh`
-
-### Creating Person Pages from Daily Notes (Obsidian)
-
-When you mention someone in a daily note without an existing person page, you can quickly create one with automatic email extraction using Obsidian's Templater plugin.
-
-**Setup (one-time)**:
-1. Install Templater plugin from Community Plugins
-2. Configure Templater Settings:
-   - Template folder location: `templates` or `switchboard/templates`
-   - Enable: "Trigger Templater on new file creation" ✓
-   - Enable: "Enable Folder Templates" ✓
-   - Timeout: `10000` (10 seconds)
-3. Add Folder Template:
-   - Folder: `/` (vault root)
-   - Template: `person-smart.md`
-
-**Usage**:
-1. In daily note, write: `Met with [[Jane Smith]] (jane@example.com)`
-2. `Cmd+Click` on `[[Jane Smith]]` to create the page
-3. Templater automatically:
-   - Applies the person template
-   - Extracts the email from the daily note context
-   - Populates the frontmatter with email
-
-**Result**: A properly formatted person page with email already filled in!
-
-**Templates provided**:
-- `person-smart.md` - Auto-extracts email from daily note context
-- `person-quick.md` - Basic template for manual entry
-- `person-extract.md` - Prompts for context line with email
-
-**Troubleshooting**:
-- If email isn't captured, check that the email is within 2 lines of the person's name
-- Ensure Templater timeout is set to 10000ms for file reading
-- Email extraction works with formats like: `name@domain.com` or `(email@domain.com)`
-
-### Importing contacts from CSV
-
-The CSV import tool allows bulk creation/updating of person pages from exported contact lists.
-
-**Usage**:
-```bash
-# Import from default CSV file location
-node tools/importContactsFromCSV.js
-
-# Import from specific CSV file
-node tools/importContactsFromCSV.js /path/to/contacts.csv
-```
-
-**Expected CSV format**:
-- Must include columns: `First Name`, `Email Addresses` or `Primary Email`
-- Optional columns: `Last Name`, `Full Name`
-- Email addresses can be semicolon-separated for multiple emails
-
-**What it does**:
-- Creates new person pages for contacts not in vault
-- Updates existing person pages by adding new email addresses
-- Uses `Firstname Lastname.md` naming format
-- Sanitizes filenames (replaces invalid characters with hyphens)
-- Preserves existing content in person pages (only updates frontmatter)
-
-
-## Automation with Keyboard Maestro (macOS)
-
-This project includes shell scripts you can trigger from Keyboard Maestro for a one-click workflow.
-
-### Prerequisites
-
-- Ensure `reminders` CLI is installed and in PATH (Homebrew installs to `/opt/homebrew/bin` on Apple Silicon).
-- `.env` is configured and `DAILY_NOTE_PATH` points to your Obsidian daily notes folder.
-
-### 1) Daily update macro (pull Reminders → build note)
-
-Creates/updates today’s note with meetings, attendees (wikilinks), and per‑person agendas.
-
-Steps in Keyboard Maestro:
-
-1. Create a new Macro (e.g., “Daily Note – Update”).
-2. Add action: “Execute Shell Script”.
-3. Command:
-
-   ```bash
-   /Users/joi/obs-dailynotes/tools/run_daily.sh
+1. **Create Apple Reminders list**: Name it "Taro Chiba" and add agenda items
+2. **Generate daily note**: Run `npm run daily`
+3. **Meeting with Taro appears as**:
+   ```markdown
+   ### Meeting with [[Taro Chiba]]
+   - 14:00 - 15:00
+   - Agenda for [[Taro Chiba]]:
+     - [ ] Discuss project timeline
+     - [ ] Review budget proposal
    ```
+4. **Sync completed items**: Check boxes and run `npm run reminders:sync`
 
-4. Optional: assign a hotkey (e.g., Ctrl + Option + D).
+## Language Choice: JavaScript and Python
 
-What it does:
+This project strategically uses both JavaScript and Python:
 
-- Builds People index from `People/*.md` frontmatter (non-fatal if empty).
-- Pulls Apple Reminders into `reminders/` (cache, per‑person agendas, full mirror).
-- Runs the daily generator silently.
+**JavaScript (Node.js)** for:
+- Google Calendar API integration
+- Real-time reminder processing
+- Main application logic
+- OAuth authentication flows
 
-### 2) Sync macro (checkboxes → Apple Reminders)
+**Python** for:
+- Batch file operations (`fix_broken_links.py`)
+- Complex text processing (`organize_switchboard.py`)
+- Testing infrastructure (`run_tests.py`)
+- File system utilities
 
-Checks off items in Reminders that you completed in Obsidian, then refreshes the local snapshot.
+This hybrid approach maximizes development efficiency and maintainability. See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for detailed architectural decisions.
 
-Steps in Keyboard Maestro:
+## Contributing
 
-1. Create a new Macro (e.g., “Reminders – Sync”).
-2. Add action: “Execute Shell Script”.
-3. Command:
+See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for system design and contribution guidelines.
 
-   ```bash
-   /Users/joi/obs-dailynotes/tools/run_sync.sh
-   ```
+## License
 
-4. Optional: run it at the end of the day or bind to a hotkey.
-
-Result:
-
-- Completed checkboxes in `reminders/reminders.md` are marked done in Apple Reminders.
-- Local cache and agenda files are refreshed.
-
+MIT
