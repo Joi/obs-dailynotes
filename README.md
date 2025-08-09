@@ -193,22 +193,26 @@ This project can mirror Apple Reminders into your Obsidian vault, inject per‑p
 - Requirements: `reminders` CLI (`brew install reminders-cli`). Ensure it’s on PATH (`/opt/homebrew/bin`).
 - Scripts:
   - `npm run people:index` → builds `people.index.json` from person page frontmatter.
+  - `npm run people:import-csv [file.csv]` → imports contacts from CSV file, creating/updating person pages.
   - `npm run reminders:pull` → writes `reminders/reminders_cache.json`, `reminders/reminders.md`, and `reminders/agendas/<Full Name>.md`.
   - `npm run reminders:sync` → completes checked items in `reminders/reminders.md` back to Apple Reminders.
   - Automation scripts: `tools/run_daily.sh`, `tools/run_sync.sh`.
 
-### Person pages and aliases
+### Person pages
 
-Create one markdown file per person (at your vault root or preferred folder). Include frontmatter:
+Person pages are markdown files that represent individuals in your network. They use a standardized frontmatter format for integration with calendar events and reminders.
 
+**File naming convention**: `Firstname Lastname.md` (e.g., `Reid Hoffman.md`)
+
+**Standard frontmatter**:
 ```markdown
 ---
-tags: people                      # recommended to identify person pages
-name: Full Name                   # must match your preferred display name
-aliases: [Nickname, Kanji Name]   # optional; used for matching attendees and lists
-emails: [email@example.com]       # optional; email addresses for this person
+tags: people                      # required to identify as person page
+name: Full Name                   # person's display name
+emails: [email1@example.com, email2@example.com]  # list of email addresses
+aliases: [Nickname, Alternate Name]  # optional alternate names
 reminders:
-  listName: "Full Name"           # the Apple Reminders list to use for this person
+  listName: "Full Name"           # Apple Reminders list name for this person
 ---
 ```
 
@@ -221,10 +225,10 @@ reminders:
 ```
 
 Notes:
-- Pages are auto-detected as person pages if they have: `tags: people`, or a `reminders.listName` field
-- The `personId` field is deprecated but still supported for backwards compatibility
+- Pages are auto-detected as person pages if they have: `tags: people`, `emails` list, or a `reminders.listName` field
+- The `emails` field accepts both single string and array format (always normalized to array internally)
 - You can keep Reminders list names pretty (e.g., just the full name). Matching also supports aliases
-- Our index uses `name`, `aliases`, and `reminders.listName` to match meeting attendees and route agenda items
+- Our index uses `emails`, `name`, `aliases`, and `reminders.listName` to match meeting attendees and route agenda items
 
 ### Daily note rendering
 
@@ -280,6 +284,31 @@ npm run reminders:pull
 
 - Daily update: `/Users/joi/obs-dailynotes/tools/run_daily.sh`
 - Sync back: `/Users/joi/obs-dailynotes/tools/run_sync.sh`
+
+### Importing contacts from CSV
+
+The CSV import tool allows bulk creation/updating of person pages from exported contact lists.
+
+**Usage**:
+```bash
+# Import from default CSV file location
+node tools/importContactsFromCSV.js
+
+# Import from specific CSV file
+node tools/importContactsFromCSV.js /path/to/contacts.csv
+```
+
+**Expected CSV format**:
+- Must include columns: `First Name`, `Email Addresses` or `Primary Email`
+- Optional columns: `Last Name`, `Full Name`
+- Email addresses can be semicolon-separated for multiple emails
+
+**What it does**:
+- Creates new person pages for contacts not in vault
+- Updates existing person pages by adding new email addresses
+- Uses `Firstname Lastname.md` naming format
+- Sanitizes filenames (replaces invalid characters with hyphens)
+- Preserves existing content in person pages (only updates frontmatter)
 
 
 ## Automation with Keyboard Maestro (macOS)
