@@ -29,9 +29,12 @@
     "test:unit": "python run_tests.py unit",
     "test:integration": "python run_tests.py integration",
     "test:coverage": "python run_tests.py coverage",
-    "test:watch": "python run_tests.py watch"
+    "test:watch": "python run_tests.py watch",
+    "test:js": "jest"
   },
   "devDependencies": {
+    "jest": "^30.0.5",
+    "markdownlint-cli": "^0.45.0",
     "prettier": "^3.3.3"
   }
 }
