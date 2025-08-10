@@ -1,0 +1,331 @@
+#!/usr/bin/env node
+/**
+ * Enhanced pullReminders with support for shared lists
+ * Handles both personal reminder lists and shared lists (e.g., "Joi/Daum To Do")
+ */
+
+const fs = require('fs');
+const path = require('path');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+const execFileAsync = promisify(execFile);
+
+const dotenv = require('dotenv');
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
+const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/joi/switchboard/dailynote';
+const vaultRoot = path.resolve(dailyDir, '..');
+const remindersDir = path.join(vaultRoot, 'reminders');
+const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
+
+// Ensure reminders directory exists
+fs.mkdirSync(remindersDir, { recursive: true });
+
+/**
+ * Get all reminder lists from system
+ */
+async function getAllLists() {
+  try {
+    const { stdout } = await execFileAsync('reminders', ['show-lists']);
+    return stdout.split('\n').filter(l => l.trim()).map(l => l.trim());
+  } catch (e) {
+    console.error('Error getting reminder lists:', e.message);
+    return [];
+  }
+}
+
+/**
+ * Get reminders from a specific list
+ */
+async function getRemindersFromList(listName) {
+  try {
+    const { stdout } = await execFileAsync('reminders', ['show', listName, '--format', 'json']);
+    return JSON.parse(stdout);
+  } catch (e) {
+    // List might not exist or be empty
+    return [];
+  }
+}
+
+/**
+ * Load people index with shared list support
+ */
+function loadPeopleIndex() {
+  if (!fs.existsSync(peopleIndexPath)) {
+    console.log('Warning: people.index.json not found. Run: npm run people:index');
+    return {};
+  }
+  
+  const index = JSON.parse(fs.readFileSync(peopleIndexPath, 'utf8'));
+  
+  // Build a map of list names to people
+  const listToPerson = {};
+  
+  for (const [name, info] of Object.entries(index)) {
+    // Map personal list
+    if (info.reminders?.listName) {
+      listToPerson[info.reminders.listName] = {
+        ...info,
+        isShared: false,
+        listType: 'personal'
+      };
+    }
+    
+    // Map shared list
+    if (info.reminders?.sharedListName) {
+      listToPerson[info.reminders.sharedListName] = {
+        ...info,
+        isShared: true,
+        listType: 'shared'
+      };
+    }
+  }
+  
+  return { index, listToPerson };
+}
+
+/**
+ * Main function to pull and organize reminders
+ */
+async function pullReminders() {
+  console.log('Pulling reminders with shared list support...');
+  
+  // Load people index
+  const { index: peopleIndex, listToPerson } = loadPeopleIndex();
+  
+  // Get all lists
+  const allLists = await getAllLists();
+  console.log(`Found ${allLists.length} reminder lists`);
+  
+  // Collect all reminders
+  const allReminders = [];
+  const byPerson = {};
+  const sharedLists = [];
+  
+  for (const listName of allLists) {
+    // Check if this is a shared list
+    const isSharedList = listName.includes('/');
+    
+    // Get reminders from this list
+    const reminders = await getRemindersFromList(listName);
+    if (reminders.length === 0) continue;
+    
+    // Find associated person
+    const personInfo = listToPerson[listName];
+    
+    for (const reminder of reminders) {
+      if (reminder.completed) continue;
+      
+      const reminderData = {
+        id: reminder.externalId || reminder.id,
+        title: reminder.title,
+        list: listName,
+        notes: reminder.notes || '',
+        dueDate: reminder.dueDate,
+        priority: reminder.priority,
+        isShared: isSharedList || personInfo?.isShared || false
+      };
+      
+      allReminders.push(reminderData);
+      
+      // Organize by person
+      if (personInfo) {
+        const personKey = personInfo.name;
+        if (!byPerson[personKey]) {
+          byPerson[personKey] = {
+            name: personInfo.name,
+            pagePath: personInfo.pagePath,
+            items: [],
+            personalList: [],
+            sharedList: [],
+            aliases: personInfo.aliases || []
+          };
+        }
+        
+        if (isSharedList || personInfo.isShared) {
+          byPerson[personKey].sharedList.push(reminderData);
+        } else {
+          byPerson[personKey].personalList.push(reminderData);
+        }
+        byPerson[personKey].items.push(reminderData);
+      }
+    }
+    
+    // Track shared lists
+    if (isSharedList) {
+      sharedLists.push({
+        name: listName,
+        count: reminders.filter(r => !r.completed).length,
+        person: personInfo?.name
+      });
+    }
+  }
+  
+  // Write main reminders file
+  const mainContent = generateMainRemindersContent(allReminders, sharedLists);
+  fs.writeFileSync(path.join(remindersDir, 'reminders.md'), mainContent);
+  
+  // Write inbox file (non-person reminders)
+  const inboxContent = generateInboxContent(allReminders, listToPerson);
+  fs.writeFileSync(path.join(remindersDir, 'reminders_inbox.md'), inboxContent);
+  
+  // Write person-specific agenda files
+  const agendasDir = path.join(remindersDir, 'agendas');
+  fs.mkdirSync(agendasDir, { recursive: true });
+  
+  for (const [personName, data] of Object.entries(byPerson)) {
+    const agendaContent = generatePersonAgenda(personName, data);
+    const fileName = personName.replace(/[\/\\:]/g, '-') + '.md';
+    fs.writeFileSync(path.join(agendasDir, fileName), agendaContent);
+    
+    // Also update the person's page if it exists
+    const personPagePath = path.join(vaultRoot, data.pagePath);
+    if (fs.existsSync(personPagePath)) {
+      updatePersonPageAgenda(personPagePath, data);
+    }
+  }
+  
+  // Save cache with metadata
+  const cache = {
+    timestamp: new Date().toISOString(),
+    totalReminders: allReminders.length,
+    sharedLists: sharedLists,
+    byPerson: Object.keys(byPerson).length,
+    lists: allLists
+  };
+  fs.writeFileSync(path.join(remindersDir, 'reminders_cache.json'), JSON.stringify(cache, null, 2));
+  
+  console.log(`✓ Processed ${allReminders.length} reminders from ${allLists.length} lists`);
+  console.log(`✓ Found ${sharedLists.length} shared lists`);
+  console.log(`✓ Generated agendas for ${Object.keys(byPerson).length} people`);
+}
+
+/**
+ * Generate main reminders content with shared list indicators
+ */
+function generateMainRemindersContent(reminders, sharedLists) {
+  let content = `# All Reminders\n`;
+  content += `*Generated: ${new Date().toLocaleString()}*\n\n`;
+  
+  if (sharedLists.length > 0) {
+    content += `## Shared Lists\n`;
+    for (const list of sharedLists) {
+      content += `- **${list.name}**: ${list.count} items`;
+      if (list.person) content += ` (with [[${list.person}]])`;
+      content += `\n`;
+    }
+    content += `\n`;
+  }
+  
+  content += `## Tasks\n\n`;
+  
+  // Group by list
+  const byList = {};
+  for (const r of reminders) {
+    if (!byList[r.list]) byList[r.list] = [];
+    byList[r.list].push(r);
+  }
+  
+  for (const [listName, items] of Object.entries(byList)) {
+    const isShared = listName.includes('/');
+    content += `### ${listName}${isShared ? ' 🔄' : ''}\n`;
+    
+    for (const item of items) {
+      content += `- [ ] ${item.title} (${listName}) <!--reminders-id:${item.id}-->\n`;
+    }
+    content += `\n`;
+  }
+  
+  return content;
+}
+
+/**
+ * Generate inbox content (non-person reminders)
+ */
+function generateInboxContent(reminders, listToPerson) {
+  const inbox = reminders.filter(r => !listToPerson[r.list]);
+  
+  let content = `# Reminders Inbox\n`;
+  content += `*Items not associated with specific people*\n\n`;
+  
+  for (const item of inbox) {
+    content += `- [ ] ${item.title} (${item.list}) <!--reminders-id:${item.id}-->\n`;
+  }
+  
+  return content;
+}
+
+/**
+ * Generate person-specific agenda with shared list indicators
+ */
+function generatePersonAgenda(personName, data) {
+  let content = `# Agenda for [[${personName}]]\n`;
+  content += `*Generated: ${new Date().toLocaleString()}*\n\n`;
+  
+  if (data.sharedList.length > 0) {
+    content += `## Shared Tasks 🔄\n`;
+    content += `*From shared reminder list*\n\n`;
+    for (const item of data.sharedList) {
+      content += `- [ ] ${item.title} <!--reminders-id:${item.id}-->\n`;
+    }
+    content += `\n`;
+  }
+  
+  if (data.personalList.length > 0) {
+    content += `## Personal Tasks\n`;
+    for (const item of data.personalList) {
+      content += `- [ ] ${item.title} <!--reminders-id:${item.id}-->\n`;
+    }
+    content += `\n`;
+  }
+  
+  return content;
+}
+
+/**
+ * Update person page with agenda including shared list indicator
+ */
+function updatePersonPageAgenda(pagePath, data) {
+  let content = fs.readFileSync(pagePath, 'utf8');
+  
+  // Generate new agenda section
+  let agendaSection = '\n<!-- BEGIN REMINDERS AGENDA -->\n';
+  agendaSection += '## Agenda (from Apple Reminders)\n\n';
+  
+  if (data.sharedList.length > 0) {
+    agendaSection += '### Shared Tasks 🔄\n';
+    for (const item of data.sharedList) {
+      agendaSection += `- [ ] ${item.title} (${item.list}) <!--reminders-id:${item.id} list:${item.list} person:${data.name}-->\n`;
+    }
+    agendaSection += '\n';
+  }
+  
+  if (data.personalList.length > 0) {
+    agendaSection += '### Personal Tasks\n';
+    for (const item of data.personalList) {
+      agendaSection += `- [ ] ${item.title} (${item.list}) <!--reminders-id:${item.id} list:${item.list} person:${data.name}-->\n`;
+    }
+  }
+  
+  agendaSection += '<!-- END REMINDERS AGENDA -->\n';
+  
+  // Replace existing agenda or append
+  if (content.includes('<!-- BEGIN REMINDERS AGENDA -->')) {
+    const start = content.indexOf('<!-- BEGIN REMINDERS AGENDA -->');
+    const end = content.indexOf('<!-- END REMINDERS AGENDA -->');
+    if (end > start) {
+      content = content.substring(0, start) + agendaSection + content.substring(end + 28);
+    }
+  } else {
+    content += agendaSection;
+  }
+  
+  fs.writeFileSync(pagePath, content);
+}
+
+// Run if called directly
+if (require.main === module) {
+  pullReminders().catch(console.error);
+}
+
+module.exports = { pullReminders };

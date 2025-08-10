@@ -10,7 +10,8 @@
   "scripts": {
     "daily": "node index.js",
     "reminders:generate": "node tools/generateReminders.js",
-    "reminders:pull": "node tools/pullReminders.js",
+    "reminders:pull": "node tools/pullRemindersWithShared.js",
+    "reminders:pull-old": "node tools/pullReminders.js",
     "reminders:sync": "node tools/syncReminders.js",
     "reminders:sync-full": "node tools/syncRemindersEnhanced.js",
     "people:index": "node tools/buildPeopleIndex.js",
