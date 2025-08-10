@@ -20,6 +20,7 @@
     "people:fetch-cal": "node tools/fetchCalendarContext.js",
     "people:fetch-web": "node tools/fetchPublicSnippets.js",
     "people:enrich-llm": "node tools/enrichFromLLM.js",
+    "people:normalize": "node tools/normalizePersonPage.js",
     "people:tag-lists": "node tools/tagPeopleWithLists.js",
     "people:generate-from-dailies": "node tools/generatePeopleFromDailyNotes.js",
     "people:import-csv": "node tools/importContactsFromCSV.js",

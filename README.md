@@ -372,6 +372,21 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 - `npm run people:import-csv [file]` - Import contacts
 - `npm run people:generate` - Extract from daily notes
 - `node tools/mcpClient.js` - Call MCP servers (Gmail/Calendar) to cache per-person context
+  - Example (standalone Gmail MCP):
+    - Terminal 1 (server):
+      ```bash
+      cd /Users/<Owner>/obs-dailynotes
+      GMAIL_CREDS_PATH=~/.gcalendar/credentials.json \
+      GMAIL_TOKEN_PATH=~/.gmail/token.json \
+      node tools/mcpServers/gmailServer.js
+      ```
+    - Terminal 2 (client call):
+      ```bash
+      cd /Users/<Owner>/obs-dailynotes
+      PERSON_EMAIL="user@example.com" \
+      MCP_GMAIL_CMD="node" MCP_GMAIL_ARGS="tools/mcpServers/gmailServer.js" \
+      node tools/mcpClient.js
+      ```
 
 ### Reminders Sync
 
