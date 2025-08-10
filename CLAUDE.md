@@ -106,6 +106,15 @@ Daily notes are created with filename pattern: `YYYY-MM-DD.md` and include:
 - Non-VC meetings display physical location instead of call link
 - The script is called in Keyboard Maestro so make sure it executes silently from running dailynotejs.sh
 
+### New Memories (keep this section current)
+
+- JS testing: project includes Jest tests under `tests/js/` and a markdownlint test to ensure generated MD is tidy. Run with `npm run test:js`.
+- Spacing fix: daily note writer ensures a single blank line between `MEETINGS` and `REMINDERS` sections.
+- Contexts deprecated: GTD no longer uses `@contexts`; docs/code updated accordingly.
+- MCP client: `tools/mcpClient.js` implements a minimal JSON-RPC client for MCP servers (Gmail/Calendar) and caches per-person context under `data/people_cache/`.
+- Calendar-direct context: `tools/fetchCalendarContext.js` reuses existing Google OAuth token to fetch events by attendee and stores in the same cache.
+- LLM enrichment: `tools/enrichFromLLM.js` calls OpenAI (GPT‑5 by default, via `OPENAI_API_KEY`) to synthesize public frontmatter and private notes. Private notes go to `~/switchboard/Private/People/<slug>.md`. Respects `#no-enrich` convention (to be implemented in enrich scripts as needed).
+
 ## GTD System
 
 The project includes a comprehensive GTD (Getting Things Done) implementation:
@@ -113,8 +122,8 @@ The project includes a comprehensive GTD (Getting Things Done) implementation:
 ### Key Components
 
 1. **GTD Processor** (`tools/processGTD.js`)
-   - Parses Apple Reminders for GTD tags and contexts
-   - Categorizes tasks by urgency, context, project, and state
+   - Parses Apple Reminders for GTD tags (contexts deprecated)
+   - Categorizes tasks by urgency, project, and state
    - Generates organized markdown files in `GTD/` folder
 
 2. **GTD Tags**
@@ -122,15 +131,15 @@ The project includes a comprehensive GTD (Getting Things Done) implementation:
    - States: `#inbox`, `#next`, `#waiting`, `#someday`
    - Email: `#email`, `#email-reply`, `#email-waiting`
    - Projects: `#project:name`
-   - Contexts: `@computer`, `@home`, `@office`, `@calls`, `@errands`, `@anywhere`, `@online`
+   - Contexts: deprecated (do not use)
 
 3. **Generated Files**
    - `GTD/dashboard.md` - Main GTD overview
-   - `GTD/next-actions.md` - Tasks by context
+   - `GTD/next-actions.md` - Next actions list
    - `GTD/email-tasks.md` - Email-specific tasks
    - `GTD/waiting-for.md` - Delegated items
    - `GTD/scheduled.md` - Tasks with due dates
-   - Context and project-specific files
+   - Optional project-specific files
 
 4. **Workflows**
    - Morning: `npm run gtd:morning` - Pull reminders, process GTD, generate priorities
