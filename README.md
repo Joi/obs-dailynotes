@@ -222,11 +222,24 @@ npm run gtd:morning
 ```bash
 npm run gtd:sync
 ```
-- Syncs completed tasks back to Reminders
-- Pulls latest changes
+- **Full two-way sync** with Apple Reminders:
+  - Syncs completed tasks back to Reminders
+  - Syncs edited task text (changes you make in Obsidian)
+  - Creates new reminders from tasks added in Obsidian
+  - Auto-detects new tasks in meeting agendas
+- Pulls latest changes from Reminders
 - Refreshes all task views
+- Adds reminder IDs to new tasks automatically
 
 Run this whenever you want to sync between Obsidian and Apple Reminders - after making changes in either system.
+
+**New Task Detection**: The sync will find tasks in meeting sections even without IDs:
+```markdown
+### Team Meeting #mtg
+- Agenda for [[John Smith]]:
+  - [ ] Review proposal   ← Will create in "John Smith" list
+  - [ ] Send follow-up    ← Auto-assigned to John's list
+```
 
 ### Smart Capture Examples
 

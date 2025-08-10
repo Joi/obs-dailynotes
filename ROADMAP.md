@@ -6,7 +6,8 @@
 - [x] Remove @ context system (redundant, conflicts with Obsidian extensions)
 - [x] Rename 'evening' sync to just 'sync' for flexible timing
 - [x] Fix missing 'daily' npm script
-- [ ] Enable full editing of reminders in Obsidian (not just completion)
+- [x] Enable full editing of reminders in Obsidian (not just completion)
+- [x] Detect and sync new tasks created in daily note meeting sections
 - [ ] Implement smarter tag detection with fuzzy matching
   - Auto-detect "email", "mail", "reply" → #email
   - Auto-detect "call", "phone" → #call

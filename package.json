@@ -12,12 +12,18 @@
     "reminders:generate": "node tools/generateReminders.js",
     "reminders:pull": "node tools/pullReminders.js",
     "reminders:sync": "node tools/syncReminders.js",
+    "reminders:sync-full": "node tools/syncRemindersEnhanced.js",
     "people:index": "node tools/buildPeopleIndex.js",
     "people:generate-from-dailies": "node tools/generatePeopleFromDailyNotes.js",
     "people:import-csv": "node tools/importContactsFromCSV.js",
     "gtd:process": "node tools/processGTD.js",
     "gtd:morning": "npm run reminders:pull && npm run gtd:process && node tools/generateTodayTodos.js",
-    "gtd:sync": "npm run reminders:sync && npm run reminders:pull && npm run gtd:process",
-    "gtd:evening": "npm run gtd:sync"
+    "gtd:sync": "npm run reminders:sync-full && npm run reminders:pull && npm run gtd:process",
+    "gtd:evening": "npm run gtd:sync",
+    "test": "python run_tests.py all",
+    "test:unit": "python run_tests.py unit",
+    "test:integration": "python run_tests.py integration",
+    "test:coverage": "python run_tests.py coverage",
+    "test:watch": "python run_tests.py watch"
   }
 }
