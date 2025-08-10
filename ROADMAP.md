@@ -2,6 +2,19 @@
 
 ## Immediate Tasks
 
+### GTD System Improvements
+- [x] Remove @ context system (redundant, conflicts with Obsidian extensions)
+- [x] Rename 'evening' sync to just 'sync' for flexible timing
+- [x] Fix missing 'daily' npm script
+- [ ] Enable full editing of reminders in Obsidian (not just completion)
+- [ ] Implement smarter tag detection with fuzzy matching
+  - Auto-detect "email", "mail", "reply" → #email
+  - Auto-detect "call", "phone" → #call
+- [ ] Add natural language date parsing
+  - "tomorrow", "next Friday", "in 2 weeks"
+- [ ] Auto-detect and link people in task titles
+  - "Call John Smith" → links to [[John Smith]]
+
 ### Privacy & Multi-Sync Strategy
 - [ ] Implement folder structure with selective sync:
   - **`_private/`**: Personal only (Obsidian Sync only, never GitHub)

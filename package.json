@@ -8,6 +8,7 @@
     "googleapis": "^66.0.0"
   },
   "scripts": {
+    "daily": "node index.js",
     "reminders:generate": "node tools/generateReminders.js",
     "reminders:pull": "node tools/pullReminders.js",
     "reminders:sync": "node tools/syncReminders.js",
@@ -16,6 +17,7 @@
     "people:import-csv": "node tools/importContactsFromCSV.js",
     "gtd:process": "node tools/processGTD.js",
     "gtd:morning": "npm run reminders:pull && npm run gtd:process && node tools/generateTodayTodos.js",
-    "gtd:evening": "npm run reminders:sync && npm run reminders:pull && npm run gtd:process"
+    "gtd:sync": "npm run reminders:sync && npm run reminders:pull && npm run gtd:process",
+    "gtd:evening": "npm run gtd:sync"
   }
 }
