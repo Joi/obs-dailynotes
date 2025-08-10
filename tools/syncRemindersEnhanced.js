@@ -157,8 +157,9 @@ async function findReminderById(list, id) {
     
     for (let i = 0; i < reminders.length; i++) {
       const r = reminders[i];
-      // Check if ID matches in notes field
-      if (r.notes && r.notes.includes(`ID: ${id}`)) {
+      // Check if ID matches externalId or in notes field
+      if ((r.externalId && r.externalId === id) || 
+          (r.notes && r.notes.includes(`ID: ${id}`))) {
         return { index: i, reminder: r };
       }
     }
@@ -169,14 +170,33 @@ async function findReminderById(list, id) {
 }
 
 /**
- * Complete a reminder by index
+ * Complete a reminder by ID
  */
-async function completeReminder(list, index) {
+async function completeReminder(list, id) {
   try {
-    await execFileAsync('reminders', ['complete', list, String(index + 1)]);
+    // Get list of non-completed reminders to find the correct index
+    const { stdout } = await execFileAsync('reminders', ['show', list, '--format', 'json']);
+    const reminders = JSON.parse(stdout);
+    
+    // Find the task by ID in the non-completed list
+    let targetIndex = -1;
+    for (let i = 0; i < reminders.length; i++) {
+      if (reminders[i].externalId === id) {
+        targetIndex = i;
+        break;
+      }
+    }
+    
+    if (targetIndex === -1) {
+      console.error(`Task with ID ${id} not found in non-completed list ${list}`);
+      return false;
+    }
+    
+    // Complete using 0-based index (reminders CLI seems to use 0-based despite docs)
+    await execFileAsync('reminders', ['complete', list, String(targetIndex)]);
     return true;
   } catch (e) {
-    console.error(`Failed to complete reminder in ${list} at index ${index}:`, e.message);
+    console.error(`Failed to complete reminder in ${list} with ID ${id}:`, e.message);
     return false;
   }
 }
@@ -256,6 +276,20 @@ async function syncReminders() {
     getTodayDailyNotePath()
   ];
   
+  // Also check person pages with reminders
+  const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
+  if (fs.existsSync(peopleIndexPath)) {
+    const peopleIndex = JSON.parse(fs.readFileSync(peopleIndexPath, 'utf8'));
+    for (const [name, info] of Object.entries(peopleIndex)) {
+      if (info.reminders && info.pagePath) {
+        const personPath = path.join(vaultRoot, info.pagePath);
+        if (fs.existsSync(personPath)) {
+          sources.push(personPath);
+        }
+      }
+    }
+  }
+  
   for (const source of sources) {
     if (!fs.existsSync(source)) continue;
     
@@ -325,14 +359,15 @@ async function syncReminders() {
           const { index, reminder } = found;
           const stateTask = syncState.tasks[stateKey];
           
-          // Check if completed
-          if (task.done && !reminder.completed) {
-            console.log(`Completing: "${task.title}"`);
-            await completeReminder(task.list, index);
+          // Check if completed (handle both completed and isCompleted)
+          const isReminderCompleted = reminder.completed || reminder.isCompleted;
+          if (task.done && !isReminderCompleted) {
+            console.log(`Completing: "${task.title}" in list "${task.list}"`);
+            await completeReminder(task.list, task.id);
           }
           
           // Check if text changed (compare with last known state)
-          if (stateTask && stateTask.title !== task.title && !reminder.completed) {
+          if (stateTask && stateTask.title !== task.title && !isReminderCompleted) {
             console.log(`Updating: "${stateTask.title}" → "${task.title}"`);
             await editReminder(task.list, index, task.title);
           }
@@ -341,7 +376,7 @@ async function syncReminders() {
           syncState.tasks[stateKey] = {
             title: task.title,
             list: task.list,
-            done: task.done || reminder.completed
+            done: task.done || isReminderCompleted
           };
         }
       }

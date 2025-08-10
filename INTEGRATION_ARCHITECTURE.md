@@ -122,19 +122,22 @@ reminders:
    - The sync system preserves these tags in Obsidian
    - Can create filtered views using Obsidian's search/query features
 
-### Multi-List Person
-A person can have multiple contexts with different reminder lists:
+### Shared Lists
+People can have both personal and shared Apple Reminder lists for collaboration:
 ```markdown
 ---
-tags: [people]
-name: Jane Smith
-emails: [jane@company.com, jane@personal.com]
-aliases: [Jane, J. Smith]
+tags: [people, list]
+name: Daum Kim
+emails: [daum@example.com]
+aliases: [Daum]
 reminders:
-  listName: "Jane Smith - Work"
-  personalListName: "Jane Smith - Personal"  # Custom field
+  listName: "Daum Kim"              # Personal list
+  sharedListName: "<Owner>/Daum To Do"  # Shared collaborative list
+  isShared: true                    # Marks this person has shared lists
 ---
 ```
+
+Shared lists allow multiple people to collaborate on tasks. The sync system handles both personal and shared lists, maintaining proper list attribution for two-way sync.
 
 ## Key Algorithms
 
@@ -191,7 +194,30 @@ The system integrates with Obsidian's Templater plugin to enable instant person 
 
 This creates a seamless workflow where person pages are created on-the-fly during meeting notes, with contact information automatically captured.
 
-## Bulk Import Tools
+## Bulk Import and Management Tools
+
+### Person Page Enrichment
+The `enrichPersonPage.js` tool transforms basic person pages into properly structured documents:
+
+```bash
+npm run people:enrich "Person Name.md" [--create-list] [--shared]
+```
+
+**Features**:
+- Extracts emails from content and moves to frontmatter
+- Adds proper structure (Overview, Background, Contact, Notes)
+- Auto-creates Apple Reminder lists if `#list` tag is present
+- Supports both personal and shared list creation
+- Updates people index automatically
+
+### List Tag Management
+The `tagPeopleWithLists.js` tool finds all people with Apple Reminder lists and tags them:
+
+```bash
+npm run people:tag-lists
+```
+
+This enables the fast sync mode by marking only people who actually have lists with the `#list` tag.
 
 ### CSV Contact Import
 The system includes a tool for bulk importing contacts from CSV exports (e.g., from Outlook, Google Contacts):
@@ -236,6 +262,8 @@ node tools/importContactsFromCSV.js /path/to/contacts.csv
 - People index is cached and only rebuilt when person pages change
 - Reminders cache has 10-minute TTL to avoid API rate limits
 - Batch operations for marking multiple tasks complete
+- **Fast Sync Mode**: Uses `#list` tag to only check people with Apple Reminder lists (19 people vs 800+)
+- **Optimized Index**: Only includes reminders config for people who actually have lists
 
 ### Error Handling
 - Missing person pages don't break the system (graceful fallback)
