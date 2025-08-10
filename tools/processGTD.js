@@ -15,6 +15,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const DAILY_NOTE_PATH = process.env.DAILY_NOTE_PATH?.replace('~', process.env.HOME) || '/Users/joi/switchboard/dailynote';
 const GTD_PATH = path.join(DAILY_NOTE_PATH, '..', 'GTD');
 const REMINDERS_PATH = path.join(DAILY_NOTE_PATH, '..', 'reminders');
+const VAULT_ROOT = path.join(DAILY_NOTE_PATH, '..');
 const REMINDERS_CLI = '/opt/homebrew/bin/reminders';
 
 // GTD Context definitions
@@ -74,6 +75,39 @@ function parseNaturalLanguageDue(input) {
   const due = new Date(base);
   due.setDate(base.getDate() + deltaDays);
   return due.toISOString();
+}
+
+/**
+ * Load people index from vault if present
+ */
+function loadPeopleIndex() {
+  try {
+    const peopleIndexPath = path.join(VAULT_ROOT, 'people.index.json');
+    if (fs.existsSync(peopleIndexPath)) {
+      return JSON.parse(fs.readFileSync(peopleIndexPath, 'utf8'));
+    }
+  } catch (_) {}
+  return {};
+}
+
+/**
+ * Auto-link person names/aliases in a task title using [[wikilinks]]
+ */
+function linkPeopleInTitle(originalTitle, peopleIndex) {
+  let title = originalTitle;
+  if (!peopleIndex || typeof peopleIndex !== 'object') return title;
+  // Build patterns for names and aliases
+  for (const [personName, info] of Object.entries(peopleIndex)) {
+    const variants = [personName, ...((info.aliases && Array.isArray(info.aliases)) ? info.aliases : [])]
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length); // link longer names first
+    for (const variant of variants) {
+      const escaped = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`(^|[^\[])(\\b${escaped}\\b)(?!\])`, 'g');
+      title = title.replace(re, (m, p1, p2) => `${p1}[[${personName}]]`);
+    }
+  }
+  return title;
 }
 
 /**
@@ -177,7 +211,7 @@ function loadReminders() {
 /**
  * Group reminders by GTD categories
  */
-function categorizeReminders(reminders) {
+function categorizeReminders(reminders, peopleIndexOptional) {
   const categories = {
     inbox: [],
     nextActions: [],
@@ -199,12 +233,14 @@ function categorizeReminders(reminders) {
     categories.byContext[context] = [];
   });
 
+  const peopleIndex = peopleIndexOptional || loadPeopleIndex();
+
   reminders.forEach(reminder => {
     if (reminder.completed) return;
 
     const elements = parseGTDElements(reminder.name);
     const task = {
-      title: elements.cleanTitle,
+      title: linkPeopleInTitle(elements.cleanTitle, peopleIndex),
       originalTitle: reminder.name,
       id: reminder.id,
       dueDate: reminder.dueDate || parseNaturalLanguageDue(reminder.name),
