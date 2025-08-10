@@ -371,6 +371,7 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 - `npm run people:index` - Build person index
 - `npm run people:import-csv [file]` - Import contacts
 - `npm run people:generate` - Extract from daily notes
+- `node tools/mcpClient.js` - Call MCP servers (Gmail/Calendar) to cache per-person context
 
 ### Reminders Sync
 
