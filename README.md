@@ -9,11 +9,12 @@ This codebase is under active development with frequent refactoring and restruct
 ## What This Does
 
 This toolkit automatically:
+
 - Pulls your Google Calendar events into daily markdown notes
 - Syncs Apple Reminders as GTD-organized tasks
 - Links meeting attendees to person pages with contact information
 - Generates agenda items for each person you're meeting
-- Creates task dashboards organized by context and project
+- Creates task dashboards organized by project and status
 
 All data is stored as plain Markdown files in your Obsidian vault, giving you full control over your information.
 
@@ -22,6 +23,7 @@ All data is stored as plain Markdown files in your Obsidian vault, giving you fu
 [Obsidian](https://obsidian.md) is a note-taking application that works with local Markdown files. It features bidirectional linking, graph visualization, and extensive customization through plugins. Your data stays on your computer as plain text files.
 
 To get started:
+
 1. Download Obsidian from [obsidian.md](https://obsidian.md)
 2. Create a vault (a folder on your computer)
 3. Configure this toolkit to point to your vault
@@ -29,18 +31,21 @@ To get started:
 ## Why Markdown
 
 Markdown is a plain text format that:
+
 - Works in any text editor
 - Tracks well in Git
 - Will be readable decades from now
 - Converts easily to HTML, PDF, or other formats
 
 Example:
+
 ```markdown
 # Meeting Notes
+
 - [[John Smith]], [[Sarah Chen]]
-- [ ] Send proposal #email @computer
+- [ ] Send proposal #email
 - [ ] Review budget #task
-```
+```text
 
 ## Architecture
 
@@ -55,6 +60,7 @@ See [ROADMAP.md](ROADMAP.md) for planned features, improvements, and sync strate
 ## Core Features
 
 ### Daily Notes Generation
+
 - Fetches and formats Google Calendar events into daily notes
 - Parses meeting details (Google Meet, Zoom links, locations)
 - Creates markdown-formatted notes with navigation links
@@ -62,14 +68,16 @@ See [ROADMAP.md](ROADMAP.md) for planned features, improvements, and sync strate
 - Injects per-person agenda items from Apple Reminders
 
 ### GTD Processing System
-- Full GTD implementation with contexts and projects
+
+- Full GTD implementation centered on projects and statuses (contexts deprecated)
 - Smart parsing of tags and priorities from reminder titles
-- Generates organized task views by context, project, and status
+- Generates organized task views by project and status
 - Two-way sync between Obsidian and Apple Reminders
 - Comprehensive dashboard with all GTD categories
 
 **Why Apple Reminders?**
 Apple Reminders serves as the "ground truth" for tasks because it:
+
 - **Shares with others** - Create shared lists with family, teammates, or assistants
 - **Syncs across devices** - iPhone, iPad, Mac, Apple Watch all stay in sync
 - **Works with Siri** - Capture tasks hands-free while driving or walking
@@ -79,6 +87,7 @@ Apple Reminders serves as the "ground truth" for tasks because it:
 This creates a reliable, shared task system where Obsidian provides the thinking/linking layer while Apple Reminders handles the operational layer.
 
 ### Person Page Management
+
 - Standardized person page format with frontmatter
 - Email-based linking to calendar attendees
 - Automatic agenda generation for meetings
@@ -90,6 +99,7 @@ This creates a reliable, shared task system where Obsidian provides the thinking
 ### About Package Management
 
 This project follows a **Homebrew-first** approach on macOS. We prefer Homebrew for system tools and utilities because it:
+
 - Manages dependencies automatically
 - Keeps tools updated easily with `brew upgrade`
 - Avoids Python/Node version conflicts
@@ -99,6 +109,7 @@ This project follows a **Homebrew-first** approach on macOS. We prefer Homebrew 
 [Homebrew](https://brew.sh) is the "missing package manager for macOS" - it installs command-line tools and applications that Apple doesn't include by default. Think of it like an app store for developer tools.
 
 To install Homebrew (if you don't have it):
+
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
@@ -106,6 +117,7 @@ To install Homebrew (if you don't have it):
 ### Prerequisites
 
 1. **Install system tools via Homebrew:**
+
 ```bash
 # Install Node.js (for the main application)
 brew install node
@@ -118,7 +130,8 @@ brew install python@3.12
 brew install pytest
 ```
 
-2. **Required access:**
+1. **Required access:**
+
 - Google Calendar API credentials
 - macOS with Apple Reminders
 - Obsidian vault configured
@@ -126,19 +139,22 @@ brew install pytest
 ### Setup
 
 1. **Clone the repository:**
+
 ```bash
 git clone https://github.com/Joi/obs-dailynotes
 cd obs-dailynotes
 ```
 
-2. **Install JavaScript dependencies (using npm):**
+1. **Install JavaScript dependencies (using npm):**
+
 ```bash
 # npm (Node Package Manager) installs JavaScript libraries locally in node_modules/
 # This creates a package-lock.json to ensure everyone gets the same versions
 npm install
 ```
 
-3. **For Python testing (optional - only if you're developing):**
+1. **For Python testing (optional - only if you're developing):**
+
 ```bash
 # Create a virtual environment to isolate Python dependencies
 python3 -m venv venv
@@ -158,7 +174,8 @@ deactivate
 **Why virtual environments?**
 Virtual environments (`venv`) create isolated Python installations for each project. This prevents conflicts when different projects need different library versions. Always use `venv` for Python development - it's like having a separate, clean Python install just for this project.
 
-4. **Configure environment (.env):**
+1. **Configure environment (.env):**
+
 ```env
 # Google Calendar OAuth
 GCAL_TOKEN_PATH=~/.gcalendar/token.json
@@ -171,15 +188,16 @@ DAILY_NOTE_PATH=/path/to/your/Obsidian/vault/dailynote
 EVENTS_FILTER=Lunch,Focus Time
 ```
 
-5. Optionally set `REMINDERS_MOCK_FILE` during testing to point `pullRemindersWithShared` at a mock JSON file.
+1. Optionally set `REMINDERS_MOCK_FILE` during testing to point `pullRemindersWithShared` at a mock JSON file.
 
-6. **Set up Google Calendar API:**
+2. **Set up Google Calendar API:**
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Create project and enable Calendar API
    - Create OAuth2 credentials (Desktop app)
    - Download JSON to `GCAL_CREDS_PATH`
 
-6. **Copy and customize config:**
+3. **Copy and customize config:**
+
 ```bash
 cp config.example.json config.json
 ```
@@ -187,16 +205,19 @@ cp config.example.json config.json
 ### Package Management Best Practices
 
 **Hierarchy of package managers (prefer in this order):**
+
 1. **Homebrew** - For system tools and utilities
 2. **npm** - For JavaScript packages (always use package.json)
 3. **pip** - For Python packages (always use venv)
 
 **When to use each:**
+
 - **Homebrew**: Command-line tools, system utilities, language runtimes
 - **npm**: JavaScript libraries specific to this project
 - **pip + venv**: Python libraries for testing/development only
 
 **Keeping dependencies updated:**
+
 ```bash
 # Update Homebrew packages
 brew update && brew upgrade
@@ -212,18 +233,22 @@ pip install --upgrade -r requirements-test.txt
 ## GTD Workflow
 
 ### Morning Routine (5 minutes)
+
 ```bash
 npm run gtd:morning
 ```
+
 - Pulls latest from Apple Reminders
 - Processes GTD tags
 - Generates today's priorities
 - Creates/updates GTD dashboard
 
 ### Sync Tasks with Reminders
+
 ```bash
 npm run gtd:sync
 ```
+
 - **Full two-way sync** with Apple Reminders:
   - Syncs completed tasks back to Reminders
   - Syncs edited task text (changes you make in Obsidian)
@@ -236,17 +261,20 @@ npm run gtd:sync
 Run this whenever you want to sync between Obsidian and Apple Reminders - after making changes in either system.
 
 **New Task Detection**: The sync will find tasks in meeting sections even without IDs:
+
 ```markdown
 ### Team Meeting #mtg
+
 - Agenda for [[John Smith]]:
-  - [ ] Review proposal   ← Will create in "John Smith" list
-  - [ ] Send follow-up    ← Auto-assigned to John's list
+  - [ ] Review proposal ← Will create in "John Smith" list
+  - [ ] Send follow-up ← Auto-assigned to John's list
 ```
 
 ### Smart Capture Examples
 
 Via Siri or manual entry:
-```
+
+```text
 "Email Sarah about budget #email !!"
 → Urgent email task
 
@@ -260,10 +288,12 @@ Via Siri or manual entry:
 ### GTD Tags Reference
 
 **Priority Markers:**
+
 - `!!` - Urgent (do today)
 - `!` - High priority (this week)
 
 **GTD Categories:**
+
 - `#inbox` - Unprocessed items
 - `#next` - Next actions
 - `#waiting` - Waiting for someone
@@ -271,6 +301,7 @@ Via Siri or manual entry:
 - `#project:name` - Project-specific
 
 **Task Types:**
+
 - `#email` - Email task
 - `#email-reply` - Needs reply
 - `#email-waiting` - Sent, awaiting response
@@ -280,13 +311,16 @@ Via Siri or manual entry:
 ## Generated Files
 
 ### Daily Notes (`YYYY-MM-DD.md`)
+
 ```markdown
 date: 2024-01-15
 
 [[2024-01-14]] << Previous | Next >> [[2024-01-16]]
 
 ## Meetings
+
 ### 🎥 Team Standup #mtg
+
 - 10:00 - 10:30 ([[John Smith]], [[Sarah Chen]])
 - [Meet Link](https://meet.google.com/...)
 - Agenda for [[John Smith]]:
@@ -295,17 +329,18 @@ date: 2024-01-15
 ```
 
 ### GTD Views (`GTD/`)
+
 - `dashboard.md` - Complete GTD overview
-- `next-actions.md` - Actions by context
+- `next-actions.md` - Next actions list
 - `email-tasks.md` - Email tasks organized
 - `waiting-for.md` - Items by person
 - `scheduled.md` - Tasks with due dates
-- `context-*.md` - Per-context lists
 - `project-*.md` - Per-project views
 
 ## Testing
 
 Run the comprehensive test suite:
+
 ```bash
 # All tests
 npm test
@@ -325,22 +360,26 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 ## NPM Scripts
 
 ### Daily Operations
+
 - `npm run daily` - Generate daily note with calendar events
 - `npm run gtd:morning` - Morning GTD routine (pull + process)
 - `npm run gtd:sync` - Sync changes between Obsidian and Reminders
 - `npm run gtd:process` - Process GTD tags only
 
 ### People Management
+
 - `npm run people:index` - Build person index
 - `npm run people:import-csv [file]` - Import contacts
 - `npm run people:generate` - Extract from daily notes
 
 ### Reminders Sync
+
 - `npm run reminders:pull` - Fetch from Apple Reminders
 - `npm run reminders:sync` - Sync completed tasks back
 - `npm run reminders:generate` - Create agenda files
 
 ### Testing & Maintenance
+
 - `npm test` - Run all tests
 - `npm run test:watch` - Watch mode
 - `npm run fix:links` - Fix broken wiki links
@@ -348,7 +387,7 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 
 ## File Structure
 
-```
+```text
 obs-dailynotes/
 ├── index.js                      # Main daily note generator
 ├── lib/                          # Core libraries
@@ -377,11 +416,13 @@ obs-dailynotes/
 Create macros for one-click operations:
 
 1. **Daily Update Macro** - Pull reminders and generate note:
+
 ```bash
 /Users/joi/obs-dailynotes/tools/run_daily.sh
 ```
 
-2. **Sync Macro** - Complete tasks and refresh:
+1. **Sync Macro** - Complete tasks and refresh:
+
 ```bash
 /Users/joi/obs-dailynotes/tools/run_sync.sh
 ```
@@ -389,6 +430,7 @@ Create macros for one-click operations:
 ### Shell Scripts
 
 The `tools/` directory contains automation scripts:
+
 - `gtd_morning.sh` - Complete morning routine
 - `gtd_evening.sh` - Evening sync and refresh
 - `run_daily.sh` - Full daily note generation
@@ -399,18 +441,22 @@ The `tools/` directory contains automation scripts:
 ### Common Issues
 
 **Google Calendar Auth:**
+
 - Delete token at `GCAL_TOKEN_PATH` and re-authenticate
 - Check timezone settings in config.json
 
 **Reminders Sync:**
+
 - Ensure reminders-cli is in PATH (`/opt/homebrew/bin`)
 - Check Apple Reminders permissions in System Settings
 
 **Missing Events:**
+
 - Verify `EVENTS_FILTER` in .env
 - Check calendar permissions in Google
 
 **Person Page Links:**
+
 - Run `npm run people:index` to rebuild index
 - Verify email addresses in frontmatter
 
@@ -436,26 +482,31 @@ reminders:
 1. **Create Apple Reminders list**: Name it "Taro Chiba" and add agenda items
 2. **Generate daily note**: Run `npm run daily`
 3. **Meeting with Taro appears as**:
-   ```markdown
-   ### Meeting with [[Taro Chiba]]
-   - 14:00 - 15:00
-   - Agenda for [[Taro Chiba]]:
-     - [ ] Discuss project timeline
-     - [ ] Review budget proposal
-   ```
-4. **Sync completed items**: Check boxes and run `npm run reminders:sync`
+
+```markdown
+### Meeting with [[Taro Chiba]]
+
+- 14:00 - 15:00
+- Agenda for [[Taro Chiba]]:
+  - [ ] Discuss project timeline
+  - [ ] Review budget proposal
+```
+
+1. **Sync completed items**: Check boxes and run `npm run reminders:sync`
 
 ## Language Choice: JavaScript and Python
 
 This project strategically uses both JavaScript and Python:
 
 **JavaScript (Node.js)** for:
+
 - Google Calendar API integration
 - Real-time reminder processing
 - Main application logic
 - OAuth authentication flows
 
 **Python** for:
+
 - Batch file operations (`fix_broken_links.py`)
 - Complex text processing (`organize_switchboard.py`)
 - Testing infrastructure (`run_tests.py`)

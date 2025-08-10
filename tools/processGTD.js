@@ -18,16 +18,8 @@ const REMINDERS_PATH = path.join(DAILY_NOTE_PATH, '..', 'reminders');
 const VAULT_ROOT = path.join(DAILY_NOTE_PATH, '..');
 const REMINDERS_CLI = '/opt/homebrew/bin/reminders';
 
-// GTD Context definitions
-const CONTEXTS = {
-  '@computer': 'Requires computer',
-  '@home': 'Home tasks',
-  '@office': 'Office only',
-  '@calls': 'Phone calls',
-  '@errands': 'Out and about',
-  '@anywhere': 'Can do anywhere',
-  '@online': 'Requires internet'
-};
+// Contexts removed from workflow; keep empty for compatibility
+const CONTEXTS = {};
 
 // GTD Tags
 const GTD_TAGS = {
@@ -98,8 +90,11 @@ function linkPeopleInTitle(originalTitle, peopleIndex) {
   if (!peopleIndex || typeof peopleIndex !== 'object') return title;
   // Build patterns for names and aliases
   for (const [personName, info] of Object.entries(peopleIndex)) {
-    const variants = [personName, ...((info.aliases && Array.isArray(info.aliases)) ? info.aliases : [])]
-      .filter(Boolean)
+    const rawAliases = (info && Array.isArray(info.aliases)) ? info.aliases : [];
+    const variants = [personName, ...rawAliases]
+      .map(v => (typeof v === 'string' ? v : (v == null ? '' : String(v))))
+      .map(v => v.trim())
+      .filter(v => v.length > 0)
       .sort((a, b) => b.length - a.length); // link longer names first
     for (const variant of variants) {
       const escaped = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -115,7 +110,7 @@ function linkPeopleInTitle(originalTitle, peopleIndex) {
  */
 function parseGTDElements(title) {
   const elements = {
-    contexts: [],
+    contexts: [], // deprecated
     tags: [],
     priority: 'normal',
     cleanTitle: title,
@@ -131,15 +126,8 @@ function parseGTDElements(title) {
     elements.cleanTitle = elements.cleanTitle.replace(PRIORITY_HIGH, '').trim();
   }
 
-  // Extract contexts (@word)
+  // Contexts no longer used
   const contextRegex = /@(\w+)/g;
-  let contextMatch;
-  while ((contextMatch = contextRegex.exec(title)) !== null) {
-    const context = `@${contextMatch[1]}`;
-    if (CONTEXTS[context]) {
-      elements.contexts.push(context);
-    }
-  }
 
   // Extract tags (#word)
   const tagRegex = /#([\w-]+)/g;
@@ -217,7 +205,6 @@ function categorizeReminders(reminders, peopleIndexOptional) {
     nextActions: [],
     waiting: [],
     someday: [],
-    byContext: {},
     byProject: {},
     email: {
       reply: [],
@@ -228,10 +215,7 @@ function categorizeReminders(reminders, peopleIndexOptional) {
     high: []
   };
 
-  // Initialize context buckets
-  Object.keys(CONTEXTS).forEach(context => {
-    categories.byContext[context] = [];
-  });
+  // Context buckets removed
 
   const peopleIndex = peopleIndexOptional || loadPeopleIndex();
 
@@ -265,16 +249,14 @@ function categorizeReminders(reminders, peopleIndexOptional) {
       categories.waiting.push(task);
     } else if (elements.tags.includes('someday')) {
       categories.someday.push(task);
-    } else if (elements.tags.includes('next') || elements.contexts.length > 0) {
+    } else if (elements.tags.includes('next')) {
       categories.nextActions.push(task);
+    } else {
+      // Default uncategorized items to inbox so the dashboard is not empty
+      categories.inbox.push(task);
     }
 
-    // Categorize by context
-    elements.contexts.forEach(context => {
-      if (categories.byContext[context]) {
-        categories.byContext[context].push(task);
-      }
-    });
+    // Context categorization removed
 
     // Categorize by project
     if (elements.project) {
@@ -389,30 +371,8 @@ ${categories.email.action.length === 0 ? '*No email actions*' : categories.email
  * Generate context-specific lists
  */
 function generateContextLists(categories) {
-  const lists = {};
-  
-  Object.entries(categories.byContext).forEach(([context, tasks]) => {
-    if (tasks.length === 0) return;
-    
-    const contextName = context.replace('@', '');
-    let content = `---
-type: gtd-context
-context: ${context}
-description: ${CONTEXTS[context]}
-generated: ${new Date().toISOString()}
----
-
-# ${CONTEXTS[context]}
-*Context: ${context}*
-
-## Tasks (${tasks.length})
-${tasks.map(formatTask).join('\n')}
-`;
-    
-    lists[`context-${contextName}.md`] = content;
-  });
-  
-  return lists;
+  // Context lists are deprecated in the current workflow
+  return {};
 }
 
 /**
@@ -451,26 +411,14 @@ type: gtd-next-actions
 generated: ${new Date().toISOString()}
 ---
 
-# Next Actions by Context
+# Next Actions
 
 `;
 
-  Object.entries(categories.byContext).forEach(([context, tasks]) => {
-    if (tasks.length === 0) return;
-    
-    content += `## ${context} - ${CONTEXTS[context]}
-${tasks.map(formatTask).join('\n')}
-
-`;
-  });
-
-  // Add uncontexted next actions
-  const uncontexted = categories.nextActions.filter(task => task.contexts.length === 0);
-  if (uncontexted.length > 0) {
-    content += `## No Context Specified
-${uncontexted.map(formatTask).join('\n')}
-
-`;
+  if (categories.nextActions.length > 0) {
+    content += categories.nextActions.map(formatTask).join('\n') + '\n';
+  } else {
+    content += '*No next actions*\n';
   }
 
   return content;

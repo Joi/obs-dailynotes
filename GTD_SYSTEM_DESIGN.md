@@ -1,31 +1,35 @@
 # GTD System: Apple Reminders + Obsidian
 
 ## What this gives you
+
 - Clear daily focus: urgent and high‑priority tasks surfaced automatically
 - One trusted task list: capture anywhere (phone, Mac, Siri) and review in Obsidian
 - People-centric workflow: tasks can link to people; meeting pages show agendas
 - Two-way sync: changes in Obsidian sync back to Apple Reminders
 
 ## How it works (in plain language)
+
 - You continue using Apple Reminders to capture tasks (via Siri, phone, Mac).
-- The system organizes your tasks using simple tags (like #next, #waiting) and contexts (like @computer).
+- The system organizes your tasks using simple tags (like #next, #waiting). Contexts are deprecated.
 - Obsidian shows easy-to-skim views (Dashboard, Next Actions, Email, Waiting For, Scheduled).
 - When you have a meeting, your daily note can include a short agenda pulled from the relevant person’s reminder list.
 
 ## Quick capture examples
+
 - “Email Sarah about budget #email !!” → urgent email task
-- “Call dentist #next @calls” → next action, phone context
+- “Call dentist #next” → next action
 - “Waiting for contract from vendor #waiting” → tracked in “Waiting For”
 
 You can also say things like “tomorrow”, “next Friday”, or “in 2 weeks” in the task text; the system understands common phrases and sets a due date accordingly.
 
-## Tags and contexts
+## Tags
+
 - GTD tags: `#inbox`, `#next`, `#waiting`, `#someday`, `#project:name`
 - Communication tags: `#email`, `#email-reply`, `#email-waiting`, `#call`, `#meeting`
-- Contexts: `@computer`, `@home`, `@office`, `@calls`, `@errands`, `@anywhere`, `@online`
 - Priorities: add `!!` for urgent (today), `!` for high (this week)
 
 ## Daily rhythm
+
 - Morning (5 min)
   - Run: `npm run gtd:morning`
   - Glance at the Dashboard; pick 3 most important tasks
@@ -39,11 +43,13 @@ You can also say things like “tomorrow”, “next Friday”, or “in 2 weeks
   - Decide the few tasks that really matter for the next week
 
 ## Suggested smart lists in Apple Reminders (optional)
+
 - Email – Action Required: has `#email`, not `#waiting`
 - Waiting For: has `#waiting`
 - Today Focus: due today or priority high
 
 ## Meeting agendas (optional, if you use person pages)
+
 If a person page includes a Reminders list, relevant items appear under that person in your meeting note. You’ll see something like:
 
 - Agenda for [[John Smith]]:
@@ -51,9 +57,10 @@ If a person page includes a Reminders list, relevant items appear under that per
   - [ ] Confirm date
 
 ## Getting started
-1) Use your existing Reminders lists. Add simple tags to task titles (examples above).
-2) Run: `npm run gtd:morning` to generate helpful views in `GTD/`.
-3) Use `npm run gtd:sync` whenever you want to sync both ways.
-4) Optional: create person pages (with emails/aliases) to enable people linking and agendas.
+
+1. Use your existing Reminders lists. Add simple tags to task titles (examples above).
+2. Run: `npm run gtd:morning` to generate helpful views in `GTD/`.
+3. Use `npm run gtd:sync` whenever you want to sync both ways.
+4. Optional: create person pages (with emails/aliases) to enable people linking and agendas.
 
 This setup keeps Apple Reminders as your reliable, everywhere task system while Obsidian provides calm, focused overviews for planning and review.
