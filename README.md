@@ -214,30 +214,32 @@ pip install --upgrade -r requirements-test.txt
 npm run gtd:morning
 ```
 - Pulls latest from Apple Reminders
-- Processes GTD tags and contexts
+- Processes GTD tags
 - Generates today's priorities
 - Creates/updates GTD dashboard
 
-### Evening Routine (5 minutes)
+### Sync Tasks with Reminders
 ```bash
-npm run gtd:evening
+npm run gtd:sync
 ```
 - Syncs completed tasks back to Reminders
-- Refreshes task views
-- Updates waiting-for lists
+- Pulls latest changes
+- Refreshes all task views
+
+Run this whenever you want to sync between Obsidian and Apple Reminders - after making changes in either system.
 
 ### Smart Capture Examples
 
 Via Siri or manual entry:
 ```
-"Email Sarah about budget #email @computer !!"
-→ Urgent email task requiring computer
+"Email Sarah about budget #email !!"
+→ Urgent email task
 
 "Waiting for contract from vendor #waiting #project:acquisition"
 → Waiting-for item linked to project
 
-"Call dentist #next @calls"
-→ Next action for phone context
+"Call dentist #next"
+→ Next action to do
 ```
 
 ### GTD Tags Reference
@@ -253,13 +255,12 @@ Via Siri or manual entry:
 - `#someday` - Someday/maybe
 - `#project:name` - Project-specific
 
-**Contexts:**
-- `@computer`, `@home`, `@office`, `@calls`, `@errands`, `@anywhere`, `@online`
-
-**Email Tags:**
-- `#email` - General email task
+**Task Types:**
+- `#email` - Email task
 - `#email-reply` - Needs reply
 - `#email-waiting` - Sent, awaiting response
+- `#call` - Phone call needed
+- `#errand` - Out and about task
 
 ## Generated Files
 
@@ -309,9 +310,9 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 ## NPM Scripts
 
 ### Daily Operations
-- `npm run daily` - Complete daily note generation
-- `npm run gtd:morning` - Morning GTD routine
-- `npm run gtd:evening` - Evening sync routine
+- `npm run daily` - Generate daily note with calendar events
+- `npm run gtd:morning` - Morning GTD routine (pull + process)
+- `npm run gtd:sync` - Sync changes between Obsidian and Reminders
 - `npm run gtd:process` - Process GTD tags only
 
 ### People Management
