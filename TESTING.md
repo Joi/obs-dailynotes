@@ -31,6 +31,8 @@ tests/
   unit/           # small, focused tests
   integration/    # end-to-end workflows
   conftest.py     # fixtures
+  js/             # JavaScript unit and lint tests
+  SUMMARY.md      # Concise overview of all tests
 ```
 
 ## Tips
@@ -39,5 +41,12 @@ tests/
 - Prefer small tests that check one behavior
 - For debugging: add `-v` and `pytest.set_trace()`
 
+## JS tests
+
+- Install dev deps (once): `npm install`
+- Run: `npm run test:js`
+
+See `tests/SUMMARY.md` for an overview of all tests.
+
 ## CI (optional)
-You can run `python run_tests.py all -v` in GitHub Actions or any CI runner to gate changes.
+You can run `python run_tests.py all -v` and `npm run test:js` in GitHub Actions or any CI runner to gate changes.
