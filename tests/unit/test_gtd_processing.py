@@ -351,6 +351,37 @@ date: 2025-08-09
         assert updated.index('## To Do Today') < updated.index('### Next Actions')
         assert updated.index('### Next Actions') < updated.index('## Notes')
     
+    def test_auto_link_people_in_titles(self, tmp_path):
+        """People names in task titles become wikilinks using people.index.json"""
+        # Create a minimal people index
+        people_index = {
+            "John Smith": {"name": "John Smith", "aliases": ["John"], "emails": ["john@example.com"], "pagePath": "John Smith.md"}
+        }
+        # Write to a temporary vault root next to a fake dailynote path
+        vault = tmp_path / 'vault'
+        (vault / 'dailynote').mkdir(parents=True)
+        (vault / 'people.index.json').write_text(json.dumps(people_index))
+        # Point env so processor looks in this vault
+        import os
+        os.environ['DAILY_NOTE_PATH'] = str(vault / 'dailynote')
+
+        from tools.processGTD import categorizeReminders
+        reminders = [
+            {
+                'id': '1',
+                'name': 'Call John Smith about contract #next',
+                'list': 'Inbox',
+                'notes': '',
+                'flagged': False,
+                'priority': 0,
+                'dueDate': None,
+                'completed': False,
+            }
+        ]
+        cats = categorizeReminders(reminders)
+        # Should appear in nextActions and have wikilinked title
+        assert any('[[John Smith]]' in t['title'] for t in cats['nextActions'])
+    
     def test_extract_person_tasks(self):
         """Test extracting tasks related to specific people"""
         tasks = [
