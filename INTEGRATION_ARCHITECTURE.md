@@ -96,6 +96,35 @@ reminders:
 - `todo-today.md` - Filtered urgent/due today items
 - `agendas/<name>.md` - Per-person agenda files
 
+#### reminders_cache.json schema (used by agenda injection)
+
+```json
+{
+  "timestamp": "ISO-STRING",
+  "lists": ["Inbox", "John Smith", "Joi/Daum To Do"],
+  "byList": {
+    "John Smith": [
+      {"id": "UUID", "title": "Discuss project", "list": "John Smith", "notes": "", "due": null, "completed": false}
+    ]
+  },
+  "byPerson": {
+    "John Smith": {
+      "name": "John Smith",
+      "pagePath": "John Smith.md",
+      "aliases": ["John", "J. Smith"],
+      "emails": ["john@example.com"],
+      "items": [
+        {"id": "UUID", "title": "Discuss project", "list": "John Smith"}
+      ],
+      "personalList": [ /* same item shape */ ],
+      "sharedList": [ /* same item shape, list can contain slashes */ ]
+    }
+  }
+}
+```
+
+`index.js` uses `byPerson` to match meeting attendees by email or alias and inject "Agenda for [[Name]]" blocks under the meeting.
+
 ## Special Use Cases
 
 ### Email Reminders System

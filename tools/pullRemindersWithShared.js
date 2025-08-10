@@ -22,9 +22,22 @@ const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
 fs.mkdirSync(remindersDir, { recursive: true });
 
 /**
- * Get all reminder lists from system
+ * Optional mock support for tests: if REMINDERS_MOCK_FILE is set, read from it.
+ * The mock JSON format should be: { "byList": { "List Name": [ {id,title,notes,completed,externalId,dueDate,priority} ] } }
  */
+const MOCK_FILE = process.env.REMINDERS_MOCK_FILE;
+
 async function getAllLists() {
+  if (MOCK_FILE) {
+    try {
+      const raw = fs.readFileSync(MOCK_FILE, 'utf8');
+      const mock = JSON.parse(raw);
+      return Object.keys(mock.byList || {});
+    } catch (e) {
+      console.error('Invalid REMINDERS_MOCK_FILE:', e.message);
+      return [];
+    }
+  }
   try {
     const { stdout } = await execFileAsync('reminders', ['show-lists']);
     return stdout.split('\n').filter(l => l.trim()).map(l => l.trim());
@@ -34,10 +47,16 @@ async function getAllLists() {
   }
 }
 
-/**
- * Get reminders from a specific list
- */
 async function getRemindersFromList(listName) {
+  if (MOCK_FILE) {
+    try {
+      const raw = fs.readFileSync(MOCK_FILE, 'utf8');
+      const mock = JSON.parse(raw);
+      return (mock.byList && mock.byList[listName]) ? mock.byList[listName] : [];
+    } catch (e) {
+      return [];
+    }
+  }
   try {
     const { stdout } = await execFileAsync('reminders', ['show', listName, '--format', 'json']);
     return JSON.parse(stdout);
@@ -101,6 +120,7 @@ async function pullReminders() {
   const allReminders = [];
   const byPerson = {};
   const sharedLists = [];
+  const byList = {}; // maintain byList for compatibility/tests
   
   for (const listName of allLists) {
     // Check if this is a shared list
@@ -121,12 +141,24 @@ async function pullReminders() {
         title: reminder.title,
         list: listName,
         notes: reminder.notes || '',
-        dueDate: reminder.dueDate,
+        dueDate: reminder.dueDate || reminder.due,
         priority: reminder.priority,
         isShared: isSharedList || personInfo?.isShared || false
       };
       
       allReminders.push(reminderData);
+
+      // byList collection
+      if (!byList[listName]) byList[listName] = [];
+      byList[listName].push({
+        id: reminderData.id,
+        title: reminderData.title,
+        list: listName,
+        notes: reminderData.notes,
+        due: reminderData.dueDate || null,
+        completed: false,
+        flagged: Boolean(reminder.flagged)
+      });
       
       // Organize by person
       if (personInfo) {
@@ -138,7 +170,8 @@ async function pullReminders() {
             items: [],
             personalList: [],
             sharedList: [],
-            aliases: personInfo.aliases || []
+            aliases: personInfo.aliases || [],
+            emails: Array.isArray(personInfo.emails) ? personInfo.emails : []
           };
         }
         
@@ -190,8 +223,9 @@ async function pullReminders() {
     timestamp: new Date().toISOString(),
     totalReminders: allReminders.length,
     sharedLists: sharedLists,
-    byPerson: Object.keys(byPerson).length,
-    lists: allLists
+    lists: allLists,
+    byList,
+    byPerson
   };
   fs.writeFileSync(path.join(remindersDir, 'reminders_cache.json'), JSON.stringify(cache, null, 2));
   

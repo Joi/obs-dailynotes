@@ -1,3 +1,12 @@
+_private/
+_local/
+.obsidian/workspace.json
+.DS_Store
+node_modules/
+venv/
+htmlcov/
+coverage*
+*.pyc
 # Private folders (never sync to GitHub)
 _private/
 _local/
