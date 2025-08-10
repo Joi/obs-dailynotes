@@ -30,5 +30,8 @@
     "test:integration": "python run_tests.py integration",
     "test:coverage": "python run_tests.py coverage",
     "test:watch": "python run_tests.py watch"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
   }
 }

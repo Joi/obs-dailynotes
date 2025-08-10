@@ -1,14 +1,17 @@
 # Integration Architecture: Reminders, People, and Daily Notes
 
 ## Overview
+
 This document explains how the obs-dailynotes system integrates Apple Reminders with Obsidian daily notes through a people-centric architecture. The system uses email addresses and full names as primary identifiers to link reminders, person pages, and calendar events.
 
 ## Core Concepts
 
 ### 1. Person Pages
+
 Person pages are Markdown files in the Obsidian vault root that represent individuals. Each person page contains frontmatter metadata that defines how to identify and link that person across different systems.
 
 **Key Fields:**
+
 - `name`: The person's full display name (e.g., "Taro Chiba")
 - `emails`: List of email addresses associated with this person (can be single string or array)
 - `aliases`: Alternative names/nicknames used in calendar invites
@@ -18,16 +21,19 @@ Person pages are Markdown files in the Obsidian vault root that represent indivi
 ### 2. Linking Mechanisms
 
 #### Email-Based Linking
+
 - **Google Calendar → Person Page**: When calendar events include attendees with email addresses, the system matches these emails against the `emails` field in person pages
 - **Person Page → Reminders List**: Each person page specifies a `reminders.listName` that corresponds to an Apple Reminders list
 
 #### Name-Based Linking
+
 - **Calendar Attendee Names → Person Page**: If an attendee's display name matches a person's `name` or `aliases`, they are linked
 - **Reminders List Name → Person Page**: The `reminders.listName` creates a direct mapping to Apple Reminders
 
 ## Data Flow
 
 ### Daily Note Generation Flow
+
 1. **Google Calendar API** → Fetch today's events with attendee details
 2. **Attendee Matching** → For each attendee email/name:
    - Search `people.index.json` for matching email in `emails` array
@@ -38,6 +44,7 @@ Person pages are Markdown files in the Obsidian vault root that represent indivi
    - Inject as agenda items under the meeting in the daily note
 
 ### Two-Way Sync Flow
+
 1. **Reminders → Obsidian**:
    - `reminders-cli` exports all lists as JSON
    - Tasks are written to `reminders/reminders.md` with embedded IDs
@@ -52,7 +59,9 @@ Person pages are Markdown files in the Obsidian vault root that represent indivi
 ## File Structure and Formats
 
 ### people.index.json
+
 Generated from person page frontmatter. Uses the person's name as the key:
+
 ```json
 {
   "Taro Chiba": {
@@ -70,6 +79,7 @@ Generated from person page frontmatter. Uses the person's name as the key:
 Note: The index key is the person's `name`, not an ID. The `emails` field is always an array, even if defined as a single string in the frontmatter.
 
 ### Person Page (Taro Chiba.md)
+
 ```markdown
 ---
 tags: [people]
@@ -82,8 +92,10 @@ reminders:
 ```
 
 ### Daily Note Meeting Section
+
 ```markdown
 ### Strategy Meeting #mtg
+
 - 14:00 - 15:00 ([[Taro Chiba]], [[<Owner Name>]])
 - Agenda for [[Taro Chiba]]:
   - [ ] Review Q4 strategy <!--reminders-id:UUID1-->
@@ -91,6 +103,7 @@ reminders:
 ```
 
 ### Reminders File Structure
+
 - `reminders_cache.json` - Raw JSON from reminders-cli
 - `reminders.md` - All uncompleted tasks with embedded IDs
 - `todo-today.md` - Filtered urgent/due today items
@@ -104,7 +117,14 @@ reminders:
   "lists": ["Inbox", "John Smith", "<Owner>/Daum To Do"],
   "byList": {
     "John Smith": [
-      {"id": "UUID", "title": "Discuss project", "list": "John Smith", "notes": "", "due": null, "completed": false}
+      {
+        "id": "UUID",
+        "title": "Discuss project",
+        "list": "John Smith",
+        "notes": "",
+        "due": null,
+        "completed": false
+      }
     ]
   },
   "byPerson": {
@@ -114,10 +134,14 @@ reminders:
       "aliases": ["John", "J. Smith"],
       "emails": ["john@example.com"],
       "items": [
-        {"id": "UUID", "title": "Discuss project", "list": "John Smith"}
+        { "id": "UUID", "title": "Discuss project", "list": "John Smith" }
       ],
-      "personalList": [ /* same item shape */ ],
-      "sharedList": [ /* same item shape, list can contain slashes */ ]
+      "personalList": [
+        /* same item shape */
+      ],
+      "sharedList": [
+        /* same item shape, list can contain slashes */
+      ]
     }
   }
 }
@@ -128,6 +152,7 @@ reminders:
 ## Special Use Cases
 
 ### Email Reminders System
+
 To create a specialized email reminders system:
 
 1. **Create Email Lists in Apple Reminders**:
@@ -136,6 +161,7 @@ To create a specialized email reminders system:
    - "Email - Waiting For Response"
 
 2. **Create Special Person Pages**:
+
 ```markdown
 ---
 tags: [people, system]
@@ -146,13 +172,15 @@ reminders:
 ---
 ```
 
-3. **Tag Integration**:
+1. **Tag Integration**:
    - Tasks in these lists can include tags like `#email-urgent`
    - The sync system preserves these tags in Obsidian
    - Can create filtered views using Obsidian's search/query features
 
 ### Shared Lists
+
 People can have both personal and shared Apple Reminder lists for collaboration:
+
 ```markdown
 ---
 tags: [people, list]
@@ -160,9 +188,9 @@ name: Daum Kim
 emails: [daum@example.com]
 aliases: [Daum]
 reminders:
-  listName: "Daum Kim"              # Personal list
-  sharedListName: "<Owner>/Daum To Do"  # Shared collaborative list
-  isShared: true                    # Marks this person has shared lists
+  listName: "Daum Kim" # Personal list
+  sharedListName: "<Owner>/Daum To Do" # Shared collaborative list
+  isShared: true # Marks this person has shared lists
 ---
 ```
 
@@ -171,7 +199,8 @@ Shared lists allow multiple people to collaborate on tasks. The sync system hand
 ## Key Algorithms
 
 ### Attendee Matching Algorithm
-```
+
+```text
 1. For each calendar attendee:
    a. Extract email address
    b. Search all person pages for email in `emails` array
@@ -180,7 +209,8 @@ Shared lists allow multiple people to collaborate on tasks. The sync system hand
 ```
 
 ### Task Sync Algorithm
-```
+
+```text
 1. Parse all Obsidian files for tasks with <!--reminders-id:-->
 2. Build map of ID → completion status
 3. For each completed task:
@@ -196,15 +226,17 @@ Shared lists allow multiple people to collaborate on tasks. The sync system hand
 The system integrates with Obsidian's Templater plugin to enable instant person page creation with automatic email extraction from daily note context.
 
 **Workflow**:
+
 1. User writes in daily note: `Met with [[John Doe]] (john@example.com)`
 2. User Cmd+Clicks on the red/unlinked `[[John Doe]]`
 3. Templater automatically:
-   - Creates `John Doe.md` 
+   - Creates `John Doe.md`
    - Searches the originating daily note for emails near "John Doe"
    - Extracts `john@example.com`
    - Populates the person page with proper frontmatter
 
 **Template Logic** (`person-smart.md`):
+
 ```javascript
 // Search algorithm:
 1. Get the file name (person's name)
@@ -216,6 +248,7 @@ The system integrates with Obsidian's Templater plugin to enable instant person 
 ```
 
 **Templater Configuration**:
+
 - Template folder: `templates/`
 - Folder Templates: Root → `person-smart.md`
 - Trigger on file creation: Enabled
@@ -226,6 +259,7 @@ This creates a seamless workflow where person pages are created on-the-fly durin
 ## Bulk Import and Management Tools
 
 ### Person Page Enrichment
+
 The `enrichPersonPage.js` tool transforms basic person pages into properly structured documents:
 
 ```bash
@@ -233,6 +267,7 @@ npm run people:enrich "Person Name.md" [--create-list] [--shared]
 ```
 
 **Features**:
+
 - Extracts emails from content and moves to frontmatter
 - Adds proper structure (Overview, Background, Contact, Notes)
 - Auto-creates Apple Reminder lists if `#list` tag is present
@@ -240,6 +275,7 @@ npm run people:enrich "Person Name.md" [--create-list] [--shared]
 - Updates people index automatically
 
 ### List Tag Management
+
 The `tagPeopleWithLists.js` tool finds all people with Apple Reminder lists and tags them:
 
 ```bash
@@ -249,6 +285,7 @@ npm run people:tag-lists
 This enables the fast sync mode by marking only people who actually have lists with the `#list` tag.
 
 ### CSV Contact Import
+
 The system includes a tool for bulk importing contacts from CSV exports (e.g., from Outlook, Google Contacts):
 
 ```bash
@@ -256,6 +293,7 @@ node tools/importContactsFromCSV.js /path/to/contacts.csv
 ```
 
 **Features**:
+
 - Parses CSV with headers: First Name, Last Name, Email Addresses, Primary Email
 - Creates person pages using `Firstname Lastname.md` format
 - Updates existing pages by merging email addresses
@@ -264,6 +302,7 @@ node tools/importContactsFromCSV.js /path/to/contacts.csv
 - Preserves existing page content while updating frontmatter
 
 **Import Process**:
+
 1. Read CSV and identify name/email columns
 2. For each row with valid name and email:
    - Check if person page exists
@@ -274,12 +313,14 @@ node tools/importContactsFromCSV.js /path/to/contacts.csv
 ## Extension Points
 
 ### Custom Tags and Filters
+
 - **Due Date Parsing**: Tasks with `@today`, `@tomorrow` patterns
 - **Priority Markers**: `!!` for high priority, `!` for medium
-- **Context Tags**: `#email`, `#phone`, `#waiting-for`
+- **GTD Tags**: `#email`, `#phone`, `#waiting`
 - **Project Links**: `[[Project Name]]` for cross-referencing
 
 ### Automation Triggers
+
 - **Morning Routine**: Generate todo-today.md with urgent items
 - **Meeting Prep**: Pull agendas 15 minutes before meetings
 - **End of Day**: Sync completed items back to Reminders
@@ -288,6 +329,7 @@ node tools/importContactsFromCSV.js /path/to/contacts.csv
 ## Implementation Notes
 
 ### Performance Considerations
+
 - People index is cached and only rebuilt when person pages change
 - Reminders cache has 10-minute TTL to avoid API rate limits
 - Batch operations for marking multiple tasks complete
@@ -295,11 +337,13 @@ node tools/importContactsFromCSV.js /path/to/contacts.csv
 - **Optimized Index**: Only includes reminders config for people who actually have lists
 
 ### Error Handling
+
 - Missing person pages don't break the system (graceful fallback)
 - Invalid email formats are skipped silently
 - Reminders without IDs can't be synced back (one-way only)
 
 ### Security
+
 - No credentials stored in person pages
 - Email addresses only used for matching, not for sending
 - Reminder IDs are UUIDs, no sensitive data exposed
