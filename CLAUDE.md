@@ -81,7 +81,7 @@ pip install -r requirements-test.txt
 
 ### Key Configuration
 
-- **Daily note path**: `/Users/<Owner>/switchboard/dailynote/` (hardcoded in PATH_PREFIX)
+- **Daily note path**: set via env `DAILY_NOTE_PATH` in `.env` (e.g., `/Users/<Owner>/switchboard/dailynote/`)
 - **Event filters**: Currently filters out events containing "Tateki / <Owner>"
 - **Time handling**: Adjusts for local timezone when fetching events
 

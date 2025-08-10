@@ -165,13 +165,15 @@ GCAL_TOKEN_PATH=~/.gcalendar/token.json
 GCAL_CREDS_PATH=~/.gcalendar/credentials.json
 
 # Obsidian vault path
-DAILY_NOTE_PATH=/path/to/your/Obsidian/vault/journal
+DAILY_NOTE_PATH=/path/to/your/Obsidian/vault/dailynote
 
 # Optional event filters
 EVENTS_FILTER=Lunch,Focus Time
 ```
 
-5. **Set up Google Calendar API:**
+5. Optionally set `REMINDERS_MOCK_FILE` during testing to point `pullRemindersWithShared` at a mock JSON file.
+
+6. **Set up Google Calendar API:**
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
    - Create project and enable Calendar API
    - Create OAuth2 credentials (Desktop app)

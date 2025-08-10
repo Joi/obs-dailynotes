@@ -45,6 +45,37 @@ const GTD_TAGS = {
 const PRIORITY_URGENT = '!!';
 const PRIORITY_HIGH = '!';
 
+// Fuzzy tag synonyms
+const TAG_SYNONYMS = [
+  { keywords: ['email', 'mail', 'reply', 'respond', 'response'], tag: 'email' },
+  { keywords: ['call', 'phone', 'ring', 'dial'], tag: 'call' },
+];
+
+// Simple natural language date parsing (limited built-in; avoids adding deps)
+function parseNaturalLanguageDue(input) {
+  const text = input.toLowerCase();
+  const now = new Date();
+  const base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let deltaDays = null;
+  if (/(^|\s)today(\s|$)/.test(text)) deltaDays = 0;
+  else if (/(^|\s)tomorrow(\s|$)/.test(text)) deltaDays = 1;
+  else if (/in\s+(\d+)\s+day/.test(text)) deltaDays = parseInt(text.match(/in\s+(\d+)\s+day/)[1], 10);
+  else if (/in\s+(\d+)\s+week/.test(text)) deltaDays = parseInt(text.match(/in\s+(\d+)\s+week/)[1], 10) * 7;
+  else if (/next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/.test(text)) {
+    const map = {sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6};
+    const m = text.match(/next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
+    const target = map[m[1]];
+    const todayDow = base.getDay();
+    let days = (target - todayDow + 7) % 7;
+    if (days === 0) days = 7;
+    deltaDays = days;
+  }
+  if (deltaDays === null) return null;
+  const due = new Date(base);
+  due.setDate(base.getDate() + deltaDays);
+  return due.toISOString();
+}
+
 /**
  * Parse GTD tags and contexts from reminder title
  */
@@ -86,6 +117,14 @@ function parseGTDElements(title) {
     // Check for project tags
     if (tag.startsWith('project:')) {
       elements.project = tag.replace('project:', '');
+    }
+  }
+
+  // Fuzzy tag enrichment from synonyms
+  const lowered = title.toLowerCase();
+  for (const rule of TAG_SYNONYMS) {
+    if (rule.keywords.some(k => lowered.includes(k))) {
+      if (!elements.tags.includes(rule.tag)) elements.tags.push(rule.tag);
     }
   }
 
@@ -168,7 +207,7 @@ function categorizeReminders(reminders) {
       title: elements.cleanTitle,
       originalTitle: reminder.name,
       id: reminder.id,
-      dueDate: reminder.dueDate,
+      dueDate: reminder.dueDate || parseNaturalLanguageDue(reminder.name),
       priority: elements.priority,
       contexts: elements.contexts,
       tags: elements.tags,

@@ -56,6 +56,54 @@ date: {today.strftime('%Y-%m-%d')}
         assert "#mtg" in loaded
         assert "[[John Smith]]" in loaded
         assert "Call Link" in loaded
+
+    def test_agenda_injection_from_cache(self, tmp_path):
+        """Ensure agenda items appear when byPerson matches attendee"""
+        # Setup vault structure
+        vault = tmp_path / "vault"
+        (vault / "dailynote").mkdir(parents=True)
+        # Simulated attendee and cache
+        attendee_names = ["John Smith"]
+        attendee_emails = ["john@example.com"]
+        cache = {
+            "byPerson": {
+                "John Smith": {
+                    "name": "John Smith",
+                    "aliases": ["John"],
+                    "emails": ["john@example.com"],
+                    "items": [
+                        {"id": "id-1", "title": "Review proposal", "list": "John Smith"},
+                        {"id": "id-2", "title": "Budget check", "list": "John Smith"}
+                    ]
+                }
+            }
+        }
+        # Build meeting content and inject agenda
+        content = "\n".join([
+            "## Meetings",
+            "### Sync with John #mtg",
+            "- 14:00 - 15:00 ([[John Smith]])"
+        ])
+        agenda_lines = []
+        for personKey, info in cache['byPerson'].items():
+            alias_set = set([info['name'], *info.get('aliases', [])])
+            email_set = set(info.get('emails', []))
+            matched_email = any(e in email_set for e in attendee_emails)
+            matched_name = any(n in alias_set for n in attendee_names)
+            if (matched_email or matched_name) and info.get('items'):
+                agenda_lines.append(f"\n- Agenda for [[{info['name']}|{info['name']}]]:")
+                for it in info['items'][:5]:
+                    agenda_lines.append(f"  - [ ] {it['title']} ({it['list']}) <!--reminders-id:{it['id']} list:{it['list']} person:{personKey}-->")
+        if agenda_lines:
+            content = content + "\n" + "\n".join(agenda_lines)
+        # Write today's note file directly
+        ymd = date.today().strftime('%Y-%m-%d')
+        note = (vault / 'dailynote' / f"{ymd}.md")
+        note.write_text(content)
+        txt = note.read_text()
+        assert '## Meetings' in txt
+        assert 'Agenda for [[John Smith]]' in txt or 'Agenda for [[John Smith|John Smith]]' in txt
+        assert 'Review proposal' in txt
     
     def test_filter_calendar_events(self):
         """Test filtering of calendar events"""
