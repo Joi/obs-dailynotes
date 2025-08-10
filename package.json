@@ -18,6 +18,7 @@
     "people:index": "node tools/buildPeopleIndex.js",
     "people:enrich": "node tools/enrichPersonPage.js",
     "people:fetch-cal": "node tools/fetchCalendarContext.js",
+    "people:fetch-web": "node tools/fetchPublicSnippets.js",
     "people:enrich-llm": "node tools/enrichFromLLM.js",
     "people:tag-lists": "node tools/tagPeopleWithLists.js",
     "people:generate-from-dailies": "node tools/generatePeopleFromDailyNotes.js",
