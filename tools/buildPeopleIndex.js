@@ -20,20 +20,79 @@ function parseFrontmatter(content) {
   if (!fm) return {};
   const yaml = fm[1];
   const obj = {};
-  // very small YAML parser for key: value pairs and arrays
-  yaml.split(/\r?\n/).forEach((line) => {
-    const m = line.match(/^([A-Za-z0-9_\-]+):\s*(.*)$/);
-    if (!m) return;
-    const key = m[1];
-    let val = m[2];
-    if (val.startsWith('[') && val.endsWith(']')) {
-      try { obj[key] = JSON.parse(val.replace(/([A-Za-z0-9_.@\-\s]+)/g, '"$1"')); } catch { obj[key] = []; }
-    } else if (val === 'true' || val === 'false') {
-      obj[key] = val === 'true';
+  const lines = yaml.split(/\r?\n/);
+  let currentKey = null;
+  
+  lines.forEach((line) => {
+    // Skip empty lines
+    if (!line.trim()) return;
+    
+    // Handle array items that start with -
+    const arrayMatch = line.match(/^\s*-\s+(.+)$/);
+    if (arrayMatch) {
+      if (currentKey && !obj[currentKey]) obj[currentKey] = [];
+      if (currentKey && Array.isArray(obj[currentKey])) {
+        obj[currentKey].push(arrayMatch[1].replace(/^"|"$/g, '').replace(/^'|'$/g, ''));
+      }
+      return;
+    }
+    
+    // Calculate indent level
+    const indent = line.search(/\S/);
+    
+    // Handle nested objects by tracking indentation
+    if (indent > 0 && currentKey) {
+      // This is a nested property
+      const m = line.match(/^\s+([A-Za-z0-9_\-]+):\s*(.*)$/);
+      if (m) {
+        const nestedKey = m[1];
+        const nestedVal = m[2];
+        
+        // Ensure parent is an object
+        if (typeof obj[currentKey] !== 'object' || obj[currentKey] === null) {
+          obj[currentKey] = {};
+        }
+        
+        // Skip if it's an array (not an object)
+        if (Array.isArray(obj[currentKey])) return;
+        
+        // Parse the nested value
+        if (nestedVal === 'true' || nestedVal === 'false') {
+          obj[currentKey][nestedKey] = nestedVal === 'true';
+        } else {
+          obj[currentKey][nestedKey] = nestedVal.replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+        }
+      }
     } else {
-      obj[key] = val.replace(/^"|"$/g, '');
+      // Root-level property
+      const m = line.match(/^([A-Za-z0-9_\-]+):\s*(.*)$/);
+      if (!m) return;
+      currentKey = m[1];
+      let val = m[2];
+      
+      // Handle arrays
+      if (val.startsWith('[') && val.endsWith(']')) {
+        try { 
+          obj[currentKey] = JSON.parse(val.replace(/([A-Za-z0-9_.@\-\s]+)/g, '"$1"')); 
+        } catch { 
+          obj[currentKey] = []; 
+        }
+      } 
+      // Handle empty value (for objects or arrays to be filled by nested lines)
+      else if (val === '' || val.trim() === '') {
+        // Don't set anything yet, wait for nested lines
+      }
+      // Handle booleans
+      else if (val === 'true' || val === 'false') {
+        obj[currentKey] = val === 'true';
+      } 
+      // Handle regular strings
+      else {
+        obj[currentKey] = val.replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+      }
     }
   });
+  
   return obj;
 }
 
@@ -55,7 +114,9 @@ if (fs.existsSync(peopleDir)) {
     const name = fm.name || path.basename(f, '.md');
     const tags = Array.isArray(fm.tags) ? fm.tags : (typeof fm.tags === 'string' ? [fm.tags] : []);
     const hasPeopleTag = tags.includes('people');
-    const hasRemindersList = fm.reminders && typeof fm.reminders.listName === 'string' && fm.reminders.listName.length > 0;
+    const hasRemindersList = fm.reminders && 
+      ((typeof fm.reminders === 'object' && fm.reminders.listName) || 
+       (typeof fm.reminders === 'string' && fm.reminders.length > 0));
     // Ensure emails is always an array
     let emails = [];
     if (Array.isArray(fm.emails)) {
@@ -76,11 +137,17 @@ if (fs.existsSync(peopleDir)) {
       name,
       pagePath,
       aliases,
-      emails,
-      reminders: {
-        listName: fm.reminders && fm.reminders.listName ? fm.reminders.listName : name
-      }
+      emails
     };
+    
+    // Only add reminders if explicitly configured
+    if (fm.reminders && typeof fm.reminders === 'object') {
+      index[name].reminders = fm.reminders;
+    } else if (typeof fm.reminders === 'string' && fm.reminders.length > 0) {
+      index[name].reminders = {
+        listName: fm.reminders
+      };
+    }
   }
 }
 

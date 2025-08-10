@@ -114,7 +114,7 @@ async function pullReminders() {
     const personInfo = listToPerson[listName];
     
     for (const reminder of reminders) {
-      if (reminder.completed) continue;
+      if (reminder.completed || reminder.isCompleted) continue;
       
       const reminderData = {
         id: reminder.externalId || reminder.id,
@@ -259,25 +259,23 @@ function generateInboxContent(reminders, listToPerson) {
  * Generate person-specific agenda with shared list indicators
  */
 function generatePersonAgenda(personName, data) {
-  let content = `# Agenda for [[${personName}]]\n`;
-  content += `*Generated: ${new Date().toLocaleString()}*\n\n`;
+  let content = `# Agenda\n\n`;
+  content += `Person: ${personName}\n\n`;
   
   if (data.sharedList.length > 0) {
-    content += `## Shared Tasks 🔄\n`;
-    content += `*From shared reminder list*\n\n`;
     for (const item of data.sharedList) {
-      content += `- [ ] ${item.title} <!--reminders-id:${item.id}-->\n`;
+      // Keep the actual list name for proper syncing
+      content += `- [ ] ${item.title} (${item.list}) <!--reminders-id:${item.id} list:${item.list} person:${personName}-->\n`;
     }
-    content += `\n`;
   }
   
   if (data.personalList.length > 0) {
-    content += `## Personal Tasks\n`;
     for (const item of data.personalList) {
-      content += `- [ ] ${item.title} <!--reminders-id:${item.id}-->\n`;
+      content += `- [ ] ${item.title} (${item.list}) <!--reminders-id:${item.id} list:${item.list} person:${personName}-->\n`;
     }
-    content += `\n`;
   }
+  
+  content += `\n`;
   
   return content;
 }
@@ -295,7 +293,8 @@ function updatePersonPageAgenda(pagePath, data) {
   if (data.sharedList.length > 0) {
     agendaSection += '### Shared Tasks 🔄\n';
     for (const item of data.sharedList) {
-      agendaSection += `- [ ] ${item.title} (${item.list}) <!--reminders-id:${item.id} list:${item.list} person:${data.name}-->\n`;
+      // Keep the actual list name (e.g., "Joi/Daum To Do") for proper syncing
+      agendaSection += `- [ ] ${item.title} (${item.list}) <!--reminders-id:${item.id}-->\n`;
     }
     agendaSection += '\n';
   }
@@ -303,7 +302,7 @@ function updatePersonPageAgenda(pagePath, data) {
   if (data.personalList.length > 0) {
     agendaSection += '### Personal Tasks\n';
     for (const item of data.personalList) {
-      agendaSection += `- [ ] ${item.title} (${item.list}) <!--reminders-id:${item.id} list:${item.list} person:${data.name}-->\n`;
+      agendaSection += `- [ ] ${item.title} (${item.list}) <!--reminders-id:${item.id}-->\n`;
     }
   }
   
