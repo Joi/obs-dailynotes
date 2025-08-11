@@ -121,7 +121,8 @@ async function syncRemindersFast() {
     path.join(remindersDir, 'reminders_inbox.md'),
     path.join(remindersDir, 'reminders.md'),
     path.join(remindersDir, 'todo-today.md'),
-    getTodayDailyNotePath()
+    getTodayDailyNotePath(),
+    path.join(vaultRoot, 'GTD', 'dashboard.md')
   ];
   
   // Only add person pages that have #list tag or reminders configuration

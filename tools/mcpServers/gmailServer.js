@@ -14,7 +14,8 @@ const path = require('path');
 const readline = require('readline');
 const { google } = require('googleapis');
 
-const SCOPES = ['https://www.googleapis.com/auth/gmail.metadata'];
+const USE_DEEP = process.env.GMAIL_DEEP === '1' || process.env.GMAIL_SCOPE === 'readonly';
+const SCOPES = [USE_DEEP ? 'https://www.googleapis.com/auth/gmail.readonly' : 'https://www.googleapis.com/auth/gmail.metadata'];
 
 function resolveHome(p) { return p && p.startsWith('~') ? path.join(process.env.HOME, p.slice(1)) : p; }
 
@@ -60,6 +61,55 @@ async function gmailSearchThreads(auth, query, limit = 10) {
   return out;
 }
 
+function decodePartData(data) {
+  if (!data) return '';
+  try {
+    // Gmail uses URL-safe base64
+    const buff = Buffer.from(data.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+    return buff.toString('utf8');
+  } catch (_) { return ''; }
+}
+
+function collectTextParts(payload) {
+  if (!payload) return '';
+  const stack = [payload];
+  const texts = [];
+  while (stack.length) {
+    const p = stack.pop();
+    const mime = (p.mimeType || '').toLowerCase();
+    if (mime === 'text/plain' && p.body?.data) {
+      texts.push(decodePartData(p.body.data));
+    } else if (p.parts && Array.isArray(p.parts)) {
+      for (const child of p.parts) stack.push(child);
+    } else if (!p.parts && p.body?.data && mime.startsWith('text/')) {
+      texts.push(decodePartData(p.body.data));
+    }
+  }
+  return texts.join('\n\n');
+}
+
+async function gmailSearchMessagesWithBodies(auth, query, limit = 5) {
+  const gmail = google.gmail({ version: 'v1', auth });
+  const userId = 'me';
+  const out = [];
+  let pageToken;
+  while (out.length < limit) {
+    const res = await gmail.users.messages.list({ userId, q: query, maxResults: Math.min(50, limit - out.length), pageToken });
+    const msgs = res.data.messages || [];
+    for (const m of msgs) {
+      const msg = await gmail.users.messages.get({ userId, id: m.id, format: USE_DEEP ? 'full' : 'metadata', metadataHeaders: ['From', 'To', 'Subject', 'Date'] });
+      const headers = Object.fromEntries((msg.data.payload?.headers || []).map(h => [h.name, h.value]));
+      const bodyText = USE_DEEP ? collectTextParts(msg.data.payload || {}) : '';
+      const preview = (bodyText || msg.data.snippet || '').slice(0, 4000);
+      out.push({ id: msg.data.id, threadId: msg.data.threadId, internalDate: msg.data.internalDate, headers, preview, snippet: msg.data.snippet || '' });
+      if (out.length >= limit) break;
+    }
+    pageToken = res.data.nextPageToken;
+    if (!pageToken || !msgs.length) break;
+  }
+  return out;
+}
+
 // JSON-RPC plumbing
 let idCounter = 0;
 function send(result, id) { process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result }) + '\n'); }
@@ -67,7 +117,8 @@ function sendError(message, id) { process.stdout.write(JSON.stringify({ jsonrpc:
 
 let authPromise = null;
 const tools = [
-  { name: 'gmail.searchThreads', description: 'Search Gmail threads by query string', inputSchema: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'number' } }, required: ['query'] } }
+  { name: 'gmail.searchThreads', description: 'Search Gmail threads by query string', inputSchema: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'number' } }, required: ['query'] } },
+  { name: 'gmail.searchMessages', description: 'Search Gmail messages; returns headers and safe preview text (<=2000 chars)', inputSchema: { type: 'object', properties: { query: { type: 'string' }, limit: { type: 'number' } }, required: ['query'] } }
 ];
 
 async function handleCall(name, params, id) {
@@ -77,6 +128,13 @@ async function handleCall(name, params, id) {
       if (!query) return sendError('Missing query', id);
       const auth = await authPromise;
       const results = await gmailSearchThreads(auth, query, Math.max(1, Math.min(50, Number(limit) || 10)));
+      return send(results, id);
+    }
+    if (name === 'gmail.searchMessages') {
+      const { query, limit } = params || {};
+      if (!query) return sendError('Missing query', id);
+      const auth = await authPromise;
+      const results = await gmailSearchMessagesWithBodies(auth, query, Math.max(1, Math.min(50, Number(limit) || 10)));
       return send(results, id);
     }
     return sendError('Unknown tool', id);

@@ -304,7 +304,11 @@ function formatTask(task) {
       formatted += ` 📅 ${dueDate.toLocaleDateString()}`;
     }
   }
-  
+  // Always include the source list for clarity and reliable syncing
+  if (task.list) {
+    formatted += ` (${task.list})`;
+  }
+
   formatted += ` <!--reminders-id:${task.id}-->`;
   
   return formatted;
@@ -338,9 +342,7 @@ ${categories.inbox.length === 0 ? '*Inbox is empty*' : categories.inbox.map(form
 ${categories.nextActions.length === 0 ? '*No next actions*' : categories.nextActions.map(formatTask).join('\n')}
 
 ## ⏸️ Waiting For
-${categories.waiting.length === 0 ? '*Not waiting on anything*' : categories.waiting.map(task => {
-    return `- [ ] ${task.title} (from: ${task.list}) <!--reminders-id:${task.id}-->`;
-  }).join('\n')}
+${categories.waiting.length === 0 ? '*Not waiting on anything*' : categories.waiting.map(formatTask).join('\n')}
 
 ## 💭 Someday/Maybe
 ${categories.someday.length === 0 ? '*No someday items*' : categories.someday.map(formatTask).join('\n')}
