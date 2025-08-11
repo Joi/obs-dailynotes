@@ -187,6 +187,14 @@ Notes:
 - Meetings duplicate or wrong order:
   - The generator writes a single MEETINGS block; rerun the script—it replaces in place.
 
+- A meeting is missing after you changed filters mid‑day:
+  - Check `.env` `EVENTS_FILTER`. The generator excludes any event whose title matches one of the comma‑separated terms.
+  - Rerun the daily generator (Keyboard Maestro macro or `node index.js`) to upsert the `MEETINGS` block using the updated filters.
+  - For a one‑off include, run with a temporary override:
+    ```bash
+    EVENTS_FILTER="<filters without the specific title>" node index.js
+    ```
+
 ## Keyboard Maestro (quick)
 
 - Daily update macro:
