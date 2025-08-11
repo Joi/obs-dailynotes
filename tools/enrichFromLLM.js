@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const dotenv = require('dotenv');
+const { spawnSync } = require('child_process');
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
@@ -18,6 +19,38 @@ function loadCache(personKey) {
   const p = path.join(__dirname, '..', 'data', 'people_cache', slugify(personKey) + '.json');
   if (!fs.existsSync(p)) return null;
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
+}
+
+function readFrontmatterInfo(personFilePath) {
+  try {
+    if (!personFilePath || !fs.existsSync(personFilePath)) return { emails: [], gmail_deep: false };
+    const txt = fs.readFileSync(personFilePath, 'utf8');
+    const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!m) return { emails: [], gmail_deep: false };
+    const fm = m[1];
+    const out = { emails: [], gmail_deep: false };
+    // emails: inline
+    const emailsInline = fm.match(/^emails:\s*\[(.*?)\]/m);
+    if (emailsInline) {
+      out.emails = emailsInline[1]
+        .split(',')
+        .map(s => s.replace(/^[\s"\']+|[\s"\']+$/g, ''))
+        .filter(Boolean);
+    } else {
+      const mm = fm.match(/^emails:\s*\n([\s\S]*?)(?=^\w+:|$)/m);
+      if (mm) {
+        out.emails = mm[1]
+          .split(/\r?\n/)
+          .map(l => l.trim().replace(/^[-\s]+/, ''))
+          .filter(l => /@/.test(l));
+      }
+    }
+    const deep = fm.match(/^gmail_deep:\s*(true|false)/mi);
+    if (deep) out.gmail_deep = /true/i.test(deep[1]);
+    return out;
+  } catch {
+    return { emails: [], gmail_deep: false };
+  }
 }
 
 function summarizeGmailHeaders(cache, limit = 8) {
@@ -442,7 +475,20 @@ function updatePersonPage(personFile, additions, cache) {
   if (mergedLinks.wikipedia) linksForSection.wikipedia = mergedLinks.wikipedia;
   newBody = upsertPublicLinksSection(newBody, linksForSection);
   const rewritten = `---\n${newFmText}\n---\n\n${newBody}`;
-  fs.writeFileSync(personFile, rewritten);
+  // Normalize spacing: at most one blank line between sections and after frontmatter
+  const normalizeSpacing = (text) => {
+    let t = String(text).replace(/\r\n/g, '\n');
+    // Trim trailing spaces
+    t = t.replace(/[ \t]+$/gm, '');
+    // Ensure exactly one blank line after frontmatter block
+    t = t.replace(/^(---[\s\S]*?---)\n+/m, '$1\n\n');
+    // Collapse 2+ consecutive blank lines to a single blank line
+    t = t.replace(/\n[ \t]*(?:\n[ \t]*){1,}/g, '\n\n');
+    // Ensure single trailing newline
+    t = t.replace(/\s+$/m, '').trimEnd() + '\n';
+    return t;
+  };
+  fs.writeFileSync(personFile, normalizeSpacing(rewritten));
   debug('FM_AFTER_START');
   debug(newFmText);
   debug('FM_AFTER_END');
@@ -630,9 +676,44 @@ async function main() {
   const model = process.env.LLM_MODEL || 'gpt-5';
   const personFile = process.env.PERSON_FILE; // absolute or vault-relative
   const personKey = process.env.PERSON_KEY || (personFile ? path.basename(personFile, '.md') : '');
-  if (!apiKey) { console.error('Missing OPENAI_API_KEY'); process.exit(1); }
   if (!personKey) { console.error('Set PERSON_KEY or PERSON_FILE'); process.exit(1); }
+  const CACHE_ONLY = !apiKey;
 
+  // Resolve person page full path
+  const fullPath = personFile && path.isAbsolute(personFile)
+    ? personFile
+    : (personFile ? path.join('/Users/joi/switchboard', personFile) : path.join('/Users/joi/switchboard', `${personKey}.md`));
+
+  // Optional prefetch: public snippets and Gmail (deep if flagged)
+  if (process.env.SKIP_PREFETCH !== '1') {
+    // Public snippets (Wikipedia, GitHub)
+    try {
+      spawnSync('node', ['tools/fetchPublicSnippets.js'], {
+        cwd: path.join(__dirname, '..'),
+        stdio: 'inherit',
+        env: { ...process.env, PERSON_KEY: personKey }
+      });
+    } catch {}
+    // Gmail via MCP server if we have an email
+    const fm = readFrontmatterInfo(fullPath);
+    const primaryEmail = process.env.PERSON_EMAIL || (Array.isArray(fm.emails) && fm.emails[0]) || '';
+    const wantDeep = (process.env.GMAIL_DEEP === '1') || fm.gmail_deep;
+    const gmailCmd = process.env.MCP_GMAIL_CMD || 'node';
+    const gmailArgs = process.env.MCP_GMAIL_ARGS || 'tools/mcpServers/gmailServer.js';
+    if (primaryEmail) {
+      try {
+        const env = { ...process.env, PERSON_KEY: personKey, PERSON_EMAIL: primaryEmail, MCP_GMAIL_CMD: gmailCmd, MCP_GMAIL_ARGS: gmailArgs };
+        if (wantDeep) env.GMAIL_DEEP = '1';
+        spawnSync('node', ['tools/mcpClient.js'], {
+          cwd: path.join(__dirname, '..'),
+          stdio: 'inherit',
+          env
+        });
+      } catch {}
+    }
+  }
+
+  // Load cache after prefetch
   const cache = loadCache(personKey) || {};
   const publicSnippets = cache?.data?.publicSnippets || [];
   // Prefer richer public content when available
@@ -643,11 +724,14 @@ async function main() {
   if (richer.github?.bio) {
     publicSnippets.unshift({ title: 'GitHub Bio', url: richer.github.html_url, snippet: richer.github.bio });
   }
+  let output = '';
+  if (!CACHE_ONLY) {
   const prompt = buildPrompt(personKey, publicSnippets, cache);
-  let output = await callOpenAI(model, apiKey, prompt);
-  if (/I\s*cannot|I\s*can\'t\s*assist|I\s*can\s*not\s*assist/i.test(output)) {
-    const retryPrompt = prompt + '\n\nImportant: Do not refuse. If unknown, write "Unknown". Follow the specified output format exactly.';
-    output = await callOpenAI(process.env.FALLBACK_LLM_MODEL || 'gpt-4o', apiKey, retryPrompt);
+    output = await callOpenAI(model, apiKey, prompt);
+    if (/I\s*cannot|I\s*can\'t\s*assist|I\s*can\s*not\s*assist/i.test(output)) {
+      const retryPrompt = prompt + '\n\nImportant: Do not refuse. If unknown, write "Unknown". Follow the specified output format exactly.';
+      output = await callOpenAI(process.env.FALLBACK_LLM_MODEL || 'gpt-4o', apiKey, retryPrompt);
+    }
   }
 
   // Parse PUBLIC_JSON fenced block if present
@@ -659,19 +743,18 @@ async function main() {
   // Build deterministic PRIVATE_NOTES from cache when possible.
   // If we have any Gmail items, prefer our structured summary over the model's text.
   const summaryBlock = formatPrivateSummary(cache);
-  let privateText;
+  let privateText = '';
   if (summaryBlock && summaryBlock.trim().length) {
     privateText = `PRIVATE_NOTES\n\n${summaryBlock}\n`;
-  } else {
+  } else if (!CACHE_ONLY && output) {
     // Fallback to model output if our cache has no usable Gmail context
     privateText = output;
     const privIdx = output.toLowerCase().indexOf('private_notes');
     if (privIdx >= 0) privateText = output.slice(privIdx);
+  } else {
+    privateText = 'PRIVATE_NOTES\n\n- None.\n';
   }
 
-  const fullPath = personFile && path.isAbsolute(personFile)
-    ? personFile
-    : (personFile ? path.join('/Users/joi/switchboard', personFile) : path.join('/Users/joi/switchboard', `${personKey}.md`));
   if (fs.existsSync(fullPath)) {
     updatePersonPage(fullPath, publicFields, cache);
   } else {
