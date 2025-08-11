@@ -471,6 +471,17 @@ The `tools/` directory contains automation scripts:
 - Verify `EVENTS_FILTER` in .env
 - Check calendar permissions in Google
 
+**Filters changed mid‑day (meeting missing):**
+
+- The generator replaces a single `MEETINGS` block on each run. If you update `EVENTS_FILTER` during the day, rerun the script to rebuild the block with the new filters.
+- To include a specific meeting that is being filtered, temporarily override the env for one run:
+
+```bash
+# Example: run once without filtering "CCRC/IP-Asia"
+EVENTS_FILTER="Tateki / Joi,Shower,Suite" node index.js
+```
+- Next runs will use whatever is in `.env` again.
+
 **Person Page Links:**
 
 - Run `npm run people:index` to rebuild index

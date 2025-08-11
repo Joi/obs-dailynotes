@@ -86,6 +86,16 @@ pip install -r requirements-test.txt
 - **Event filters**: Currently filters out events containing "Tateki / Joi"
 - **Time handling**: Adjusts for local timezone when fetching events
 
+### Troubleshooting tips for missing meetings
+
+- Check `.env` for `EVENTS_FILTER`. Titles matching any comma‑separated term are excluded.
+- If filters were edited after a daily note was created, rerun `./dailynotejs.sh` to upsert the single `MEETINGS` block with the new filter set.
+- To temporarily include an excluded event, override for one run:
+
+  ```bash
+  EVENTS_FILTER="<your usual filters without the title>" node index.js
+  ```
+
 ### Output Format
 
 Daily notes are created with filename pattern: `YYYY-MM-DD.md` and include:
