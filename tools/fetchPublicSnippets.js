@@ -94,8 +94,101 @@ async function main() {
   const personKey = process.env.PERSON_KEY;
   if (!personKey) { console.error('Set PERSON_KEY'); process.exit(1); }
 
+  // Optional hints from config/people.json (backwards-compatible: value can be array or object)
+  let peopleConfig = {};
+  try {
+    const cfgPath = path.join(__dirname, '..', 'config', 'people.json');
+    if (fs.existsSync(cfgPath)) {
+      peopleConfig = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
+    }
+  } catch { /* ignore */ }
+
   const links = extractLinksFromPersonPage(personKey);
-  const wikipedia = await fetchWikipediaSummary(personKey);
+
+  // Extract qualifier from personKey if present, supporting both "Name (Qualifier)" and "Name - Qualifier"
+  const qualifierInfo = (() => {
+    const original = String(personKey);
+    let base = original;
+    let qual = '';
+    let m = original.match(/^(.+?)\s*\(([^)]+)\)\s*$/); // Parentheses form
+    if (m) { base = m[1].trim(); qual = m[2].trim(); return { base, qualifier: qual }; }
+    m = original.match(/^(.+?)\s*-\s*(.+)$/); // Hyphen form
+    if (m) { base = m[1].trim(); qual = m[2].trim(); return { base, qualifier: qual }; }
+    return { base, qualifier: '' };
+  })();
+
+  // Helper: Wikipedia search to resolve disambiguation
+  async function searchWikipedia(query) {
+    const api = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=5&format=json&utf8=1`;
+    const res = await httpJson(api);
+    try {
+      const hits = res?.query?.search || [];
+      if (!hits.length) return null;
+      // Prefer exact title match if present; otherwise take the first
+      const exact = hits.find(h => h?.title?.toLowerCase() === query.toLowerCase());
+      const pick = exact || hits[0];
+      return pick?.title || null;
+    } catch { return null; }
+  }
+
+  // Determine target Wikipedia page
+  async function resolveWikipedia() {
+    // 1) If frontmatter/body links already contain a specific Wikipedia URL, trust it
+    if (links.wikipedia && /^https?:\/\//i.test(links.wikipedia)) {
+      const t = links.wikipedia.replace(/^https?:\/\/[^/]+\/wiki\//i, '').replace(/_/g, ' ');
+      const byLink = await fetchWikipediaSummary(t);
+      if (byLink) return byLink;
+    }
+
+    // 2) Config hint: allow object config like { "Michelle Lee (USPTO)": { wikipedia: "https://en.wikipedia.org/wiki/Michelle_K._Lee", qualifier: "USPTO" } }
+    const cfgVal = peopleConfig[personKey];
+    if (cfgVal && typeof cfgVal === 'object' && !Array.isArray(cfgVal)) {
+      if (cfgVal.wikipedia) {
+        const t = String(cfgVal.wikipedia).replace(/^https?:\/\/[^/]+\/wiki\//i, '').replace(/_/g, ' ');
+        const byCfg = await fetchWikipediaSummary(t);
+        if (byCfg) return byCfg;
+      }
+      if (cfgVal.wikipedia_title) {
+        const byTitle = await fetchWikipediaSummary(String(cfgVal.wikipedia_title));
+        if (byTitle) return byTitle;
+      }
+    }
+
+    // 3) Try the personKey as-is
+    let w = await fetchWikipediaSummary(personKey);
+    const looksDisambig = (sum) => {
+      const s = (sum?.summary || '').toLowerCase();
+      return /may refer to:/.test(s) || /disambiguation/.test(s);
+    };
+    if (w && !looksDisambig(w)) return w;
+
+    // 4) If disambiguation and we have a qualifier, search with qualifier
+    if (qualifierInfo.qualifier) {
+      // Special-case: common agency/org qualifiers can imply middle initial names
+      const queries = [
+        `${qualifierInfo.base} ${qualifierInfo.qualifier}`,
+        // Heuristic: if qualifier mentions USPTO or patent, try adding probable middle initial name variant
+        (/uspto|patent/i.test(qualifierInfo.qualifier) ? `${qualifierInfo.base} K. Lee` : null)
+      ].filter(Boolean);
+      for (const q of queries) {
+        const title = await searchWikipedia(q);
+        if (title) {
+          const bySearch = await fetchWikipediaSummary(title);
+          if (bySearch && !looksDisambig(bySearch)) return bySearch;
+        }
+      }
+    }
+
+    // 5) Final fallback: if we can find any non-disambig via search on base name
+    const t2 = await searchWikipedia(qualifierInfo.base);
+    if (t2) {
+      const byBase = await fetchWikipediaSummary(t2);
+      if (byBase && !looksDisambig(byBase)) return byBase;
+    }
+    return w; // return whatever we had (possibly disambig) so the rest of pipeline still runs
+  }
+
+  const wikipedia = await resolveWikipedia();
   const ghUser = guessGitHubUsernameFromLinks(links);
   const github = await fetchGitHubProfile(ghUser);
 

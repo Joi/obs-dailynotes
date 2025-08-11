@@ -139,7 +139,40 @@ function resolvePersonFilePath(personKey, personFileEnv) {
     return path.isAbsolute(personFileEnv) ? personFileEnv : path.join('/Users/<Owner>/switchboard', personFileEnv);
   }
   if (!personKey) return null;
-  return path.join('/Users/<Owner>/switchboard', `${personKey}.md`);
+  const baseDir = '/Users/<Owner>/switchboard';
+  const candidates = [];
+  // Direct
+  candidates.push(path.join(baseDir, `${personKey}.md`));
+  // Variant: parentheses -> hyphen
+  const parenToHyphen = personKey.replace(/\s*\(([^)]+)\)\s*$/, ' - $1');
+  if (parenToHyphen !== personKey) candidates.push(path.join(baseDir, `${parenToHyphen}.md`));
+  // Variant: hyphen -> parentheses
+  const hyphenToParen = personKey.replace(/\s*-\s*([^()]+)\s*$/, ' ($1)');
+  if (hyphenToParen !== personKey) candidates.push(path.join(baseDir, `${hyphenToParen}.md`));
+  for (const p of candidates) if (fs.existsSync(p)) return p;
+  // Fallback: consult people.index.json
+  try {
+    const dailyDir = process.env.DAILY_NOTE_PATH;
+    const vaultRoot = dailyDir ? path.resolve(dailyDir, '..') : baseDir;
+    const idxPath = path.join(vaultRoot, 'people.index.json');
+    if (fs.existsSync(idxPath)) {
+      const idx = JSON.parse(fs.readFileSync(idxPath, 'utf8'));
+      // Direct name
+      if (idx[personKey]?.pagePath) {
+        const p = path.join(vaultRoot, idx[personKey].pagePath);
+        if (fs.existsSync(p)) return p;
+      }
+      // Alias match
+      for (const [name, rec] of Object.entries(idx)) {
+        const aliases = Array.isArray(rec.aliases) ? rec.aliases : [];
+        if (name === personKey || aliases.includes(personKey)) {
+          const p = path.join(vaultRoot, rec.pagePath);
+          if (fs.existsSync(p)) return p;
+        }
+      }
+    }
+  } catch {}
+  return path.join(baseDir, `${personKey}.md`);
 }
 
 function readFrontmatterFlag(personFilePath, flagKey) {

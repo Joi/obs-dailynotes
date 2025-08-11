@@ -88,19 +88,38 @@ function loadPeopleIndex() {
 function linkPeopleInTitle(originalTitle, peopleIndex) {
   let title = originalTitle;
   if (!peopleIndex || typeof peopleIndex !== 'object') return title;
-  // Build patterns for names and aliases
+  // Build variant ownership map to detect ambiguous aliases
+  const variantToOwners = new Map(); // variant -> Set(personName)
+  const personToVariants = new Map(); // personName -> variant[]
   for (const [personName, info] of Object.entries(peopleIndex)) {
     const rawAliases = (info && Array.isArray(info.aliases)) ? info.aliases : [];
     const variants = [personName, ...rawAliases]
       .map(v => (typeof v === 'string' ? v : (v == null ? '' : String(v))))
       .map(v => v.trim())
-      .filter(v => v.length > 0)
-      .sort((a, b) => b.length - a.length); // link longer names first
-    for (const variant of variants) {
-      const escaped = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const re = new RegExp(`(^|[^\[])(\\b${escaped}\\b)(?!\])`, 'g');
-      title = title.replace(re, (m, p1, p2) => `${p1}[[${personName}]]`);
+      .filter(v => v.length > 0);
+    personToVariants.set(personName, variants);
+    for (const v of variants) {
+      if (!variantToOwners.has(v)) variantToOwners.set(v, new Set());
+      variantToOwners.get(v).add(personName);
     }
+  }
+  // Prepare a de-ambiguous list of (personName, variant) pairs, longer variants first
+  const pairs = [];
+  for (const [personName, variants] of personToVariants.entries()) {
+    for (const v of variants) {
+      const owners = variantToOwners.get(v) || new Set();
+      if (owners.size > 1 && v === v.replace(/\s*\([^)]*\)\s*$/, '') ) {
+        // Skip plain ambiguous variants shared by multiple people (e.g., "Michelle Lee")
+        continue;
+      }
+      pairs.push([personName, v]);
+    }
+  }
+  pairs.sort((a, b) => b[1].length - a[1].length);
+  for (const [personName, variant] of pairs) {
+    const escaped = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(^|[^\[])(\\b${escaped}\\b)(?!\])`, 'g');
+    title = title.replace(re, (m, p1, p2) => `${p1}[[${personName}]]`);
   }
   return title;
 }

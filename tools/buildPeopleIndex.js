@@ -111,7 +111,7 @@ if (fs.existsSync(peopleDir)) {
     const filePath = path.join(peopleDir, f);
     const content = fs.readFileSync(filePath, 'utf8');
     const fm = parseFrontmatter(content);
-    const name = fm.name || path.basename(f, '.md');
+    const name = (fm.name && String(fm.name).trim().length ? fm.name : path.basename(f, '.md'));
     const tags = Array.isArray(fm.tags) ? fm.tags : (typeof fm.tags === 'string' ? [fm.tags] : []);
     const hasPeopleTag = tags.includes('people');
     const hasRemindersList = fm.reminders && 
@@ -131,12 +131,25 @@ if (fs.existsSync(peopleDir)) {
     
     const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];
     const pagePath = `${path.basename(f)}`;
+
+    // Support disambiguated names by including qualifiers in aliases:
+    // If page name is like "Name (Qualifier)" or "Name - Qualifier", then record both
+    const nameAliases = [];
+    const m1 = name.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+    const m2 = name.match(/^(.+?)\s*-\s*(.+)$/);
+    if (m1) {
+      nameAliases.push(m1[1].trim());
+      nameAliases.push(`${m1[1].trim()} - ${m1[2].trim()}`);
+    } else if (m2) {
+      nameAliases.push(m2[1].trim());
+      nameAliases.push(`${m2[1].trim()} (${m2[2].trim()})`);
+    }
     
     // Use name as the key in the index (not personId)
     index[name] = {
       name,
       pagePath,
-      aliases,
+      aliases: Array.from(new Set([...(aliases || []), ...nameAliases])),
       emails
     };
     

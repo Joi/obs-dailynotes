@@ -1,3 +1,19 @@
-{}
-
-
+{
+  "Michelle Lee (CAA)": { "qualifier": "CAA", "emails": ["mkyddlee@caa.com"] },
+  "Michelle Lee (USPTO)": {
+    "qualifier": "USPTO",
+    "wikipedia": "https://en.wikipedia.org/wiki/Michelle_K._Lee",
+    "emails": ["michelle.lee@gmail.com"]
+  },
+  "Michelle Lee (Washington Post)": { "qualifier": "Washington Post", "emails": ["michelle.lee@washpost.com"] },
+  "Chris Anderson (Wired)": {
+    "qualifier": "Wired",
+    "emails": ["chris@wired.com"],
+    "wikipedia": "https://en.wikipedia.org/wiki/Chris_Anderson_(writer)"
+  },
+  "Chris Anderson (TED)": {
+    "qualifier": "TED",
+    "emails": ["chris@ted.com"],
+    "wikipedia": "https://en.wikipedia.org/wiki/Chris_Anderson_(entrepreneur)"
+  }
+}

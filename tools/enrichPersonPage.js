@@ -215,7 +215,15 @@ if (body.trim() === '' || body.trim() === `# ${personName}`) {
 }
 
 // Write the updated content
-fs.writeFileSync(fullPath, newContent);
+function normalizeSpacing(text) {
+  let t = String(text).replace(/\r\n/g, '\n');
+  t = t.replace(/[ \t]+$/gm, '');
+  t = t.replace(/^(---[\s\S]*?---)\n+/m, '$1\n\n');
+  t = t.replace(/\n[ \t]*(?:\n[ \t]*){1,}/g, '\n\n');
+  t = t.replace(/\s+$/m, '').trimEnd() + '\n';
+  return t;
+}
+fs.writeFileSync(fullPath, normalizeSpacing(newContent));
 console.log(`✓ Updated ${personName}'s page`);
 
 // Create Apple Reminders list if needed
