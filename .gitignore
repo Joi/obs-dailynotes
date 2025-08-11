@@ -39,6 +39,7 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+logs/
 
 # Temporary files
 *.tmp
@@ -46,6 +47,9 @@ npm-debug.log*
 
 # Local docs not to commit
 SCRIPTS.md
+
+# People cache (derived, may contain sensitive context) – do not commit
+data/people_cache/
 
 # Python cache
 __pycache__/
