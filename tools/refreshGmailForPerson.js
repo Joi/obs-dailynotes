@@ -5,6 +5,7 @@
  * Usage:
  *   node tools/refreshGmailForPerson.js "Taro Chiba"
  *   node tools/refreshGmailForPerson.js --deep "Taro Chiba"   # force deep mode
+ *   node tools/refreshGmailForPerson.js --email taro@example.com  # find page by email
  *
  * Behavior:
  * - Looks up ~/switchboard/<Name>.md
@@ -17,11 +18,12 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 function parseArgs(argv) {
-  const args = { name: null, forceDeep: false };
+  const args = { name: null, forceDeep: false, email: null };
   const rest = [];
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--deep' || a === '-d') args.forceDeep = true;
+    else if (a === '--email' && argv[i + 1]) { args.email = argv[i + 1]; i += 1; }
     else rest.push(a);
   }
   args.name = rest.join(' ').trim();
@@ -77,21 +79,60 @@ function upsertGmailDeepFlag(absPath) {
   }
 }
 
+function findPersonFileByEmail(email) {
+  try {
+    const dir = '/Users/joi/switchboard';
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+    for (const f of files) {
+      const p = path.join(dir, f);
+      const txt = fs.readFileSync(p, 'utf8');
+      const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      const fm = m ? m[1] : '';
+      if (!fm) continue;
+      // Check inline list form
+      const inline = fm.match(/^emails:\s*\[(.*?)\]/m);
+      if (inline) {
+        const parts = inline[1].split(',').map(s => s.replace(/^[\s"\']+|[\s"\']+$/g,'')).filter(Boolean);
+        if (parts.includes(email)) return p;
+      }
+      // Check block form
+      const block = fm.match(/^emails:\s*\n([\s\S]*?)(?=^\w+:|$)/m);
+      if (block) {
+        const lines = block[1].split(/\r?\n/).map(l => l.trim()).map(l => l.replace(/^[\-\s]+/, '')).filter(Boolean);
+        if (lines.includes(email)) return p;
+      }
+      // personId is deprecated; do not use for matching
+    }
+  } catch {}
+  return null;
+}
+
 function main() {
-  const { name, forceDeep } = parseArgs(process.argv);
-  if (!name) {
-    console.error('Usage: node tools/refreshGmailForPerson.js "Full Name" [--deep]');
+  const { name, forceDeep, email } = parseArgs(process.argv);
+  if (!name && !email) {
+    console.error('Usage: node tools/refreshGmailForPerson.js "Full Name" [--deep] | --email someone@example.com [--deep]');
     process.exit(1);
   }
-  const fm = readFrontmatterFor(name);
+  let absPath = null;
+  let fm = null;
+  if (email) {
+    absPath = findPersonFileByEmail(email);
+    if (!absPath) { console.error('No person page found for email:', email); process.exit(2); }
+    // derive name from filename for PERSON_KEY
+    const personName = path.basename(absPath, '.md');
+    fm = readFrontmatterFor(personName);
+  } else {
+    fm = readFrontmatterFor(name);
+    absPath = fm.path;
+  }
   const primaryEmail = Array.isArray(fm.emails) && fm.emails.length ? fm.emails[0] : null;
   if (!primaryEmail) {
-    console.error(`No email found in frontmatter for: ${name} (${fm.path})`);
+    console.error(`No email found in frontmatter for: ${name || email} (${fm.path})`);
     process.exit(2);
   }
   const env = {
     ...process.env,
-    PERSON_KEY: name,
+    PERSON_KEY: name || path.basename(absPath, '.md'),
     PERSON_EMAIL: primaryEmail,
     MCP_GMAIL_CMD: 'node',
     MCP_GMAIL_ARGS: 'tools/mcpServers/gmailServer.js'
