@@ -84,11 +84,7 @@ async function main() {
         // Fetch today's events
         const events = await fetchTodayEvents(auth);
         
-        if (events.length === 0) {
-            return;
-        }
-        
-        // Write header to file
+        // Always write header even if there are no events today
         const header = formatHeader(config, PATH_PREFIX);
         await upsertTodaySection('HEADER', header, PATH_PREFIX);
         
@@ -104,6 +100,7 @@ async function main() {
         // Build and upsert a single MEETINGS section in chronological order
         let processedCount = 0;
         const meetingBlocks = [];
+        const agendasInjectedForPerson = new Set();
         for (const event of events) {
             if (shouldFilterEvent(event, config, eventsFilterRegex)) continue;
             const parsers = [parseGoogleHangout, parseZoom, parseOtherMeetingType];
@@ -122,7 +119,8 @@ async function main() {
                             const matchedByEmail = attendeeEmails.some(e => emailSet.has(e));
                             const matchedByName = attendeeNames.some(n => aliasSet.has(n));
                             const matched = matchedByEmail || matchedByName;
-                            if (matched && Array.isArray(info.items) && info.items.length) {
+                            if (matched && !agendasInjectedForPerson.has(personKey) && Array.isArray(info.items) && info.items.length) {
+                                agendasInjectedForPerson.add(personKey);
                                 agendaLines.push(`\n- Agenda for [[${info.name}|${info.name}]]:`);
                                 for (const it of info.items.slice(0, 5)) {
                                     agendaLines.push(`  - [ ] ${it.title} (${it.list}) <!--reminders-id:${it.id} list:${it.list} person:${personKey}-->`);

@@ -10,10 +10,12 @@ cd /Users/joi/obs-dailynotes
 npm run people:index >/dev/null 2>&1 || true
 
 # Pull latest Reminders snapshot (cache + agendas + full mirror)
-npm run reminders:pull >/dev/null 2>&1
+# Make non-fatal so daily note generation still proceeds if Reminders sync fails
+npm run reminders:pull >/dev/null 2>&1 || true
 
 # Generate today's priority todos file
-node tools/generateTodayTodos.js >/dev/null 2>&1
+# Non-fatal; daily note should still generate without this
+node tools/generateTodayTodos.js >/dev/null 2>&1 || true
 
 # Generate today's daily note content (silent by default)
 node index.js >/dev/null 2>&1

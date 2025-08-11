@@ -125,6 +125,8 @@ Daily notes are created with filename pattern: `YYYY-MM-DD.md` and include:
 - MCP client: `tools/mcpClient.js` implements a minimal JSON-RPC client for MCP servers (Gmail/Calendar) and caches per-person context under `data/people_cache/`.
 - Calendar-direct context: `tools/fetchCalendarContext.js` reuses existing Google OAuth token to fetch events by attendee and stores in the same cache.
 - LLM enrichment: `tools/enrichFromLLM.js` calls OpenAI (GPT‑5 by default, via `OPENAI_API_KEY`) to synthesize public frontmatter and private notes. Private notes go to `~/switchboard/Private/People/<slug>.md`. Respects `#no-enrich` convention (to be implemented in enrich scripts as needed).
+- Daily note header includes local timezone (IANA + offset) as `timezone: <Zone> (UTC±HH:MM)`.
+- Per-person agendas are injected at most once per daily note; duplicates across multiple meetings are avoided.
 
 ## GTD System
 
