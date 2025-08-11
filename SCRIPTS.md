@@ -160,16 +160,16 @@ Enable deep Gmail fetching for a person and enrich their page with a deep Gmail 
 
 ```markdown
 ---
-personId: taro@example.com
 name: Taro Chiba
 aliases: [Taro, "T. Chiba"]
+emails: [taro@example.com]
 reminders:
   listName: "Taro Chiba"
 ---
 ```
 
 Notes:
-- Use `personId` (email) when possible (stable ID).
+- Prefer `emails` for identity and disambiguation (personId is deprecated).
 - `reminders.listName` must match the Apple Reminders list for that person.
 - `aliases` help match attendee names and list names that vary.
 
@@ -191,6 +191,7 @@ Notes:
   - Check `.env` `EVENTS_FILTER`. The generator excludes any event whose title matches one of the comma‑separated terms.
   - Rerun the daily generator (Keyboard Maestro macro or `node index.js`) to upsert the `MEETINGS` block using the updated filters.
   - For a one‑off include, run with a temporary override:
+
     ```bash
     EVENTS_FILTER="<filters without the specific title>" node index.js
     ```
