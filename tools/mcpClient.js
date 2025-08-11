@@ -2,6 +2,7 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 function ensureDir(p) {
   fs.mkdirSync(p, { recursive: true });
@@ -90,6 +91,15 @@ async function fetchGmailSummaryByEmail(client, email, limit = 5) {
   }
 }
 
+async function fetchGmailMessagesWithPreview(client, email, limit = 5) {
+  try {
+    const res = await client.callTool('gmail.searchMessages', { query: `from:${email} OR to:${email}`, limit });
+    return res;
+  } catch (_) {
+    return null;
+  }
+}
+
 async function fetchCalendarByAttendee(client, email, daysBack = 365, daysForward = 30) {
   try {
     const res = await client.callTool('calendar.listEvents', { attendee: email, daysBack, daysForward });
@@ -106,16 +116,51 @@ function cachePathFor(personKey) {
   return path.join(root, file);
 }
 
-function writeCache(personKey, data) {
+function readCache(personKey) {
   const p = cachePathFor(personKey);
-  fs.writeFileSync(p, JSON.stringify({ timestamp: new Date().toISOString(), data }, null, 2));
+  if (!fs.existsSync(p)) return null;
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
+}
+
+function writeCache(personKey, merge) {
+  const p = cachePathFor(personKey);
+  let existing = {};
+  if (fs.existsSync(p)) {
+    try { existing = JSON.parse(fs.readFileSync(p, 'utf8')); } catch {}
+  }
+  const data = existing.data || {};
+  const merged = { timestamp: new Date().toISOString(), data: { ...data, ...merge } };
+  fs.writeFileSync(p, JSON.stringify(merged, null, 2));
   return p;
+}
+
+function resolvePersonFilePath(personKey, personFileEnv) {
+  if (personFileEnv) {
+    return path.isAbsolute(personFileEnv) ? personFileEnv : path.join('/Users/<Owner>/switchboard', personFileEnv);
+  }
+  if (!personKey) return null;
+  return path.join('/Users/<Owner>/switchboard', `${personKey}.md`);
+}
+
+function readFrontmatterFlag(personFilePath, flagKey) {
+  try {
+    if (!personFilePath || !fs.existsSync(personFilePath)) return null;
+    const txt = fs.readFileSync(personFilePath, 'utf8');
+    const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!m) return null;
+    const fm = m[1];
+    const re = new RegExp(`^${flagKey}:\\s*(true|false)\\s*$`, 'mi');
+    const mm = fm.match(re);
+    if (!mm) return null;
+    return /^true$/i.test(mm[1]);
+  } catch { return null; }
 }
 
 async function main() {
   const email = process.env.PERSON_EMAIL || '';
   const personKey = process.env.PERSON_KEY || email || 'unknown';
-  const out = { email, gmail: null, calendar: null };
+  const out = {}; // we will merge selectively
+  const existing = readCache(personKey) || {};
 
   if (!email) {
     console.error('Set PERSON_EMAIL to query.');
@@ -128,10 +173,21 @@ async function main() {
   const calArgs = (process.env.MCP_CAL_ARGS || '').split(' ').filter(Boolean);
 
   if (gmailCmd) {
-    out.gmail = await withServer({ cmd: gmailCmd, args: gmailArgs, fn: (c) => fetchGmailSummaryByEmail(c, email, 10) });
+    let deep = (process.env.GMAIL_DEEP === '1' || /^(true|1)$/i.test(process.env.GMAIL_DEEP || ''));
+    if (!deep) {
+      const personFilePath = resolvePersonFilePath(personKey, process.env.PERSON_FILE);
+      const flag = readFrontmatterFlag(personFilePath, 'gmail_deep');
+      if (flag === true) deep = true;
+    }
+    if (deep) process.env.GMAIL_DEEP = '1';
+    const gmail = await withServer({ cmd: gmailCmd, args: gmailArgs, fn: (c) => deep ? fetchGmailMessagesWithPreview(c, email, 10) : fetchGmailSummaryByEmail(c, email, 10) });
+    const prev = (existing.data && existing.data.gmailByEmail) || {};
+    out.gmailByEmail = { ...prev, [email]: gmail };
   }
   if (calCmd) {
-    out.calendar = await withServer({ cmd: calCmd, args: calArgs, fn: (c) => fetchCalendarByAttendee(c, email, 365, 60) });
+    const calendar = await withServer({ cmd: calCmd, args: calArgs, fn: (c) => fetchCalendarByAttendee(c, email, 365, 60) });
+    const prev = (existing.data && existing.data.calendarDirectByEmail) || {};
+    out.calendarDirectByEmail = { ...prev, [email]: calendar };
   }
 
   const p = writeCache(personKey, out);

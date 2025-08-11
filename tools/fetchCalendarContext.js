@@ -77,15 +77,44 @@ function mergeCache(filePath, merge) {
 }
 
 async function main() {
-  const email = process.env.PERSON_EMAIL || '';
+  let email = process.env.PERSON_EMAIL || '';
   const personKey = process.env.PERSON_KEY || email || 'unknown';
   const daysBackIdx = process.argv.indexOf('--days-back');
   const daysForwardIdx = process.argv.indexOf('--days-forward');
   const daysBack = daysBackIdx >= 0 ? parseInt(process.argv[daysBackIdx + 1] || '365', 10) : 365;
   const daysForward = daysForwardIdx >= 0 ? parseInt(process.argv[daysForwardIdx + 1] || '30', 10) : 30;
 
+  // If email not provided, try to read from person page frontmatter
   if (!email) {
-    console.error('Set PERSON_EMAIL to query.');
+    const personFile = process.env.PERSON_FILE
+      ? (path.isAbsolute(process.env.PERSON_FILE) ? process.env.PERSON_FILE : path.join('/Users/<Owner>/switchboard', process.env.PERSON_FILE))
+      : path.join('/Users/<Owner>/switchboard', `${personKey}.md`);
+    if (fs.existsSync(personFile)) {
+      try {
+        const txt = fs.readFileSync(personFile, 'utf8');
+        const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+        if (m) {
+          const lines = m[1].split(/\r?\n/);
+          let inEmails = false;
+          const emailsFound = [];
+          for (const line of lines) {
+            if (/^emails:\s*$/.test(line)) { inEmails = true; continue; }
+            if (inEmails) {
+              if (/^\s*-\s*[^\s]+@[^\s]+$/.test(line)) {
+                emailsFound.push(line.replace(/^\s*-\s*/, '').trim());
+              } else if (/^\s*[a-zA-Z0-9_-]+:/.test(line)) {
+                break; // next key
+              }
+            }
+          }
+          if (emailsFound.length) email = emailsFound[0];
+        }
+      } catch {}
+    }
+  }
+
+  if (!email) {
+    console.error('No PERSON_EMAIL and no email found in person page. Set PERSON_EMAIL or PERSON_FILE/PERSON_KEY.');
     process.exit(1);
   }
 

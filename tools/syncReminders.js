@@ -12,6 +12,7 @@ const vaultRoot = path.resolve(dailyDir, '..');
 const inboxPath = path.join(vaultRoot, 'reminders', 'reminders_inbox.md');
 const fullPath = path.join(vaultRoot, 'reminders', 'reminders.md');
 const todoTodayPath = path.join(vaultRoot, 'reminders', 'todo-today.md');
+const gtdDashboardPath = path.join(vaultRoot, 'GTD', 'dashboard.md');
 
 function getTodayDailyNotePath() {
   const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/<Owner>/switchboard/dailynote';
@@ -92,6 +93,10 @@ function completeByIndex(list, index) {
       const content = fs.readFileSync(todayPath, 'utf8');
       addTasks(parseTasksFromContent(content));
     }
+  } catch {}
+  // Collect from GTD dashboard
+  try {
+    if (fs.existsSync(gtdDashboardPath)) addTasks(parseTasksFromFile(gtdDashboardPath));
   } catch {}
 
   const tasks = Array.from(aggregated.values());

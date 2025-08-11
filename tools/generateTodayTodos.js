@@ -9,6 +9,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/<Owner>/switchboard/dailynote';
 const outputPath = path.join(dailyDir, 'reminders', 'todo-today.md');
 const cachePath = path.join(dailyDir, 'reminders', 'reminders_cache.json');
+const CACHE_TTL_MIN = Number(process.env.TODO_CACHE_TTL_MIN || '0');
 
 // Helper to check if a reminder is due today or urgent
 function isDueToday(reminder) {
@@ -29,18 +30,28 @@ function isPriority(reminder) {
          (reminder.title && reminder.title.match(/urgent|asap|important|critical/i));
 }
 
+function isWaiting(reminder) {
+  const list = String(reminder.list || '');
+  const title = String(reminder.title || '');
+  if (/waiting/i.test(list)) return true;
+  if (/#waiting\b/i.test(title)) return true;
+  return false;
+}
+
 async function generateTodayTodos() {
   // First try to use the cache if it exists and is recent
   let items = [];
   let useCache = false;
   
   try {
-    const stats = fs.statSync(cachePath);
-    const ageInMinutes = (Date.now() - stats.mtime.getTime()) / 1000 / 60;
-    if (ageInMinutes < 10) { // Use cache if less than 10 minutes old
-      const cacheData = fs.readFileSync(cachePath, 'utf8');
-      items = JSON.parse(cacheData);
-      useCache = true;
+    if (CACHE_TTL_MIN > 0) {
+      const stats = fs.statSync(cachePath);
+      const ageInMinutes = (Date.now() - stats.mtime.getTime()) / 1000 / 60;
+      if (ageInMinutes < CACHE_TTL_MIN) {
+        const cacheData = fs.readFileSync(cachePath, 'utf8');
+        items = JSON.parse(cacheData);
+        useCache = true;
+      }
     }
   } catch (e) {
     // Cache doesn't exist or is invalid
@@ -71,7 +82,7 @@ async function generateTodayTodos() {
   
   // Filter for today's items and urgent items
   const todayItems = items.filter(item => 
-    !item.isCompleted && (isDueToday(item) || isPriority(item))
+    !item.isCompleted && !isWaiting(item) && (isDueToday(item) || isPriority(item))
   );
   
   // Sort by priority and due date

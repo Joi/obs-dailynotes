@@ -16,6 +16,7 @@ When installing any tool or dependency:
 3. Only use pip as last resort, and always within a virtual environment
 
 Example:
+
 ```bash
 # ✅ GOOD: Install system tools via Homebrew
 brew install node
@@ -143,8 +144,14 @@ The project includes a comprehensive GTD (Getting Things Done) implementation:
 
 4. **Workflows**
    - Morning: `npm run gtd:morning` - Pull reminders, process GTD, generate priorities
-   - Evening: `npm run gtd:evening` - Sync completed, refresh views
+   - Evening/Review: `npm run gtd:sync` - Sync checked tasks from Obsidian (GTD dashboard, reminders/*.md, today’s note) back to Apple Reminders, pull fresh cache, regenerate GTD files
    - Weekly Review: Use `templates/weekly-review.md` template
+
+### Sync Sources and Deprecated Scripts
+
+- Tasks checked in `GTD/dashboard.md`, `reminders/reminders.md`, `reminders/reminders_inbox.md`, `reminders/todo-today.md`, and today’s daily note will sync back to Apple Reminders.
+- Prefer `npm run gtd:sync` or `npm run reminders:sync-full`.
+- Deprecated: `npm run reminders:sync` now delegates to `gtd:sync`.
 
 ## Workflow Reminders
 

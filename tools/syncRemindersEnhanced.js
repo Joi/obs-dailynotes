@@ -249,6 +249,7 @@ function updateFileWithIds(filePath, updates) {
     if (lineIndex >= 0 && lineIndex < lines.length) {
       const line = lines[lineIndex];
       // Add the reminder ID to the end of the line
+      // If the task lost high priority or moved to waiting, ensure it's not duplicated in priority caches
       if (!line.includes('<!--reminders-id:')) {
         lines[lineIndex] = line.replace(/\s*$/, ` <!--reminders-id:${update.id}-->`);
       }
@@ -273,7 +274,8 @@ async function syncReminders() {
     path.join(remindersDir, 'reminders_inbox.md'),
     path.join(remindersDir, 'reminders.md'),
     path.join(remindersDir, 'todo-today.md'),
-    getTodayDailyNotePath()
+    getTodayDailyNotePath(),
+    path.join(vaultRoot, 'GTD', 'dashboard.md')
   ];
   
   // Also check person pages with reminders
