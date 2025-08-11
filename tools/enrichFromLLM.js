@@ -505,22 +505,29 @@ function writePrivate(personKey, text) {
 function ensurePrivateMarker(personFilePath) {
   try {
     let content = fs.readFileSync(personFilePath, 'utf8');
-    if (/<!--\s*has-private\s*-->/.test(content) || /\〔p\〕/.test(content)) return; // already marked
-    // Insert 〔p〕 next to the first H1 if present; otherwise add a tiny marker after frontmatter
-    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
-    const fmEndIdx = fmMatch ? fmMatch[0].length : 0;
-    const before = content.slice(0, fmEndIdx);
-    let body = content.slice(fmEndIdx);
-    const h1Match = body.match(/^#\s+.*$/m);
-    if (h1Match) {
-      body = body.replace(/^#\s+.*$/m, (m0) => m0 + ' 〔p〕');
-      content = before + body + '\n<!-- has-private -->\n';
-    } else {
-      const marker = '〔p〕\n<!-- has-private -->\n';
-      content = before + marker + body;
+    // Ensure has-private comment exists; remove the 〔p〕 marker if present
+    const hasPrivate = /<!--\s*has-private\s*-->/.test(content);
+    // Remove 〔p〕 from any H1 line
+    content = content.replace(/^(#\s+.*)\s*〔p〕\s*$/gm, '$1');
+    // Also remove trailing (p) after H1 if present
+    content = content.replace(/^(#\s+.*)\s*\(p\)\s*$/gm, '$1');
+    if (!hasPrivate) {
+      // Append has-private comment after body to avoid frontmatter interference
+      const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+      const fmEndIdx = fmMatch ? fmMatch[0].length : 0;
+      const before = content.slice(0, fmEndIdx);
+      let body = content.slice(fmEndIdx);
+      // Ensure a trailing newline
+      if (!/\n$/.test(body)) body += '\n';
+      body += '<!-- has-private -->\n';
+      content = before + body;
     }
-    // Collapse any accidental extra blank lines
-    content = content.replace(/\n[ \t]*(?:\n[ \t]*)+/g, '\n\n').trimEnd() + '\n';
+    // Normalize spacing
+    content = content
+      .replace(/[ \t]+$/gm, '')
+      .replace(/^(---[\s\S]*?---)\n+/m, '$1\n\n')
+      .replace(/\n[ \t]*(?:\n[ \t]*){1,}/g, '\n\n')
+      .trimEnd() + '\n';
     fs.writeFileSync(personFilePath, content);
   } catch {}
 }
