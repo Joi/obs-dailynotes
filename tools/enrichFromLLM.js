@@ -6,6 +6,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const dotenv = require('dotenv');
 
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -210,14 +211,109 @@ function extractLinksFromCache(cache) {
 
 function parseLinksFromFrontmatterText(fmText) {
   try {
+    const obj = {};
+    const classify = (url) => {
+      const u = String(url || '').trim();
+      if (!/^https?:\/\//i.test(u)) return ['other', u];
+      if (/wikipedia\.org\/wiki\//i.test(u)) return ['wikipedia', u];
+      if (/github\.com\//i.test(u)) return ['github', u];
+      if (/(x\.com|twitter\.com)\//i.test(u)) return ['twitter', u];
+      if (/linkedin\.com\//i.test(u)) return ['linkedin', u];
+      if (/mozilla\.vc\//i.test(u)) return ['homepage', u];
+      return ['homepage', u];
+    };
+
+    // Block form with key: value pairs
     const re = /^links:\s*\n([\s\S]*?)(?=^[a-zA-Z0-9_-]+:|\Z)/m;
     const m = fmText.match(re);
-    if (!m) return {};
+    if (m) {
+      const lines = m[1].split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        // key: url
+        const kv = line.match(/^([a-zA-Z0-9_-]+):\s*"?([^\"]+)"?\s*$/);
+        if (kv) { obj[kv[1]] = kv[2]; continue; }
+        // bullet list item: - https://...
+        const bullet = line.match(/^[-*]\s*(\S+)\s*$/);
+        if (bullet) {
+          const [key, val] = classify(bullet[1]);
+          if (!obj[key]) obj[key] = val;
+        }
+      }
+    }
+    // Inline scalar form (single URL)
+    const inline = fmText.match(/^links:\s*(\S.*?)\s*$/m);
+    if (inline && /^https?:\/\//i.test(inline[1])) {
+      const [key, val] = classify(inline[1]);
+      if (!obj[key]) obj[key] = val;
+    }
+    // Inline array form: links: ["url1", "url2"]
+    const arrayInline = fmText.match(/^links:\s*\[(.*?)\]/m);
+    if (arrayInline) {
+      const raw = arrayInline[1];
+      const parts = raw.split(',').map(s => s.trim().replace(/^['"]|['"]$/g, ''));
+      for (const p of parts) {
+        if (!p) continue;
+        const [key, val] = classify(p);
+        if (!obj[key]) obj[key] = val;
+      }
+    }
+    return obj;
+  } catch { return {}; }
+}
+
+// Fallback: parse links from the body “## Public Links” section
+function parseLinksFromBody(bodyText) {
+  try {
     const obj = {};
-    const lines = m[1].split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    // Find a Public Links section (any heading level, case-insensitive)
+    const secMatch = bodyText.match(/^#{1,6}\s*public\s+links\b\s*\n([\s\S]*?)(?=^#{1,6}\s|\Z)/mi);
+    const section = secMatch ? secMatch[1] : bodyText; // if not found, scan whole body as fallback
+    const lines = section.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const classify = (label, url) => {
+      const key = String(label || '').toLowerCase();
+      if (/wikipedia/.test(key)) return ['wikipedia', url];
+      if (/github/.test(key)) return ['github', url];
+      if (/(twitter|x\/?)/.test(key)) return ['twitter', url];
+      if (/linkedin/.test(key)) return ['linkedin', url];
+      if (/mozilla/.test(key)) return ['homepage', url];
+      return ['homepage', url];
+    };
     for (const line of lines) {
-      const kv = line.match(/^([a-zA-Z0-9_-]+):\s*"?([^\"]+)"?\s*$/);
-      if (kv) obj[kv[1]] = kv[2];
+      // Pattern: - Label: URL
+      let m = line.match(/^[-*]\s*([^:]+):\s*(\S+)/);
+      if (m && /^https?:\/\//i.test(m[2])) {
+        const [k, v] = classify(m[1].trim(), m[2].trim());
+        if (!obj[k]) obj[k] = v;
+        continue;
+      }
+      // Pattern: - URL (no label)
+      m = line.match(/^[-*]\s*(https?:\/\/\S+)/i);
+      if (m) {
+        const url = m[1].trim();
+        // Guess label by domain
+        const host = (() => { try { return new URL(url).hostname.toLowerCase(); } catch { return ''; } })();
+        let label = 'homepage';
+        if (host.includes('wikipedia.org')) label = 'wikipedia';
+        else if (host.includes('github.com')) label = 'github';
+        else if (host.includes('twitter.com') || host.includes('x.com')) label = 'twitter';
+        else if (host.includes('linkedin.com')) label = 'linkedin';
+        else if (host.includes('mozilla.vc')) label = 'homepage';
+        if (!obj[label]) obj[label] = url;
+        continue;
+      }
+      // Fallback: any URL anywhere on the line
+      const any = line.match(/https?:\/\/\S+/i);
+      if (any) {
+        const url = any[0].trim();
+        const host = (() => { try { return new URL(url).hostname.toLowerCase(); } catch { return ''; } })();
+        let label = 'homepage';
+        if (host.includes('wikipedia.org')) label = 'wikipedia';
+        else if (host.includes('github.com')) label = 'github';
+        else if (host.includes('twitter.com') || host.includes('x.com')) label = 'twitter';
+        else if (host.includes('linkedin.com')) label = 'linkedin';
+        else if (host.includes('mozilla.vc')) label = 'homepage';
+        if (!obj[label]) obj[label] = url;
+      }
     }
     return obj;
   } catch { return {}; }
@@ -276,22 +372,47 @@ function upsertPublicLinksSection(body, links) {
 }
 
 function updatePersonPage(personFile, additions, cache) {
+  const DEBUG = process.env.DEBUG_LINKS === '1' || process.env.ENRICH_DEBUG === '1';
+  const logDir = path.join(__dirname, '..', 'logs');
+  const logFile = path.join(logDir, 'enrich-links.log');
+  const debug = (...args) => {
+    if (!DEBUG) return;
+    try { fs.mkdirSync(logDir, { recursive: true }); } catch {}
+    try { fs.appendFileSync(logFile, args.join(' ') + os.EOL); } catch {}
+  };
   let content = fs.readFileSync(personFile, 'utf8');
   if (!content.startsWith('---')) content = `---\nname: ${path.basename(personFile, '.md')}\n---\n\n` + content;
   const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   const fmRaw = m ? m[1] : '';
   let fmText = fmRaw;
-  // Normalize and remove duplicate links blocks before upserting
+  debug('PERSON_FILE =', personFile);
+  debug('FM_RAW_START');
+  debug(fmRaw);
+  debug('FM_RAW_END');
+  // Normalize and remove any existing links definitions (we'll rewrite from mergedLinks)
+  // Remove block form
   fmText = fmText.replace(/^links:\s*\n([\s\S]*?)(?=^[a-zA-Z0-9_-]+:|\Z)/gm, '');
+  // Remove inline scalar or empty array forms
+  fmText = fmText.replace(/^links:\s*\S.*$/gm, '');
+  fmText = fmText.replace(/^links:\s*\[\s*\]\s*$/gm, '');
   const body = m ? content.slice(m[0].length) : content;
 
-  // Merge links with precedence: frontmatter > detected > cache > additions
+  // Merge links with precedence: frontmatter > detected > cache > additions > body (fallback)
   const cacheLinks = extractLinksFromCache(cache);
   const rich = cache?.data?.publicRicher || {};
   const detected = rich.linksDetected || {};
   const fmLinksExisting = parseLinksFromFrontmatterText(fmRaw);
+  const bodyLinks = parseLinksFromBody(body);
   const mergedLinks = { ...(additions.links || {}), ...cacheLinks, ...detected, ...fmLinksExisting };
-  const newFmText = upsertFrontmatterText(fmText, {
+  for (const [k, v] of Object.entries(bodyLinks)) {
+    if (!mergedLinks[k]) mergedLinks[k] = v;
+  }
+  debug('fmLinksExisting =', JSON.stringify(fmLinksExisting));
+  debug('cacheLinks =', JSON.stringify(cacheLinks));
+  debug('detected =', JSON.stringify(detected));
+  debug('bodyLinks =', JSON.stringify(bodyLinks));
+  debug('mergedLinks =', JSON.stringify(mergedLinks));
+  let newFmText = upsertFrontmatterText(fmText, {
     org: additions.org,
     title: additions.title,
     timezone: additions.timezone,
@@ -299,16 +420,32 @@ function updatePersonPage(personFile, additions, cache) {
     languages: additions.languages,
     links: mergedLinks
   });
+  // Force-write a normalized links block from mergedLinks (guarantee presence)
+  if (Object.keys(mergedLinks || {}).length) {
+    let nf = newFmText
+      .replace(/^links:\s*\n([\s\S]*?)(?=^[a-zA-Z0-9_-]+:|\Z)/gm, '')
+      .replace(/^links:\s*\S.*$/gm, '')
+      .replace(/^links:\s*\[\s*\]\s*$/gm, '');
+    let linksBlock = 'links:\n';
+    for (const [k, v] of Object.entries(mergedLinks)) {
+      if (v) linksBlock += `  ${k}: "${v}"\n`;
+    }
+    if (!/\n$/.test(nf)) nf += '\n';
+    newFmText = nf + linksBlock;
+  }
 
   const fallbackBio = buildPublicBioFromCache(cache);
   const bioText = additions.publicBio || fallbackBio || '';
   let newBody = upsertBio(body, bioText, mergedLinks.wikipedia);
-  // Build Public Links section from frontmatter links, with Wikipedia added if available
-  const linksForSection = { ...fmLinksExisting };
+  // Build Public Links section from merged links so inline or detected links appear
+  const linksForSection = { ...mergedLinks };
   if (mergedLinks.wikipedia) linksForSection.wikipedia = mergedLinks.wikipedia;
   newBody = upsertPublicLinksSection(newBody, linksForSection);
   const rewritten = `---\n${newFmText}\n---\n\n${newBody}`;
   fs.writeFileSync(personFile, rewritten);
+  debug('FM_AFTER_START');
+  debug(newFmText);
+  debug('FM_AFTER_END');
 }
 
 function writePrivate(personKey, text) {
@@ -347,6 +484,17 @@ function normalizeSubject(subjectRaw) {
   return s;
 }
 
+function normalizeDisplayName(nameRaw) {
+  let n = String(nameRaw || '').trim();
+  // Strip surrounding ASCII or typographic quotes
+  n = n.replace(/^['"“”‘’]+/, '').replace(/['"“”‘’]+$/, '');
+  // Collapse repeated inner quotes
+  n = n.replace(/^[\s'"“”‘’]+|[\s'"“”‘’]+$/g, '').trim();
+  // Collapse multiple whitespace
+  n = n.replace(/\s+/g, ' ').trim();
+  return n;
+}
+
 function extractConnectedNames(cache) {
   try {
     const byEmail = cache?.data?.gmailByEmail || {};
@@ -358,9 +506,13 @@ function extractConnectedNames(cache) {
         const to = (m.headers?.To || '').replace(/\s*<[^>]*>/g, '').trim();
         for (const field of [from, to]) {
           for (const name of field.split(/,|;/)) {
-            const n = name.trim();
-            if (!n || /@/.test(n)) continue;
-            if (/^Adam\b/i.test(n)) continue; // exclude Adam himself
+            const raw = name.trim();
+            if (!raw || /@/.test(raw)) continue;
+            const n = normalizeDisplayName(raw);
+            if (!n) continue;
+            // Exclude clear self forms (best-effort)
+            const lower = n.toLowerCase();
+            if (lower.includes('joichi ito') || lower.includes('伊藤')) continue;
             set.add(n);
           }
         }
@@ -382,9 +534,12 @@ function extractConnectedNameStats(cache) {
         const to = (m.headers?.To || '').replace(/\s*<[^>]*>/g, '').trim();
         for (const field of [from, to]) {
           for (const name of field.split(/,|;/)) {
-            const n = name.trim();
-            if (!n || /@/.test(n)) continue;
-            if (/^Adam\b/i.test(n)) continue; // exclude Adam himself
+            const raw = name.trim();
+            if (!raw || /@/.test(raw)) continue;
+            const n = normalizeDisplayName(raw);
+            if (!n) continue;
+            const lower = n.toLowerCase();
+            if (lower.includes('joichi ito') || lower.includes('伊藤')) continue;
             const prev = stats.get(n) || { firstMs: t, lastMs: t };
             prev.firstMs = Math.min(prev.firstMs, t);
             prev.lastMs = Math.max(prev.lastMs, t);
@@ -413,7 +568,11 @@ function formatPrivateSummary(cache) {
       for (const m of messages) {
         const d = Number(m.internalDate) || Date.parse(m.headers?.Date || '') || 0;
         const subject = normalizeSubject(m.headers?.Subject || '');
-        items.push({ dateMs: d, date: new Date(d).toISOString().slice(0, 10), subject });
+        const msgIdRaw = m.headers?.['Message-ID'] || m.headers?.['Message-Id'] || '';
+        const msgId = msgIdRaw.replace(/[<>]/g, '');
+        const mailLink = msgId ? `message:%3C${encodeURIComponent(msgId)}%3E` : '';
+        const gmailLink = msgId ? `https://mail.google.com/mail/u/0/#search/rfc822msgid%3A${encodeURIComponent(msgId)}` : '';
+        items.push({ dateMs: d, date: new Date(d).toISOString().slice(0, 10), subject, mailLink, gmailLink });
         if (subject) {
           const prev = subjectStats.get(subject) || { firstMs: d, lastMs: d, count: 0 };
           prev.firstMs = Math.min(prev.firstMs, d);
@@ -440,25 +599,28 @@ function formatPrivateSummary(cache) {
     lines.push('#### Relationship Summary');
     lines.push(`- Email history spans ${firstDate} to ${lastDate} (${items.length} messages indexed).`);
     if (topSubjects.length) {
-      lines.push(`- Topics discussed include: ${topSubjects.map(o => '`' + o.subj + '` (' + o.yr + ')').join(', ')}.`);
+      lines.push('- Topics discussed include:');
+      for (const o of topSubjects) lines.push(`  - ${o.subj} (${o.yr})`);
     }
-    if (names.length) {
-      lines.push(`- Connected people (inferred from headers, may be uncertain): ${names.join(', ')}.`);
+    lines.push('');
+    lines.push('#### Recent Interactions (links open in Mail.app)');
+    for (const it of items.slice(0, 10)) {
+      const label = it.subject || '(no subject)';
+      const openMail = it.mailLink ? ` [Mail](${it.mailLink})` : '';
+      const openGmail = it.gmailLink ? ` [Gmail](${it.gmailLink})` : '';
+      lines.push(`- ${it.date} — ${label}${openMail}${openGmail}`);
     }
     lines.push('');
     lines.push('#### How we met');
     if (names.length) {
       const firstName = names[0].replace(/\s*\([^)]*\)$/, '');
       lines.push(`- Uncertain; possibly connected via ${firstName} (inferred from headers).`);
-    }
-    else lines.push('- Uncertain.');
+    } else lines.push('- Uncertain.');
     lines.push('');
     lines.push('#### Recent Interests');
     if (topSubjects.length) {
       for (const o of topSubjects.slice(0, 5)) lines.push(`- ${o.subj} (${o.yr})`);
-    } else {
-      lines.push('- Uncertain.');
-    }
+    } else lines.push('- Uncertain.');
     return lines.join('\n');
   } catch { return ''; }
 }
@@ -494,19 +656,17 @@ async function main() {
   let publicFields = {};
   try { if (publicJsonMatch) publicFields = JSON.parse(publicJsonMatch[0] || publicJsonMatch); } catch {}
 
-  // Extract PRIVATE_NOTES section if present
-  let privateText = output;
-  const privIdx = output.toLowerCase().indexOf('private_notes');
-  if (privIdx >= 0) privateText = output.slice(privIdx);
-  // If model didn't include RECENT interactions, synthesize from cache
+  // Build deterministic PRIVATE_NOTES from cache when possible.
+  // If we have any Gmail items, prefer our structured summary over the model's text.
   const summaryBlock = formatPrivateSummary(cache);
-  if (summaryBlock) {
-    // Replace entire PRIVATE_NOTES block or prepend if missing
-    if (/^PRIVATE_NOTES/m.test(privateText)) {
-      privateText = privateText.replace(/^PRIVATE_NOTES[\s\S]*$/m, `PRIVATE_NOTES\n\n${summaryBlock}\n`);
-    } else {
-      privateText = `PRIVATE_NOTES\n\n${summaryBlock}\n\n` + privateText;
-    }
+  let privateText;
+  if (summaryBlock && summaryBlock.trim().length) {
+    privateText = `PRIVATE_NOTES\n\n${summaryBlock}\n`;
+  } else {
+    // Fallback to model output if our cache has no usable Gmail context
+    privateText = output;
+    const privIdx = output.toLowerCase().indexOf('private_notes');
+    if (privIdx >= 0) privateText = output.slice(privIdx);
   }
 
   const fullPath = personFile && path.isAbsolute(personFile)
@@ -523,6 +683,23 @@ async function main() {
   console.log('Wrote private notes:', privPath);
   // Subtle marker on public page indicating a private page exists
   ensurePrivateMarker(fullPath);
+  // Also add Connected People to the public page body
+  try {
+    const content = fs.readFileSync(fullPath, 'utf8');
+    const names = extractConnectedNames(cache);
+    if (names && names.length) {
+      const block = '## Connected People (from email headers)\n' + names.map(n => `- ${n}`).join('\n') + '\n';
+      let out = content;
+      if (/^##\s*Connected People \(from email headers\)/m.test(content)) {
+        out = content.replace(/^##\s*Connected People \(from email headers\)[\s\S]*?(?=^##\s|\Z)/m, block + '\n');
+      } else if (/^##\s*Notes/m.test(content)) {
+        out = content.replace(/(^##\s*Notes[\s\S]*?$)/m, (m0) => block + '\n' + m0);
+      } else {
+        out = content + '\n' + block + '\n';
+      }
+      fs.writeFileSync(fullPath, out.replace(/\n{3,}/g, '\n\n'));
+    }
+  } catch {}
 }
 
 if (require.main === module) {
