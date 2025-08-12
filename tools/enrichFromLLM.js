@@ -595,6 +595,41 @@ function normalizeDisplayName(nameRaw) {
   return n;
 }
 
+// Build a set of owner name variants from environment configuration
+function buildOwnerVariantsFromEnv() {
+  const variants = new Set();
+  const add = (s) => {
+    const t = normalizeToTokens(s).join(' ');
+    if (t) variants.add(t);
+  };
+  const ownerNames = String(process.env.OWNER_NAMES || '').split(',').map((s) => s.trim()).filter(Boolean);
+  for (const n of ownerNames) add(n);
+  if (process.env.OWNER_PRIMARY_NAME) add(process.env.OWNER_PRIMARY_NAME);
+  if (variants.size === 0) {
+    ['Joichi Ito', 'Joi Ito', 'Joi Ito Mailstore'].forEach(add);
+  }
+  return variants;
+}
+
+function isLikelyOwner(candidateName) {
+  const ownerVariants = buildOwnerVariantsFromEnv();
+  const candTokens = normalizeToTokens(candidateName);
+  if (!candTokens.length) return false;
+  const candKey = candTokens.join(' ');
+  if (ownerVariants.has(candKey)) return true;
+  for (const ov of ownerVariants) {
+    const oTokens = ov.split(' ');
+    if (oTokens.length >= 2 && candTokens.length >= 2) {
+      const cf = candTokens[0], cl = candTokens[candTokens.length - 1];
+      const of = oTokens[0], ol = oTokens[oTokens.length - 1];
+      if (levenshtein(cf, of) <= 1 && levenshtein(cl, ol) <= 1) return true;
+    } else {
+      for (const ct of candTokens) if (levenshtein(ct, oTokens[0]) <= 1) return true;
+    }
+  }
+  return false;
+}
+
 // Helpers to detect "self" variants (handles dot prefixes and minor typos)
 function normalizeToTokens(nameRaw) {
   const s = String(nameRaw || '')
@@ -688,8 +723,9 @@ function extractConnectedNames(cache) {
             if (!raw || /@/.test(raw)) continue;
             const n = normalizeDisplayName(raw);
             if (!n) continue;
-            // Exclude self variants
+            // Exclude self and owner variants
             if (isLikelySelf(n)) continue;
+            if (isLikelyOwner(n)) continue;
             set.add(n);
           }
         }
@@ -716,6 +752,7 @@ function extractConnectedNameStats(cache) {
             const n = normalizeDisplayName(raw);
             if (!n) continue;
             if (isLikelySelf(n)) continue;
+            if (isLikelyOwner(n)) continue;
             const prev = stats.get(n) || { firstMs: t, lastMs: t };
             prev.firstMs = Math.min(prev.firstMs, t);
             prev.lastMs = Math.max(prev.lastMs, t);
@@ -839,7 +876,12 @@ async function main() {
       try {
         const env = { ...process.env, PERSON_KEY: personKey, PERSON_EMAIL: email, MCP_GMAIL_CMD: gmailCmd, MCP_GMAIL_ARGS: gmailArgs };
         if (wantDeep) env.GMAIL_DEEP = '1';
+        // Try MCP path first
         spawnSync('node', ['tools/mcpClient.js'], { cwd: path.join(__dirname, '..'), stdio: 'inherit', env });
+        // Fallback: direct Gmail fetch if MCP path failed silently
+        const args = ['tools/fetchGmailDirect.js', personKey, '--email', email];
+        if (wantDeep) args.push('--deep');
+        spawnSync('node', args, { cwd: path.join(__dirname, '..'), stdio: 'inherit', env });
       } catch {}
     }
   }

@@ -1,7 +1,7 @@
 # Graph Report
 
-Nodes: 4863
-Edges: 17397
+Nodes: 4864
+Edges: 17399
 
 ## Nodes by Type
 - gtd-dashboard: 1
@@ -10,7 +10,7 @@ Edges: 17397
 - gtd-scheduled: 1
 - gtd-waiting-for: 1
 - idea: 7
-- note: 3985
+- note: 3986
 - paper: 2
 - pdf-metadata: 1
 - person: 863

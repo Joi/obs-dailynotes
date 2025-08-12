@@ -134,8 +134,17 @@ async function handleCall(name, params, id) {
       const { query, limit } = params || {};
       if (!query) return sendError('Missing query', id);
       const auth = await authPromise;
-      const results = await gmailSearchMessagesWithBodies(auth, query, Math.max(1, Math.min(50, Number(limit) || 10)));
-      return send(results, id);
+      try {
+        const results = await gmailSearchMessagesWithBodies(auth, query, Math.max(1, Math.min(50, Number(limit) || 10)));
+        return send(results, id);
+      } catch (e) {
+        try {
+          const results = await gmailSearchThreads(auth, query, Math.max(1, Math.min(50, Number(limit) || 10)));
+          return send(results, id);
+        } catch (e2) {
+          return sendError(e2.message || 'Tool error', id);
+        }
+      }
     }
     return sendError('Unknown tool', id);
   } catch (e) { return sendError(e.message || 'Tool error', id); }
@@ -143,7 +152,8 @@ async function handleCall(name, params, id) {
 
 async function main() {
   const creds = process.env.GMAIL_CREDS_PATH || process.env.GCAL_CREDS_PATH; // allow reuse
-  const token = process.env.GMAIL_TOKEN_PATH || path.join(process.env.HOME, '.gmail', 'token.json');
+  // Accept GCAL_TOKEN_PATH as alias to avoid duplicated auth locations
+  const token = process.env.GMAIL_TOKEN_PATH || process.env.GCAL_TOKEN_PATH || path.join(process.env.HOME, '.gmail', 'token.json');
   if (!creds) { process.stderr.write('Set GMAIL_CREDS_PATH (or GCAL_CREDS_PATH)\n'); process.exit(1); }
   authPromise = authorize(creds, token);
 

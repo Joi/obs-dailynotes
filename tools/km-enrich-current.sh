@@ -8,6 +8,17 @@ set -euo pipefail
 # Ensure standard system paths are available even in restricted environments
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
+# Ensure Gmail MCP has creds/token paths in env (fallbacks if not set via .env)
+export GMAIL_CREDS_PATH="${GMAIL_CREDS_PATH:-$HOME/.gcalendar/credentials.json}"
+export GMAIL_TOKEN_PATH="${GMAIL_TOKEN_PATH:-$HOME/.gmail/token.json}"
+# Also accept Calendar aliases for robustness
+export GCAL_CREDS_PATH="${GCAL_CREDS_PATH:-$GMAIL_CREDS_PATH}"
+export GCAL_TOKEN_PATH="${GCAL_TOKEN_PATH:-$GMAIL_TOKEN_PATH}"
+
+# Ensure MCP server defaults
+export MCP_GMAIL_CMD="${MCP_GMAIL_CMD:-node}"
+export MCP_GMAIL_ARGS="${MCP_GMAIL_ARGS:-tools/mcpServers/gmailServer.js}"
+
 VAULT="/Users/joi/switchboard"
 REPO="/Users/joi/obs-dailynotes"
 
@@ -71,7 +82,20 @@ PY
 )"
   fi
 
-  if [[ "${path:0:1}" != "/" ]]; then
+  # Resolve to an existing file; handle both absolute and relative with optional .md
+  if [[ "${path:0:1}" == "/" ]]; then
+    if [[ ! -f "$path" ]]; then
+      if [[ -f "${path}.md" ]]; then
+        path="${path}.md"
+      else
+        local base
+        base="$(basename "${path%.md}")"
+        local found
+        found="$(find "$VAULT" -type f -name "$base.md" -print -quit 2>/dev/null || true)"
+        [[ -n "$found" ]] && path="$found"
+      fi
+    fi
+  else
     if [[ -f "$VAULT/$path" ]]; then
       path="$VAULT/$path"
     elif [[ -f "$VAULT/${path}.md" ]]; then
@@ -113,7 +137,7 @@ echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] resolved=\"${path}\"" >> "$LOG_FILE"
 # Resolve Node binary robustly
 NODE_BIN="$(command -v node || true)"
 if [[ -z "$NODE_BIN" ]]; then
-for candidate in /opt/homebrew/bin/node /usr/local/bin/node /usr/bin/node $HOME/.nvm/versions/node/*/bin/node; do
+for candidate in $HOME/.nvm/versions/node/*/bin/node /opt/homebrew/bin/node /usr/local/bin/node /usr/bin/node; do
     if [[ -x "$candidate" ]]; then NODE_BIN="$candidate"; break; fi
   done
 fi
