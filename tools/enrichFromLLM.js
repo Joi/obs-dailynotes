@@ -838,6 +838,42 @@ function formatPrivateSummary(cache) {
   } catch { return ''; }
 }
 
+// Utilities to help debug Gmail token scope issues
+function resolveHome(p) {
+  return p && p.startsWith('~') ? path.join(process.env.HOME || '', p.slice(1)) : p;
+}
+
+function logGmailScopeDebug(personKey, emailsTried) {
+  try {
+    const credsPath = process.env.GMAIL_CREDS_PATH || process.env.GCAL_CREDS_PATH || '(unset)';
+    const tokenPathRaw = process.env.GMAIL_TOKEN_PATH || process.env.GCAL_TOKEN_PATH || '(unset)';
+    const tokenPath = resolveHome(tokenPathRaw);
+    let scope = '(unknown)';
+    try {
+      const tokenTxt = fs.readFileSync(tokenPath, 'utf8');
+      const obj = JSON.parse(tokenTxt);
+      if (obj && obj.scope) scope = obj.scope;
+    } catch {}
+    const emailsList = Array.from(new Set((emailsTried || []).filter(Boolean))).join(', ');
+    console.warn('[enrich] Gmail cache empty/null for:', personKey);
+    console.warn('[enrich] Using creds:', credsPath);
+    console.warn('[enrich] Using token:', tokenPathRaw);
+    console.warn('[enrich] Token scope:', scope);
+    if (emailsList) console.warn('[enrich] Emails tried:', emailsList);
+    console.warn('[enrich] If scope is not gmail.readonly, run:');
+    console.warn('  GMAIL_DEEP=1 node tools/mcpServers/bootstrapGmailAuth.js');
+    console.warn('  GMAIL_DEEP=1 GMAIL_OAUTH_CODE="<code>" node tools/mcpServers/bootstrapGmailAuth.js');
+    if (emailsList) {
+      console.warn('[enrich] Populate cache directly then re-enrich:');
+      const first = emailsTried && emailsTried[0];
+      if (first) {
+        console.warn(`  node tools/fetchGmailDirect.js "${personKey}" --email ${first} --deep`);
+        console.warn(`  SKIP_PREFETCH=1 PERSON_FILE="/Users/joi/switchboard/${personKey}.md" node tools/enrichFromLLM.js`);
+      }
+    }
+  } catch {}
+}
+
 async function main() {
   const apiKey = process.env.OPENAI_API_KEY;
   const model = process.env.LLM_MODEL || 'gpt-5';
@@ -888,6 +924,24 @@ async function main() {
 
   // Load cache after prefetch
   const cache = loadCache(personKey) || {};
+  // If Gmail cache is empty/null for all tried emails, log a helpful debug block
+  try {
+    const gmailByEmail = cache?.data?.gmailByEmail || {};
+    const fmInfo = readFrontmatterInfo(fullPath);
+    const confEmails = loadPeopleConfigEmails(personKey);
+    const emailsTried = Array.from(new Set([process.env.PERSON_EMAIL, ...(fmInfo.emails || []), ...confEmails].filter(Boolean)));
+    const hasAny = Object.keys(gmailByEmail).length > 0;
+    let allNull = true;
+    if (hasAny) {
+      for (const e of Object.keys(gmailByEmail)) {
+        const val = gmailByEmail[e];
+        if (Array.isArray(val) ? val.length > 0 : Boolean(val)) { allNull = false; break; }
+      }
+    }
+    if (!hasAny || allNull) {
+      logGmailScopeDebug(personKey, emailsTried);
+    }
+  } catch {}
   const publicSnippets = cache?.data?.publicSnippets || [];
   // Prefer richer public content when available
   const richer = cache?.data?.publicRicher || {};
