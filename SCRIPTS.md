@@ -7,7 +7,7 @@ This page summarizes the scripts, exact commands, and when to run them.
 - Install `reminders` CLI (Apple Reminders):
 
   ```bash
-  brew install reminders-cli
+  brew install keith/formulae/reminders-cli
   ```
 
 - Configure `.env` in this repo with `DAILY_NOTE_PATH`, `GCAL_TOKEN_PATH`, `GCAL_CREDS_PATH`.
@@ -15,7 +15,7 @@ This page summarizes the scripts, exact commands, and when to run them.
 
 ## One-click scripts (recommended)
 
-- Daily update (People index → Pull Reminders → Generate today’s note):
+- Daily update (People index → Pull Reminders → Generate today's note):
 
   ```bash
   /Users/joi/obs-dailynotes/tools/run_daily.sh
@@ -27,18 +27,133 @@ This page summarizes the scripts, exact commands, and when to run them.
   /Users/joi/obs-dailynotes/tools/run_sync.sh
   ```
 
-Tip: Trigger these via Keyboard Maestro “Execute Shell Script”.
+Tip: Trigger these via Keyboard Maestro "Execute Shell Script".
 
 ## NPM scripts
 
-- Rebuild the People index from person pages’ frontmatter:
+- Rebuild the People index from person pages' frontmatter:
 
   ```bash
   npm run people:index
   ```
+
+- Run OCR on screenshots in today's daily note:
+
+  ```bash
+  npm run ocr
+  ```
+
+- Morning routine with OCR (reminders → GTD → todos → OCR):
+
+  ```bash
+  npm run gtd:morning-ocr
+  ```
+
+## OCR for Meeting Notes (NEW)
+
+Automatically extract text from screenshots/images in your daily notes using OCR.
+
+### Setup
+
+**OCR Methods** (in order of preference):
+1. **Tesseract** (optional): `brew install tesseract` for better accuracy
+2. **macOS Vision Framework** (built-in): Requires macOS 14+, fallback if Tesseract not installed
+
+**Screenshot Storage**:
+- Default location: `/Users/joi/switchboard/Attachments/`
+- Configure in Obsidian: Settings → Files & Links → Attachment folder path → `Attachments`
+- The OCR script searches multiple locations:
+  - Vault root (`/Users/joi/switchboard/`)
+  - `/Attachments/`
+  - `/Resources/Images/`
+  - `/dailynote/`
+
+### Commands
+
+- **Extract text from today's screenshots**:
+  ```bash
+  npm run ocr
+  ```
+
+- **Morning routine with OCR**:
+  ```bash
+  npm run gtd:morning-ocr
+  ```
+  
+  Runs: reminders pull → GTD process → generate todos → OCR screenshots
+
+- **Enhanced morning script** (alternative):
+  ```bash
+  /Users/joi/obs-dailynotes/tools/gtd_morning_with_ocr.sh
+  ```
+
+### Workflow for Meeting Notes
+
+1. **During meetings**:
+   - Take screenshots: ⌘+Shift+4
+   - Capture: whiteboards, presentations, shared screens, handwritten notes
+   - Drag screenshots into your daily note (or paste with ⌘+V)
+
+2. **After meetings**:
+   ```bash
+   cd /Users/joi/obs-dailynotes
+   npm run ocr
+   ```
+
+3. **Result**: A new section `## Screenshot Text (OCR)` is added to your daily note:
+   ```markdown
+   ## Screenshot Text (OCR)
+   
+   ### Screenshot 2025-08-12 at 6.10.34.png
+   
+       Meeting Agenda - Happiness Capital Q3 Review
+       Date: August 12, 2025
+       Attendees: Eric, Mika, Dorcas, Terrence
+       
+       Topics to Discuss:
+       1. Q3 Financial Performance
+       2. Portfolio Company Updates
+       3. Investment Pipeline Review
+       [... up to 15 lines total]
+   ```
+
+### Features
+
+- **Full text extraction**: Shows up to 15 lines per image (not just summaries)
+- **Overflow handling**: Shows `[... X more lines truncated]` if text exceeds 15 lines
+- **Smart placement**: Inserts OCR section before Reminders section
+- **Multiple formats**: Supports PNG, JPG, JPEG, GIF, HEIC
+- **Searchable**: Full text makes content searchable in Obsidian
+- **Batch processing**: Processes all images in the daily note at once
+
+### Use Cases
+
+- **Whiteboard sessions**: Capture brainstorming results
+- **Presentation slides**: Extract key points from screen shares
+- **Handwritten notes**: Digitize paper notes or iPad sketches
+- **Code snippets**: Capture code from screen shares
+- **Chat messages**: Save important Slack/Teams conversations
+- **Document excerpts**: Quick capture of PDF sections
+
+### Troubleshooting
+
+- **No OCR output**: 
+  - Ensure image is embedded with `![[filename.png]]` syntax
+  - Check image exists in expected location
+  - Verify OCR method: `tesseract -v` or check macOS version ≥ 14
+  
+- **Truncated text**:
+  - Normal for documents > 15 lines
+  - Consider breaking large documents into multiple screenshots
+  
+- **Poor accuracy**:
+  - Install Tesseract for better results: `brew install tesseract`
+  - Ensure good image quality and contrast
+  - Avoid blurry or angled photos
+
 ## PDFs recommended by people (workflow)
 
-Add a recommended PDF for a person; the script will download/copy the PDF, create a notes page, add an Apple Reminder, and link it on the person’s page under “Recommended PDFs”.
+Add a recommended PDF for a person; the script will download/copy the PDF, create a notes page, add an Apple Reminder, and link it on the person's page under "Recommended PDFs".
 
 Command:
 
@@ -57,25 +172,25 @@ Options:
 What it does:
 - Saves PDF to `~/switchboard/Resources/PDFs/<slug>.pdf`
 - Creates `~/switchboard/Resources/PDFs/<slug>.md` with frontmatter and sections (Notes, Highlights)
-- Adds Apple Reminders task: “Read PDF: <title>”
-- Upserts a link under `## Recommended PDFs` on the person’s page
+- Adds Apple Reminders task: "Read PDF: <title>"
+- Upserts a link under `## Recommended PDFs` on the person's page
 
 Prereqs:
-- `brew install reminders-cli`
+- `brew install keith/formulae/reminders-cli`
 - Ensure `DAILY_NOTE_PATH` is set in `.env` so the script can locate `people.index.json`
 
 Details:
 - Person list selection for the Reminder (in order):
-  1) The person’s page frontmatter `reminders.listName` if present and not a template (e.g., ignores `{{title}}`)
-  2) `people.index.json` entry’s `reminders.listName`
+  1) The person's page frontmatter `reminders.listName` if present and not a template (e.g., ignores `{{title}}`)
+  2) `people.index.json` entry's `reminders.listName`
   3) Fallback to a `Reading` list
-- If the target list doesn’t exist, the tool attempts to create it automatically.
+- If the target list doesn't exist, the tool attempts to create it automatically.
 - The person page is linked with an Obsidian wikilink under a `## Recommended PDFs` section (created if missing). Duplicate links are avoided.
 - The notes file includes: `title`, `added` ISO timestamp, `recommended_by`, `pdf_path`, optional `pdf_url`, and `tags: [pdf, reading]`.
 
 Troubleshooting:
-- “reminders: command not found” → `brew install reminders-cli`
-- “Failed to add reminder task” → ensure the list name is concrete (avoid templates like `{{title}}`) or set a valid `reminders.listName` on the person page; the tool will fallback to `Reading` and auto-create lists when possible.
+- "reminders: command not found" → `brew install keith/formulae/reminders-cli`
+- "Failed to add reminder task" → ensure the list name is concrete (avoid templates like `{{title}}`) or set a valid `reminders.listName` on the person page; the tool will fallback to `Reading` and auto-create lists when possible.
 
 - Pull Apple Reminders → cache + per‑person agendas + full mirror:
 
@@ -166,8 +281,9 @@ Enable deep Gmail fetching for a person and enrich their page with a deep Gmail 
 
 ## Typical flows
 
-- Morning (create/update today’s note):
+- Morning (create/update today's note):
   1) `/Users/joi/obs-dailynotes/tools/run_daily.sh`
+  2) Optional: `npm run ocr` if you have screenshots to process
 
 - After checking off items in the Reminders mirror:
   1) `/Users/joi/obs-dailynotes/tools/run_sync.sh`
@@ -184,8 +300,9 @@ Enable deep Gmail fetching for a person and enrich their page with a deep Gmail 
 ## Where things appear
 
 - Daily note (under `DAILY_NOTE_PATH`):
-  - Header, Meetings, and “Reminders (macOS)” transclusion of `reminders.md`.
-  - Per‑meeting “Agenda” sub-lists (when attendees match person pages).
+  - Header, Meetings, and "Reminders (macOS)" transclusion of `reminders.md`.
+  - Per‑meeting "Agenda" sub-lists (when attendees match person pages).
+  - OCR section: `## Screenshot Text (OCR)` with extracted text from images
 
 - Person pages (at vault root):
   - Agenda from Apple Reminders is auto-inserted at the top between:
@@ -242,5 +359,7 @@ Notes:
   - Command: `/Users/joi/obs-dailynotes/tools/run_daily.sh`
 - Sync macro:
   - Command: `/Users/joi/obs-dailynotes/tools/run_sync.sh`
-
-
+- OCR macro (new):
+  - Command: `cd /Users/joi/obs-dailynotes && npm run ocr`
+- Morning with OCR macro:
+  - Command: `cd /Users/joi/obs-dailynotes && npm run gtd:morning-ocr`

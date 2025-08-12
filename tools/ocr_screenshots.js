@@ -26,11 +26,27 @@ function findImageLinks(markdown) {
 
 function resolveImagePath(vaultRoot, rel) {
   if (path.isAbsolute(rel)) return rel;
-  const p = path.join(vaultRoot, rel);
-  if (fs.existsSync(p)) return p;
-  // Try Resources/Images fallback if not found
-  const alt = path.join(vaultRoot, 'Resources', 'Images', rel);
-  if (fs.existsSync(alt)) return alt;
+  
+  // Try multiple possible locations
+  const locations = [
+    path.join(vaultRoot, rel),                    // Root of vault
+    path.join(vaultRoot, 'Attachments', rel),     // Attachments folder
+    path.join(vaultRoot, 'Resources', 'Images', rel), // Resources/Images folder
+    path.join(vaultRoot, 'dailynote', rel),       // Daily note folder
+  ];
+  
+  for (const loc of locations) {
+    if (fs.existsSync(loc)) return loc;
+  }
+  
+  // If just filename, search for it
+  const filename = path.basename(rel);
+  for (const loc of locations) {
+    const dir = path.dirname(loc);
+    const fullPath = path.join(dir, filename);
+    if (fs.existsSync(fullPath)) return fullPath;
+  }
+  
   return null;
 }
 
@@ -73,10 +89,14 @@ return ocrFile("${imgPath.replace(/"/g, '\\"')}")
   return '';
 }
 
-function summarizeLines(text, maxLines = 3) {
+function formatOCRText(text, maxLines = 15) {
   const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-  if (lines.length <= maxLines) return lines.join(' ');
-  return lines.slice(0, maxLines).join(' ') + ' …';
+  if (lines.length <= maxLines) {
+    // If within limit, return all lines joined with line breaks
+    return lines.join('\n    ');
+  }
+  // If exceeds limit, truncate and add ellipsis
+  return lines.slice(0, maxLines).join('\n    ') + '\n    [... ' + (lines.length - maxLines) + ' more lines truncated]';
 }
 
 async function main() {
@@ -94,11 +114,11 @@ async function main() {
     if (!abs) continue;
     const text = useTess ? ocrWithTesseract(abs) : ocrWithVisionKit(abs);
     if (text && text.trim().length >= 8) {
-      entries.push({ rel, text: summarizeLines(text, 3) });
+      entries.push({ rel, text: formatOCRText(text, 15) });
     }
   }
   if (!entries.length) process.exit(0);
-  const block = ['## Screenshot Text (OCR)', ...entries.map(e => `- ${e.rel}: ${e.text}`)].join('\n') + '\n';
+  const block = ['## Screenshot Text (OCR)', ...entries.map(e => `### ${e.rel}\n\n    ${e.text}\n`)].join('\n') + '\n';
   // Insert before Reminders or at end
   if (/^##\s*Reminders/m.test(md)) {
     md = md.replace(/(^##\s*Reminders[\s\S]*$)/m, (m0) => block + '\n' + m0);
