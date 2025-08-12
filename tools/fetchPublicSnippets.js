@@ -131,6 +131,31 @@ async function main() {
     } catch { return null; }
   }
 
+  function normalizeTokens(name) {
+    const base = String(name || '')
+      .replace(/\([^)]*\)/g, ' ') // drop qualifiers in parens
+      .replace(/[-_]/g, ' ')
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    return base.split(' ').filter(Boolean);
+  }
+
+  function likelyMatchesTitle(candidateTitle, personName) {
+    const strict = (process.env.STRICT_WIKI_MATCH || '1') !== '0';
+    if (!strict) return true;
+    const title = String(candidateTitle || '').replace(/_/g, ' ');
+    const titleMain = title.replace(/\s*\([^)]*\)\s*$/, '').toLowerCase();
+    const nameTokens = normalizeTokens(personName);
+    if (nameTokens.length < 2) return false;
+    const [first, ...rest] = nameTokens;
+    const last = rest[rest.length - 1];
+    // Require both first and last name tokens to appear in the title main
+    if (!titleMain.includes(first) || !titleMain.includes(last)) return false;
+    return true;
+  }
+
   // Determine target Wikipedia page
   async function resolveWikipedia() {
     // 1) If frontmatter/body links already contain a specific Wikipedia URL, trust it
@@ -160,7 +185,7 @@ async function main() {
       const s = (sum?.summary || '').toLowerCase();
       return /may refer to:/.test(s) || /disambiguation/.test(s);
     };
-    if (w && !looksDisambig(w)) return w;
+    if (w && !looksDisambig(w) && likelyMatchesTitle(w.url?.split('/wiki/')[1] || '', personKey)) return w;
 
     // 4) If disambiguation and we have a qualifier, search with qualifier
     if (qualifierInfo.qualifier) {
@@ -172,18 +197,18 @@ async function main() {
       ].filter(Boolean);
       for (const q of queries) {
         const title = await searchWikipedia(q);
-        if (title) {
+        if (title && likelyMatchesTitle(title, qualifierInfo.base)) {
           const bySearch = await fetchWikipediaSummary(title);
-          if (bySearch && !looksDisambig(bySearch)) return bySearch;
+          if (bySearch && !looksDisambig(bySearch) && likelyMatchesTitle(title, qualifierInfo.base)) return bySearch;
         }
       }
     }
 
     // 5) Final fallback: if we can find any non-disambig via search on base name
     const t2 = await searchWikipedia(qualifierInfo.base);
-    if (t2) {
+    if (t2 && likelyMatchesTitle(t2, qualifierInfo.base)) {
       const byBase = await fetchWikipediaSummary(t2);
-      if (byBase && !looksDisambig(byBase)) return byBase;
+      if (byBase && !looksDisambig(byBase) && likelyMatchesTitle(t2, qualifierInfo.base)) return byBase;
     }
     return w; // return whatever we had (possibly disambig) so the rest of pipeline still runs
   }

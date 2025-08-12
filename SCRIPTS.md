@@ -36,6 +36,46 @@ Tip: Trigger these via Keyboard Maestro “Execute Shell Script”.
   ```bash
   npm run people:index
   ```
+## PDFs recommended by people (workflow)
+
+Add a recommended PDF for a person; the script will download/copy the PDF, create a notes page, add an Apple Reminder, and link it on the person’s page under “Recommended PDFs”.
+
+Command:
+
+```bash
+node tools/addPdfNote.js \
+  --person "Full Name" \
+  --url "https://example.com/file.pdf" \
+  --title "Paper Title" \
+  --due 2025-09-01
+```
+
+Options:
+- `--file /path/to/local.pdf` instead of `--url` to import a local file
+- `--due YYYY-MM-DD` sets a due date on the Reminder
+
+What it does:
+- Saves PDF to `~/switchboard/Resources/PDFs/<slug>.pdf`
+- Creates `~/switchboard/Resources/PDFs/<slug>.md` with frontmatter and sections (Notes, Highlights)
+- Adds Apple Reminders task: “Read PDF: <title>”
+- Upserts a link under `## Recommended PDFs` on the person’s page
+
+Prereqs:
+- `brew install reminders-cli`
+- Ensure `DAILY_NOTE_PATH` is set in `.env` so the script can locate `people.index.json`
+
+Details:
+- Person list selection for the Reminder (in order):
+  1) The person’s page frontmatter `reminders.listName` if present and not a template (e.g., ignores `{{title}}`)
+  2) `people.index.json` entry’s `reminders.listName`
+  3) Fallback to a `Reading` list
+- If the target list doesn’t exist, the tool attempts to create it automatically.
+- The person page is linked with an Obsidian wikilink under a `## Recommended PDFs` section (created if missing). Duplicate links are avoided.
+- The notes file includes: `title`, `added` ISO timestamp, `recommended_by`, `pdf_path`, optional `pdf_url`, and `tags: [pdf, reading]`.
+
+Troubleshooting:
+- “reminders: command not found” → `brew install reminders-cli`
+- “Failed to add reminder task” → ensure the list name is concrete (avoid templates like `{{title}}`) or set a valid `reminders.listName` on the person page; the tool will fallback to `Reading` and auto-create lists when possible.
 
 - Pull Apple Reminders → cache + per‑person agendas + full mirror:
 

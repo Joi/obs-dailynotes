@@ -53,6 +53,19 @@ function readFrontmatterInfo(personFilePath) {
   }
 }
 
+function loadPeopleConfigEmails(personKey) {
+  try {
+    const cfgPath = path.join(__dirname, '..', 'config', 'people.json');
+    if (!fs.existsSync(cfgPath)) return [];
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8')) || {};
+    const val = cfg[personKey];
+    if (!val) return [];
+    if (Array.isArray(val)) return val.filter((e) => /@/.test(e));
+    if (val && typeof val === 'object' && Array.isArray(val.emails)) return val.emails.filter((e) => /@/.test(e));
+    return [];
+  } catch { return []; }
+}
+
 function summarizeGmailHeaders(cache, limit = 8) {
   try {
     const byEmail = cache?.data?.gmailByEmail || {};
@@ -208,8 +221,24 @@ function upsertFrontmatterText(fmText, { org, title, timezone, keywords, languag
     }
   }
 
-  // Always update enrich as JSON
-  setOrAppendLine('enrich', JSON.stringify({ source: 'openai', updated: new Date().toISOString() }));
+  // Remove any prior enrich block/scalar and stray root source/updated keys
+  text = text
+    // remove enrich block
+    .replace(/^enrich:\s*\n([\s\S]*?)(?=^[A-Za-z0-9_\-]+:|\Z)/gm, '')
+    // remove enrich inline scalar
+    .replace(/^enrich:\s*\S.*$/gm, '')
+    // remove accidental root keys written previously
+    .replace(/^\s*source:\s*.*$/gm, '')
+    .replace(/^\s*updated:\s*.*$/gm, '')
+    .replace(/\n{2,}/g, '\n');
+
+  // Write enrich as a YAML mapping for readability
+  const enrichBlock = `enrich:\n  source: openai\n  updated: ${new Date().toISOString()}`;
+  if (/^enrich:/m.test(text)) {
+    text = text.replace(/^enrich:\s*\n([\s\S]*?)(?=^[A-Za-z0-9_\-]+:|\Z)/m, enrichBlock + '\n');
+  } else {
+    text += `\n${enrichBlock}`;
+  }
 
   return text;
 }
@@ -453,6 +482,8 @@ function updatePersonPage(personFile, additions, cache) {
     languages: additions.languages,
     links: mergedLinks
   });
+  // Strip stray single-letter lines (e.g., accidental 'Z') from frontmatter
+  newFmText = newFmText.replace(/^\s*[A-Za-z]\s*$/gm, '').replace(/\n{2,}/g, '\n');
   // Force-write a normalized links block from mergedLinks (guarantee presence)
   if (Object.keys(mergedLinks || {}).length) {
     let nf = newFmText
@@ -469,7 +500,21 @@ function updatePersonPage(personFile, additions, cache) {
 
   const fallbackBio = buildPublicBioFromCache(cache);
   const bioText = additions.publicBio || fallbackBio || '';
-  let newBody = upsertBio(body, bioText, mergedLinks.wikipedia);
+  // Remove any existing sections we fully control to avoid duplicates
+  let cleanedBody = body
+    // Connected People
+    .replace(/^##\s*Connected People \(from email headers\)[\s\S]*?(?=^##\s|\Z)/gmi, '')
+    // Bio
+    .replace(/^##\s*Bio[\s\S]*?(?=^##\s|\Z)/gmi, '')
+    // Public Links
+    .replace(/^##\s*Public\s+Links[\s\S]*?(?=^##\s|\Z)/gmi, '')
+    // Stray '---' separators and Created footers pasted into body
+    .replace(/^---\s*$[\r\n]+\*Created:[^\n]*\n?/gmi, '')
+    .replace(/^---\s*$/gmi, '');
+  // Remove stray '---' separators and Created footers in body (keep frontmatter only)
+  cleanedBody = cleanedBody.replace(/^---\s*$[\r\n]+\*Created:[^\n]*\n?/gmi, '');
+  cleanedBody = cleanedBody.replace(/^---\s*$/gmi, '');
+  let newBody = upsertBio(cleanedBody, bioText, mergedLinks.wikipedia);
   // Build Public Links section from merged links so inline or detected links appear
   const linksForSection = { ...mergedLinks };
   if (mergedLinks.wikipedia) linksForSection.wikipedia = mergedLinks.wikipedia;
@@ -543,9 +588,89 @@ function normalizeDisplayName(nameRaw) {
   n = n.replace(/^['"“”‘’]+/, '').replace(/['"“”‘’]+$/, '');
   // Collapse repeated inner quotes
   n = n.replace(/^[\s'"“”‘’]+|[\s'"“”‘’]+$/g, '').trim();
+  // Remove leading punctuation/dots
+  n = n.replace(/^[^\p{L}\p{N}]+/u, '');
   // Collapse multiple whitespace
   n = n.replace(/\s+/g, ' ').trim();
   return n;
+}
+
+// Helpers to detect "self" variants (handles dot prefixes and minor typos)
+function normalizeToTokens(nameRaw) {
+  const s = String(nameRaw || '')
+    .toLowerCase()
+    .replace(/[\.\-_]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return s ? s.split(' ') : [];
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n; if (n === 0) return m;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return dp[m][n];
+}
+
+function buildSelfVariantsFromGlobals() {
+  const variants = new Set();
+  const personKey = globalThis.__personKey || '';
+  const personFile = globalThis.__personFile || '';
+  const add = (s) => { const t = normalizeToTokens(s).join(' '); if (t) variants.add(t); };
+  add(personKey);
+  try {
+    if (personFile && fs.existsSync(personFile)) {
+      const txt = fs.readFileSync(personFile, 'utf8');
+      const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      if (m) {
+        const fm = m[1];
+        // aliases block form
+        const aliasBlock = fm.match(/^aliases:\s*\n([\s\S]*?)(?=^\w+:|$)/m);
+        if (aliasBlock) {
+          const lines = aliasBlock[1].split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+          for (const l of lines) add(l.replace(/^[-\s]+/, ''));
+        }
+        // aliases inline array form
+        const aliasInline = fm.match(/^aliases:\s*\[(.*?)\]/m);
+        if (aliasInline) {
+          const parts = aliasInline[1].split(',').map(s => s.replace(/^\s*["']?|["']?\s*$/g, ''));
+          for (const p of parts) add(p);
+        }
+      }
+    }
+  } catch {}
+  return variants;
+}
+
+function isLikelySelf(candidateName) {
+  const selfVariants = buildSelfVariantsFromGlobals();
+  const candTokens = normalizeToTokens(candidateName);
+  if (!candTokens.length) return true;
+  const candKey = candTokens.join(' ');
+  if (selfVariants.has(candKey)) return true;
+  // Fuzzy: first and last tokens within edit distance <= 1
+  for (const sv of selfVariants) {
+    const sTokens = sv.split(' ');
+    if (sTokens.length >= 2 && candTokens.length >= 2) {
+      const cf = candTokens[0], cl = candTokens[candTokens.length - 1];
+      const sf = sTokens[0], sl = sTokens[sTokens.length - 1];
+      if (levenshtein(cf, sf) <= 1 && levenshtein(cl, sl) <= 1) return true;
+    }
+  }
+  return false;
 }
 
 function extractConnectedNames(cache) {
@@ -563,9 +688,8 @@ function extractConnectedNames(cache) {
             if (!raw || /@/.test(raw)) continue;
             const n = normalizeDisplayName(raw);
             if (!n) continue;
-            // Exclude clear self forms (best-effort)
-            const lower = n.toLowerCase();
-            if (lower.includes('joichi ito') || lower.includes('伊藤')) continue;
+            // Exclude self variants
+            if (isLikelySelf(n)) continue;
             set.add(n);
           }
         }
@@ -591,8 +715,7 @@ function extractConnectedNameStats(cache) {
             if (!raw || /@/.test(raw)) continue;
             const n = normalizeDisplayName(raw);
             if (!n) continue;
-            const lower = n.toLowerCase();
-            if (lower.includes('joichi ito') || lower.includes('伊藤')) continue;
+            if (isLikelySelf(n)) continue;
             const prev = stats.get(n) || { firstMs: t, lastMs: t };
             prev.firstMs = Math.min(prev.firstMs, t);
             prev.lastMs = Math.max(prev.lastMs, t);
@@ -690,6 +813,9 @@ async function main() {
   const fullPath = personFile && path.isAbsolute(personFile)
     ? personFile
     : (personFile ? path.join('/Users/joi/switchboard', personFile) : path.join('/Users/joi/switchboard', `${personKey}.md`));
+  // Expose current person for self-detection utilities used later
+  globalThis.__personKey = personKey;
+  globalThis.__personFile = fullPath;
 
   // Optional prefetch: public snippets and Gmail (deep if flagged)
   if (process.env.SKIP_PREFETCH !== '1') {
@@ -703,19 +829,17 @@ async function main() {
     } catch {}
     // Gmail via MCP server if we have an email
     const fm = readFrontmatterInfo(fullPath);
-    const primaryEmail = process.env.PERSON_EMAIL || (Array.isArray(fm.emails) && fm.emails[0]) || '';
+    const confEmails = loadPeopleConfigEmails(personKey);
+    const fmEmails = Array.isArray(fm.emails) ? fm.emails : [];
+    const allEmails = Array.from(new Set([process.env.PERSON_EMAIL, ...fmEmails, ...confEmails].filter(Boolean)));
     const wantDeep = (process.env.GMAIL_DEEP === '1') || fm.gmail_deep;
     const gmailCmd = process.env.MCP_GMAIL_CMD || 'node';
     const gmailArgs = process.env.MCP_GMAIL_ARGS || 'tools/mcpServers/gmailServer.js';
-    if (primaryEmail) {
+    for (const email of allEmails.slice(0, 5)) {
       try {
-        const env = { ...process.env, PERSON_KEY: personKey, PERSON_EMAIL: primaryEmail, MCP_GMAIL_CMD: gmailCmd, MCP_GMAIL_ARGS: gmailArgs };
+        const env = { ...process.env, PERSON_KEY: personKey, PERSON_EMAIL: email, MCP_GMAIL_CMD: gmailCmd, MCP_GMAIL_ARGS: gmailArgs };
         if (wantDeep) env.GMAIL_DEEP = '1';
-        spawnSync('node', ['tools/mcpClient.js'], {
-          cwd: path.join(__dirname, '..'),
-          stdio: 'inherit',
-          env
-        });
+        spawnSync('node', ['tools/mcpClient.js'], { cwd: path.join(__dirname, '..'), stdio: 'inherit', env });
       } catch {}
     }
   }
@@ -762,6 +886,11 @@ async function main() {
     privateText = 'PRIVATE_NOTES\n\n- None.\n';
   }
 
+  // Strip any trailing CONTEXT section from the private notes (keep private notes clean)
+  privateText = String(privateText).replace(/\n+###\s*CONTEXT[\s\S]*$/i, '\n');
+  // Normalize spacing in private notes
+  privateText = privateText.replace(/\r\n/g, '\n').replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n';
+
   if (fs.existsSync(fullPath)) {
     updatePersonPage(fullPath, publicFields, cache);
   } else {
@@ -773,15 +902,38 @@ async function main() {
   console.log('Wrote private notes:', privPath);
   // Subtle marker on public page indicating a private page exists
   ensurePrivateMarker(fullPath);
-  // Also add Connected People to the public page body
+  // Also add Connected People to the public page body (canonicalized and de-duplicated)
   try {
     const content = fs.readFileSync(fullPath, 'utf8');
-    const names = extractConnectedNames(cache);
-    if (names && names.length) {
+    // Load people index to canonicalize names
+    const vaultRoot = path.resolve(path.join('/Users/joi/switchboard', 'dailynote'), '..');
+    let aliasToCanon = new Map();
+    try {
+      const idxPath = path.join(vaultRoot, 'people.index.json');
+      if (fs.existsSync(idxPath)) {
+        const idx = JSON.parse(fs.readFileSync(idxPath, 'utf8')) || {};
+        for (const [canon, rec] of Object.entries(idx)) {
+          const aliases = Array.isArray(rec.aliases) ? rec.aliases : [];
+          aliasToCanon.set(canon.toLowerCase(), canon);
+          for (const a of aliases) aliasToCanon.set(String(a).toLowerCase(), canon);
+        }
+      }
+    } catch {}
+    const namesRaw = extractConnectedNames(cache);
+    let names = [];
+    if (namesRaw && namesRaw.length) {
+      const seen = new Set();
+      for (const n of namesRaw) {
+        const canon = aliasToCanon.get(String(n).toLowerCase()) || n;
+        const key = String(canon).toLowerCase();
+        if (!seen.has(key)) { seen.add(key); names.push(canon); }
+      }
       const block = '## Connected People (from email headers)\n' + names.map(n => `- ${n}`).join('\n') + '\n';
       let out = content;
-      if (/^##\s*Connected People \(from email headers\)/m.test(content)) {
-        out = content.replace(/^##\s*Connected People \(from email headers\)[\s\S]*?(?=^##\s|\Z)/m, block + '\n');
+      // Remove any existing sections first, then insert above Notes if present
+      out = out.replace(/^##\s*Connected People \(from email headers\)[\s\S]*?(?=^##\s|\Z)/gmi, '');
+      if (/^##\s*Notes/m.test(out)) {
+        out = out.replace(/(^##\s*Notes[\s\S]*?$)/m, (m0) => block + '\n' + m0);
       } else if (/^##\s*Notes/m.test(content)) {
         out = content.replace(/(^##\s*Notes[\s\S]*?$)/m, (m0) => block + '\n' + m0);
       } else {

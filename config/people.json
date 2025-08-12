@@ -15,5 +15,6 @@
     "qualifier": "TED",
     "emails": ["chris@ted.com"],
     "wikipedia": "https://en.wikipedia.org/wiki/Chris_Anderson_(entrepreneur)"
-  }
+  },
+  "Danah Boyd": ["danah@danah.org", "apophenia@danah.org", "danah@datasociety.net", "zephoria@gmail.com"]
 }

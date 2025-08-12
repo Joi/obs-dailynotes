@@ -19,7 +19,7 @@ clip="$(pbpaste || true)"
 LOG_DIR="$REPO/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/km-enrich.log"
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] clip=\"${clip}\"" >> "$LOG_FILE"
+echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] clip=\"${clip}\"" >> "$LOG_FILE"
 
 decode_uri() {
   python3 - "$1" << 'PY'
@@ -108,7 +108,7 @@ if [[ -z "${path}" ]]; then
   exit 1
 fi
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] resolved=\"${path}\"" >> "$LOG_FILE"
+echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] resolved=\"${path}\"" >> "$LOG_FILE"
 
 # Resolve Node binary robustly
 NODE_BIN="$(command -v node || true)"
@@ -122,11 +122,14 @@ if [[ -z "$NODE_BIN" ]]; then
   exit 1
 fi
 
-"$NODE_BIN" tools/enrichPersonPage.js "$path" >> "$LOG_FILE" 2>&1 || {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR running enrich" >> "$LOG_FILE"
+# Note: Node tools load $REPO/.env internally via dotenv; no need to source .env here.
+
+# Call the LLM enricher (auto-prefetches public+gmail, updates page and private notes)
+PERSON_FILE="$path" "$NODE_BIN" tools/enrichFromLLM.js >> "$LOG_FILE" 2>&1 || {
+  echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] ERROR running enrichFromLLM" >> "$LOG_FILE"
   exit 1
 }
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] success" >> "$LOG_FILE"
+echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] success" >> "$LOG_FILE"
 
 
