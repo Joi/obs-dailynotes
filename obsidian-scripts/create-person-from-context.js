@@ -80,7 +80,7 @@ async function createPersonFromContext(tp) {
     
     // Generate the person page content
     let content = `---
-tags: people
+tags: person
 name: ${fileName}
 emails: ${emails}
 aliases: []

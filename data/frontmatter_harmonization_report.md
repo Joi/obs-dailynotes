@@ -1,0 +1,109 @@
+# Frontmatter Harmonization Report
+
+Files scanned: 2912
+Files with proposed changes: 2912
+- type updates: 2906
+- slug updates: 2912
+- id updates: 2912
+
+## Samples
+- /Users/joi/switchboard/202109030628 - Signal with Sean Bonner.md
+  - type: ∅ → person, slug: ∅ → 202109030628-signal-with-sean-bonner, id: ∅ → person:202109030628-signal-with-sean-bonner
+- /Users/joi/switchboard/2023-04-21-1100.md
+  - type: ∅ → person, slug: ∅ → 2023-04-21-1100, id: ∅ → person:2023-04-21-1100
+- /Users/joi/switchboard/2025-05-21.md
+  - type: ∅ → person, slug: ∅ → 2025-05-21, id: ∅ → person:2025-05-21
+- /Users/joi/switchboard/2025-08-02.md
+  - type: ∅ → person, slug: ∅ → 2025-08-02, id: ∅ → person:2025-08-02
+- /Users/joi/switchboard/2025-08-03.md
+  - type: ∅ → person, slug: ∅ → 2025-08-03, id: ∅ → person:2025-08-03
+- /Users/joi/switchboard/A K M Adam.md
+  - type: ∅ → person, slug: ∅ → a-k-m-adam, id: ∅ → person:a-k-m-adam
+- /Users/joi/switchboard/A Sulzberger.md
+  - type: ∅ → person, slug: ∅ → a-sulzberger, id: ∅ → person:a-sulzberger
+- /Users/joi/switchboard/AJ Phillips.md
+  - type: ∅ → person, slug: ∅ → aj-phillips, id: ∅ → person:aj-phillips
+- /Users/joi/switchboard/Adam Back.md
+  - type: ∅ → person, slug: ∅ → adam-back, id: ∅ → person:adam-back
+- /Users/joi/switchboard/Adam Lindemann.md
+  - type: ∅ → person, slug: ∅ → adam-lindemann, id: ∅ → person:adam-lindemann
+- /Users/joi/switchboard/Adam Mullinax.md
+  - type: ∅ → person, slug: ∅ → adam-mullinax, id: ∅ → person:adam-mullinax
+- /Users/joi/switchboard/Addresses.md
+  - type: ∅ → person, slug: ∅ → addresses, id: ∅ → person:addresses
+- /Users/joi/switchboard/Adela Avila.md
+  - type: ∅ → person, slug: ∅ → adela-avila, id: ∅ → person:adela-avila
+- /Users/joi/switchboard/Ado Machida.md
+  - type: ∅ → person, slug: ∅ → ado-machida, id: ∅ → person:ado-machida
+- /Users/joi/switchboard/Adrianna Ma.md
+  - type: ∅ → person, slug: ∅ → adrianna-ma, id: ∅ → person:adrianna-ma
+- /Users/joi/switchboard/Aedhmar Hynes.md
+  - type: ∅ → person, slug: ∅ → aedhmar-hynes, id: ∅ → person:aedhmar-hynes
+- /Users/joi/switchboard/Agata Jałosińska.md
+  - type: ∅ → person, slug: ∅ → agata-ja-osi-ska, id: ∅ → person:agata-ja-osi-ska
+- /Users/joi/switchboard/Ahtisaari Marko.md
+  - type: ∅ → person, slug: ∅ → ahtisaari-marko, id: ∅ → person:ahtisaari-marko
+- /Users/joi/switchboard/AiLun Ku.md
+  - type: ∅ → person, slug: ∅ → ailun-ku, id: ∅ → person:ailun-ku
+- /Users/joi/switchboard/Aimi Sekiguchi.md
+  - type: ∅ → person, slug: ∅ → aimi-sekiguchi, id: ∅ → person:aimi-sekiguchi
+- /Users/joi/switchboard/Aki Oba.md
+  - type: ∅ → person, slug: ∅ → aki-oba, id: ∅ → person:aki-oba
+- /Users/joi/switchboard/Akihisa Shiozaki.md
+  - type: ∅ → person, slug: ∅ → akihisa-shiozaki, id: ∅ → person:akihisa-shiozaki
+- /Users/joi/switchboard/Akiko Murakami.md
+  - type: ∅ → person, slug: ∅ → akiko-murakami, id: ∅ → person:akiko-murakami
+- /Users/joi/switchboard/Akiko Yata.md
+  - type: ∅ → person, slug: ∅ → akiko-yata, id: ∅ → person:akiko-yata
+- /Users/joi/switchboard/Akira Saka.md
+  - type: ∅ → person, slug: ∅ → akira-saka, id: ∅ → person:akira-saka
+- /Users/joi/switchboard/Akito Someya.md
+  - type: ∅ → person, slug: ∅ → akito-someya, id: ∅ → person:akito-someya
+- /Users/joi/switchboard/Akiyoshi Inasaka.md
+  - type: ∅ → person, slug: ∅ → akiyoshi-inasaka, id: ∅ → person:akiyoshi-inasaka
+- /Users/joi/switchboard/Alaa Murabit.md
+  - type: ∅ → person, slug: ∅ → alaa-murabit, id: ∅ → person:alaa-murabit
+- /Users/joi/switchboard/Albert Wenger.md
+  - type: ∅ → person, slug: ∅ → albert-wenger, id: ∅ → person:albert-wenger
+- /Users/joi/switchboard/Albert-Laszlo Barabasi.md
+  - type: ∅ → person, slug: ∅ → albert-laszlo-barabasi, id: ∅ → person:albert-laszlo-barabasi
+- /Users/joi/switchboard/Alberto Ibarguen.md
+  - type: ∅ → person, slug: ∅ → alberto-ibarguen, id: ∅ → person:alberto-ibarguen
+- /Users/joi/switchboard/Alek Tarkowski.md
+  - type: ∅ → person, slug: ∅ → alek-tarkowski, id: ∅ → person:alek-tarkowski
+- /Users/joi/switchboard/Alexander Karsner.md
+  - type: ∅ → person, slug: ∅ → alexander-karsner, id: ∅ → person:alexander-karsner
+- /Users/joi/switchboard/Alexander Lourie.md
+  - type: ∅ → person, slug: ∅ → alexander-lourie, id: ∅ → person:alexander-lourie
+- /Users/joi/switchboard/Alexander Macgillivray.md
+  - type: ∅ → person, slug: ∅ → alexander-macgillivray, id: ∅ → person:alexander-macgillivray
+- /Users/joi/switchboard/Alexandra Mendelson.md
+  - type: ∅ → person, slug: ∅ → alexandra-mendelson, id: ∅ → person:alexandra-mendelson
+- /Users/joi/switchboard/Alison Sander.md
+  - type: ∅ → person, slug: ∅ → alison-sander, id: ∅ → person:alison-sander
+- /Users/joi/switchboard/Allen Guan.md
+  - type: ∅ → person, slug: ∅ → allen-guan, id: ∅ → person:allen-guan
+- /Users/joi/switchboard/Allison Tauziet.md
+  - type: ∅ → person, slug: ∅ → allison-tauziet, id: ∅ → person:allison-tauziet
+- /Users/joi/switchboard/Amanda Nguyen.md
+  - type: ∅ → person, slug: ∅ → amanda-nguyen, id: ∅ → person:amanda-nguyen
+- /Users/joi/switchboard/Amy Brand.md
+  - type: ∅ → person, slug: ∅ → amy-brand, id: ∅ → person:amy-brand
+- /Users/joi/switchboard/Ana Sofia Correia.md
+  - type: ∅ → person, slug: ∅ → ana-sofia-correia, id: ∅ → person:ana-sofia-correia
+- /Users/joi/switchboard/Andaz Hotel Tokyo.md
+  - type: ∅ → person, slug: ∅ → andaz-hotel-tokyo, id: ∅ → person:andaz-hotel-tokyo
+- /Users/joi/switchboard/Andre Uhl.md
+  - type: ∅ → person, slug: ∅ → andre-uhl, id: ∅ → person:andre-uhl
+- /Users/joi/switchboard/Andrea Lauer.md
+  - type: ∅ → person, slug: ∅ → andrea-lauer, id: ∅ → person:andrea-lauer
+- /Users/joi/switchboard/Andrea Lee.md
+  - type: ∅ → person, slug: ∅ → andrea-lee, id: ∅ → person:andrea-lee
+- /Users/joi/switchboard/Andrew Cohen.md
+  - type: ∅ → person, slug: ∅ → andrew-cohen, id: ∅ → person:andrew-cohen
+- /Users/joi/switchboard/Andrew Lee.md
+  - type: ∅ → person, slug: ∅ → andrew-lee, id: ∅ → person:andrew-lee
+- /Users/joi/switchboard/Andrew Mangino.md
+  - type: ∅ → person, slug: ∅ → andrew-mangino, id: ∅ → person:andrew-mangino
+- /Users/joi/switchboard/Andrew McLaughlin.md
+  - type: ∅ → person, slug: ∅ → andrew-mclaughlin, id: ∅ → person:andrew-mclaughlin

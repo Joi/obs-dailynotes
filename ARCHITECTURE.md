@@ -1,3 +1,10 @@
+---
+tags: [documentation]
+type: note
+slug: architecture-decision-multilang
+id: note:architecture-decision-multilang
+---
+
 # Architecture Decision: Multi-Language Codebase
 
 ## Current State

@@ -19,6 +19,17 @@ const fullMdPath = path.join(remindersDir, 'reminders.md');
 const inboxMdPath = path.join(remindersDir, 'reminders_inbox.md');
 const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
 
+function extractTags(text) {
+  if (!text || typeof text !== 'string') return [];
+  const tags = new Set();
+  const re = /#([A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)?)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    tags.add(m[1]);
+  }
+  return Array.from(tags);
+}
+
 function runRemindersShowAll() {
   return new Promise((resolve, reject) => {
     execFile('reminders', ['show-all', '--format', 'json'], (err, stdout, stderr) => {
@@ -31,15 +42,22 @@ function runRemindersShowAll() {
 }
 
 function normalizeItem(it) {
+  const title = it.title || '';
+  const notes = it.notes || '';
+  const tags = Array.from(new Set([
+    ...extractTags(title),
+    ...extractTags(notes)
+  ]));
   return {
     id: it.externalId,
-    title: it.title || '',
+    title,
     list: it.list || '',
-    notes: it.notes || '',
+    notes,
     flagged: !!it.flagged,
     priority: it.priority || 0,
     due: it.dueDate || null,
-    completed: !!it.isCompleted
+    completed: !!it.isCompleted,
+    tags
   };
 }
 

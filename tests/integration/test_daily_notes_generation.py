@@ -309,7 +309,7 @@ Mentioned [[Bob Johnson]] in context of new project.
                 
                 # Create page
                 frontmatter = f"""---
-tags: [people]
+tags: [person]
 name: {person}
 emails: [{person_email if person_email else ''}]
 aliases: []

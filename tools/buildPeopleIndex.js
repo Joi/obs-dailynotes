@@ -113,7 +113,7 @@ if (fs.existsSync(peopleDir)) {
     const fm = parseFrontmatter(content);
     const name = (fm.name && String(fm.name).trim().length ? fm.name : path.basename(f, '.md'));
     const tags = Array.isArray(fm.tags) ? fm.tags : (typeof fm.tags === 'string' ? [fm.tags] : []);
-    const hasPeopleTag = tags.includes('people');
+    const hasPeopleTag = tags.includes('person');
     const hasRemindersList = fm.reminders && 
       ((typeof fm.reminders === 'object' && fm.reminders.listName) || 
        (typeof fm.reminders === 'string' && fm.reminders.length > 0));
@@ -126,7 +126,7 @@ if (fs.existsSync(peopleDir)) {
     }
     const hasEmails = emails.length > 0;
     
-    // Include if explicitly tagged people OR has strong signal (emails or reminders list)
+    // Include if explicitly tagged person OR has strong signal (emails or reminders list)
     if (!hasPeopleTag && !hasEmails && !hasRemindersList) continue;
     
     const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];

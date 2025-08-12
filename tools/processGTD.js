@@ -44,6 +44,18 @@ const TAG_SYNONYMS = [
   { keywords: ['call', 'phone', 'ring', 'dial'], tag: 'call' },
 ];
 
+// Extract hash tags from arbitrary text (supports project:name)
+function extractTags(text) {
+  if (!text || typeof text !== 'string') return [];
+  const tags = new Set();
+  const re = /#([A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)?)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    tags.add(m[1]);
+  }
+  return Array.from(tags);
+}
+
 // Simple natural language date parsing (limited built-in; avoids adding deps)
 function parseNaturalLanguageDue(input) {
   const text = input.toLowerCase();
@@ -206,7 +218,10 @@ function loadReminders() {
           flagged: item.flagged,
           priority: item.priority,
           dueDate: item.due,
-          completed: item.completed
+          completed: item.completed,
+          tags: Array.isArray(item.tags) && item.tags.length > 0
+            ? item.tags
+            : extractTags(`${item.title || ''} ${item.notes || ''}`)
         });
       });
     });
@@ -242,6 +257,14 @@ function categorizeReminders(reminders, peopleIndexOptional) {
     if (reminder.completed) return;
 
     const elements = parseGTDElements(reminder.name);
+    // Merge tags from notes and cache
+    const noteTags = extractTags(reminder.notes || '');
+    const cacheTags = Array.isArray(reminder.tags) ? reminder.tags : [];
+    elements.tags = Array.from(new Set([...(elements.tags || []), ...noteTags, ...cacheTags]));
+    if (!elements.project) {
+      const projectTag = elements.tags.find(t => t.startsWith('project:'));
+      if (projectTag) elements.project = projectTag.replace('project:', '');
+    }
     const task = {
       title: linkPeopleInTitle(elements.cleanTitle, peopleIndex),
       originalTitle: reminder.name,

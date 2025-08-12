@@ -1,0 +1,115 @@
+#!/usr/bin/env node
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const fg = require("fast-glob");
+const matter = require("gray-matter");
+
+const REPO_ROOT = "/Users/joi/obs-dailynotes";
+const SWITCHBOARD_PATH = process.env.SWITCHBOARD_PATH || "/Users/joi/switchboard";
+const DATA_DIR = path.join(REPO_ROOT, "data");
+const REPORT_MD = path.join(DATA_DIR, "frontmatter_harmonization_report.md");
+
+function ensureDir(dirPath) { if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true }); }
+
+async function listMarkdownFiles() {
+  const patterns = [
+    path.join(SWITCHBOARD_PATH, "**/*.md"),
+    path.join(REPO_ROOT, "**/*.md"),
+  ];
+  const ignore = ["**/node_modules/**", "**/.git/**", "**/data/**", "**/logs/**"];
+  return fg(patterns, { ignore, dot: false, onlyFiles: true, unique: true });
+}
+
+function kebabify(text) {
+  return String(text || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function inferTypeFromPath(absPath) {
+  if (absPath.includes("/Private/People/") || absPath.match(/\/[^/]+\.md$/)) return "person";
+  if (absPath.includes("/Organizations/")) return "organization";
+  if (absPath.includes("/litnotes/")) return "idea";
+  if (absPath.includes("/Literature/") || absPath.includes("/zotero-annotations/")) return "paper";
+  return "note";
+}
+
+function harmonize(fm, absPath) {
+  const title = path.basename(absPath, ".md");
+  const result = { changes: {}, fm: { ...fm } };
+  // Type
+  const currentType = typeof fm.type === "string" ? fm.type : null;
+  const inferredType = currentType || inferTypeFromPath(absPath);
+  if (!currentType || currentType !== inferredType) {
+    result.fm.type = inferredType;
+    result.changes.type = { from: currentType || null, to: inferredType };
+  }
+  // Slug
+  const currentSlug = typeof fm.slug === "string" ? fm.slug : null;
+  const proposedSlug = currentSlug || kebabify(title);
+  if (!currentSlug || currentSlug !== proposedSlug) {
+    result.fm.slug = proposedSlug;
+    result.changes.slug = { from: currentSlug || null, to: proposedSlug };
+  }
+  // ID
+  const currentId = typeof fm.id === "string" ? fm.id : null;
+  const proposedId = `${result.fm.type}:${result.fm.slug}`;
+  if (!currentId || currentId !== proposedId) {
+    result.fm.id = proposedId;
+    result.changes.id = { from: currentId || null, to: proposedId };
+  }
+  return result;
+}
+
+async function main() {
+  ensureDir(DATA_DIR);
+  const apply = process.argv.includes("--apply");
+  const files = await listMarkdownFiles();
+  const summary = { filesScanned: 0, filesChanged: 0, samples: [], byChange: { type: 0, slug: 0, id: 0 } };
+  for (const file of files) {
+    let raw;
+    try { raw = fs.readFileSync(file, "utf8"); } catch { continue; }
+    let parsed;
+    try { parsed = matter(raw); } catch { parsed = { data: {}, content: raw }; }
+    const fm = parsed.data || {};
+    const { changes, fm: newFm } = harmonize(fm, file);
+    const mutated = Object.keys(changes).length > 0;
+    summary.filesScanned++;
+    if (mutated) {
+      summary.filesChanged++;
+      if (changes.type) summary.byChange.type++;
+      if (changes.slug) summary.byChange.slug++;
+      if (changes.id) summary.byChange.id++;
+      if (summary.samples.length < 50) {
+        summary.samples.push({ file, changes });
+      }
+      if (apply) {
+        const out = matter.stringify(parsed.content || "", newFm, { lineWidth: 0 });
+        fs.writeFileSync(file, out.endsWith("\n") ? out : out + "\n", "utf8");
+      }
+    }
+  }
+
+  const lines = [];
+  lines.push("# Frontmatter Harmonization Report", "");
+  lines.push(`Files scanned: ${summary.filesScanned}`);
+  lines.push(`Files with ${apply ? "changes applied" : "proposed changes"}: ${summary.filesChanged}`);
+  lines.push(`- type updates: ${summary.byChange.type}`);
+  lines.push(`- slug updates: ${summary.byChange.slug}`);
+  lines.push(`- id updates: ${summary.byChange.id}`);
+  lines.push("", "## Samples");
+  for (const s of summary.samples) {
+    const parts = Object.entries(s.changes).map(([k, v]) => `${k}: ${v.from || '∅'} → ${v.to}`).join(", ");
+    lines.push(`- ${s.file}\n  - ${parts}`);
+  }
+  fs.writeFileSync(REPORT_MD, lines.join("\n") + "\n", "utf8");
+  console.log(`${apply ? "Applied" : "Planned"} harmonization. Report: ${REPORT_MD}`);
+}
+
+main().catch((e) => { console.error(e); process.exit(1); });
+
+

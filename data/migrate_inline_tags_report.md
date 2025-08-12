@@ -1,0 +1,95 @@
+# Migrate Inline Tags To Frontmatter Report
+
+Files updated: 88
+- Added 'person' to frontmatter: 0
+- Added 'idea' to frontmatter: 25
+
+## Files
+- /Users/joi/switchboard/Applied Behavior Analysis.md [+idea]
+- /Users/joi/switchboard/Autism.md [+idea]
+- /Users/joi/switchboard/Aya Ninomiya.md [+person]
+- /Users/joi/switchboard/Bayesian Statistics.md [+idea]
+- /Users/joi/switchboard/Boris Anthony.md [+idea]
+- /Users/joi/switchboard/CCI.md 
+- /Users/joi/switchboard/Causal Inference.md [+idea]
+- /Users/joi/switchboard/Chibitronics.md 
+- /Users/joi/switchboard/Digital Garage.md 
+- /Users/joi/switchboard/Digital Shakai Koso Kaigi.md 
+- /Users/joi/switchboard/ENISA.md 
+- /Users/joi/switchboard/Enjin01.md 
+- /Users/joi/switchboard/Federal Trade Commission.md 
+- /Users/joi/switchboard/Federated Learning of Cohorts.md [+idea]
+- /Users/joi/switchboard/Floortime.md [+idea]
+- /Users/joi/switchboard/Front Matter.md [+idea]
+- /Users/joi/switchboard/Fumiaki Kobayashi.md [+person]
+- /Users/joi/switchboard/Fumio Kishida.md [+person]
+- /Users/joi/switchboard/Future of Accounting.md [+idea]
+- /Users/joi/switchboard/GTD Review.md [+idea]
+- /Users/joi/switchboard/Getting Things Done.md [+idea]
+- /Users/joi/switchboard/HR Best Practices.md [+idea]
+- /Users/joi/switchboard/Hasselblad.md 
+- /Users/joi/switchboard/Hiromi Ozaki.md [+person]
+- /Users/joi/switchboard/Hiroo Mori.md [+person]
+- /Users/joi/switchboard/Hiroto Izumi.md [+person]
+- /Users/joi/switchboard/Intended Consequences.md [+idea]
+- /Users/joi/switchboard/Koichi Akaishi.md [+person]
+- /Users/joi/switchboard/Koichi Hagiuda.md [+person]
+- /Users/joi/switchboard/Kriti Godey.md [+person]
+- /Users/joi/switchboard/Kyoiku Chokugo.md [+idea]
+- /Users/joi/switchboard/Liberal Democratic Party.md 
+- /Users/joi/switchboard/Literature Review.md [+idea]
+- /Users/joi/switchboard/MOMA.md 
+- /Users/joi/switchboard/Madars Virza.md [+person]
+- /Users/joi/switchboard/Masaki Fujimoto.md [+person]
+- /Users/joi/switchboard/Masanori Kusunoki.md [+person]
+- /Users/joi/switchboard/Matt McKenna.md [+person]
+- /Users/joi/switchboard/Melissa De Klerk.md [+person]
+- /Users/joi/switchboard/Metaverse.md [+idea]
+- /Users/joi/switchboard/Michael Carter.md [+person]
+- /Users/joi/switchboard/Michael J. Green.md [+person]
+- /Users/joi/switchboard/Mike Bracken.md [+person]
+- /Users/joi/switchboard/Ministry of Defense.md 
+- /Users/joi/switchboard/Ministry of Economy Trade and Industry.md 
+- /Users/joi/switchboard/Mizuko Ito.md [+person]
+- /Users/joi/switchboard/Mori Building.md 
+- /Users/joi/switchboard/Naohiko Okuda.md [+person]
+- /Users/joi/switchboard/Naoyuki Iwashita.md [+person]
+- /Users/joi/switchboard/Neha Narula.md [+person]
+- /Users/joi/switchboard/Neurodiversity.md [+idea]
+- /Users/joi/switchboard/Nippon Kaigi.md [+idea]
+- /Users/joi/switchboard/Noritake Matsuda.md [+person]
+- /Users/joi/switchboard/Office of American Possibilities.md 
+- /Users/joi/switchboard/Open Source in Government.md [+idea]
+- /Users/joi/switchboard/Personal Knowledge Management.md [+idea]
+- /Users/joi/switchboard/QAnon Japan.md 
+- /Users/joi/switchboard/Quantum Computing.md [+idea]
+- /Users/joi/switchboard/Ray Ozzie.md [+person]
+- /Users/joi/switchboard/Ryan Phelan.md [+person]
+- /Users/joi/switchboard/Samantha Bates.md [+person]
+- /Users/joi/switchboard/Seiichi Saito.md [+person]
+- /Users/joi/switchboard/Shigeaki Saegusa.md [+person]
+- /Users/joi/switchboard/Shingo Tsuji.md [+person]
+- /Users/joi/switchboard/Sierra Leone.md 
+- /Users/joi/switchboard/Sota Mizushima.md [+person]
+- /Users/joi/switchboard/Stephanie T. Nguyen.md [+person]
+- /Users/joi/switchboard/Takashi Asanuma.md [+person]
+- /Users/joi/switchboard/Tatsuya Honmaru.md [+person]
+- /Users/joi/switchboard/The Digital Agency.md 
+- /Users/joi/switchboard/The Future Project.md 
+- /Users/joi/switchboard/The Media Lab.md 
+- /Users/joi/switchboard/Tomomi Inada.md [+person]
+- /Users/joi/switchboard/Trilateral Commission.md 
+- /Users/joi/switchboard/Umio Otsuka.md [+person]
+- /Users/joi/switchboard/Valentin Heun.md [+person]
+- /Users/joi/switchboard/Vincenzo Iozzo.md [+person]
+- /Users/joi/switchboard/YAML.md [+idea]
+- /Users/joi/switchboard/Yasutoshi Nishimura.md [+person]
+- /Users/joi/switchboard/Yat Siu.md [+person]
+- /Users/joi/switchboard/Yoichi Ochiai.md [+person]
+- /Users/joi/switchboard/Yoko Ishikura.md [+person]
+- /Users/joi/switchboard/Yoshihide Suga.md [+person]
+- /Users/joi/switchboard/Yoshiko Sakurai.md [+person]
+- /Users/joi/switchboard/Yoshimasa Hayashi.md [+person]
+- /Users/joi/switchboard/Zettel ID.md [+idea]
+- /Users/joi/switchboard/Zettelkasten.md [+idea]
+- /Users/joi/switchboard/_DA Ideas.md [+idea]

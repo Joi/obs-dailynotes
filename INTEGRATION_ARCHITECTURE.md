@@ -1,3 +1,10 @@
+---
+tags: [documentation]
+type: note
+slug: integration-architecture
+id: note:integration-architecture
+---
+
 # Integration Architecture: Reminders, People, and Daily Notes
 
 ## Overview
@@ -82,7 +89,7 @@ Note: The index key is the person's `name`, not an ID. The `emails` field is alw
 
 ```markdown
 ---
-tags: [people]
+tags: [person]
 name: Taro Chiba
 emails: [taro@example.com, taro@cit.ac.jp]
 aliases: [Taro, T. Chiba]
@@ -164,7 +171,7 @@ To create a specialized email reminders system:
 
 ```markdown
 ---
-tags: [people, system]
+tags: [person, system]
 name: Email Tasks
 emails: [email-tasks@system.local]
 reminders:
@@ -183,7 +190,7 @@ People can have both personal and shared Apple Reminder lists for collaboration:
 
 ```markdown
 ---
-tags: [people, list]
+tags: [person, list]
 name: Daum Kim
 emails: [daum@example.com]
 aliases: [Daum]

@@ -19,7 +19,7 @@ class TestPersonPageFrontmatter:
     def test_parse_valid_frontmatter(self):
         """Test parsing valid person page frontmatter"""
         content = """---
-tags: [people]
+tags: [person]
 name: John Smith
 emails: [john@example.com, jsmith@company.org]
 aliases: [John, J. Smith]
@@ -40,7 +40,7 @@ reminders:
         import yaml
         fm = yaml.safe_load(frontmatter_text)
         
-        assert fm['tags'] == ['people']
+        assert fm['tags'] == ['person']
         assert fm['name'] == 'John Smith'
         assert fm['emails'] == ['john@example.com', 'jsmith@company.org']
         assert fm['aliases'] == ['John', 'J. Smith']
@@ -49,25 +49,25 @@ reminders:
     def test_standardize_tags_format(self):
         """Test standardizing tags from string to array"""
         content = """---
-tags: people
+tags: person
 name: John Smith
 ---"""
         
         # Standardize tags
         standardized = re.sub(
-            r'^tags: people$',
-            'tags: [people]',
+            r'^tags: person$',
+            'tags: [person]',
             content,
             flags=re.MULTILINE
         )
         
-        assert 'tags: [people]' in standardized
-        assert 'tags: people' not in standardized
+        assert 'tags: [person]' in standardized
+        assert 'tags: person' not in standardized
     
     def test_extract_emails_from_frontmatter(self):
         """Test extracting emails from frontmatter"""
         content = """---
-tags: [people]
+tags: [person]
 emails: 
   - john@example.com
   - jsmith@company.org
@@ -87,7 +87,7 @@ emails:
     def test_missing_required_fields(self):
         """Test handling of missing required fields"""
         content = """---
-tags: [people]
+tags: [person]
 ---"""
         
         match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
@@ -243,14 +243,14 @@ class TestPersonPageIndex:
         
         # Person 1
         (people_dir / "John Smith.md").write_text("""---
-tags: [people]
+tags: [person]
 name: John Smith
 emails: [john@example.com]
 ---""")
         
         # Person 2
         (people_dir / "Jane Doe.md").write_text("""---
-tags: [people]
+tags: [person]
 name: Jane Doe
 emails: [jane@example.com]
 ---""")
@@ -262,7 +262,7 @@ emails: [jane@example.com]
             match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
             if match:
                 fm = yaml.safe_load(match.group(1))
-                if 'people' in fm.get('tags', []):
+                if 'person' in fm.get('tags', []):
                     name = fm.get('name', person_file.stem)
                     index[name] = {
                         'file': person_file.name,
@@ -359,7 +359,7 @@ class TestPersonPageValidation:
                     # Check required fields
                     if 'tags' not in fm:
                         errors.append('Missing tags field')
-                    elif 'people' not in fm.get('tags', []):
+                    elif 'person' not in fm.get('tags', []):
                         errors.append('Missing people tag')
                     
                     if 'name' not in fm:
@@ -378,7 +378,7 @@ class TestPersonPageValidation:
         
         # Valid page
         valid_content = """---
-tags: [people]
+tags: [person]
 name: John Smith
 emails: [john@example.com]
 ---"""
@@ -399,7 +399,7 @@ name: John Smith
         
         # Wrong field type
         invalid_content3 = """---
-tags: [people]
+tags: [person]
 name: John Smith
 emails: "john@example.com"
 ---"""

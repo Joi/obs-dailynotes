@@ -81,7 +81,7 @@ function ensurePeopleTagInFrontmatter(fm) {
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     if (/^tags:\s*$/i.test(line)) {
-      lines[i] = 'tags: [people]';
+      lines[i] = 'tags: [person]';
       foundTags = true;
       break;
     }
@@ -100,7 +100,7 @@ function ensurePeopleTagInFrontmatter(fm) {
   }
   if (!foundTags) {
     // Append tags at the end of frontmatter
-    lines.push('tags: [people]');
+    lines.push('tags: [person]');
   }
   return lines.join('\n');
 }

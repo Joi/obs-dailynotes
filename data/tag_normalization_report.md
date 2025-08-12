@@ -1,0 +1,115 @@
+# Tag Normalization Report
+
+Files scanned: 2910
+Files with proposed changes: 874
+Files with YAML errors skipped: 2
+
+## Type changes (proposed)
+- None
+
+## Tag changes (proposed)
+- people→person: 866
+- org_p→organization: 6
+- ideas_p→idea: 2
+
+## Samples
+- /Users/joi/switchboard/2023-04-21-1100.md
+  - tags: people→person
+- /Users/joi/switchboard/2025-05-21.md
+  - tags: people→person
+- /Users/joi/switchboard/2025-08-02.md
+  - tags: people→person
+- /Users/joi/switchboard/2025-08-03.md
+  - tags: people→person
+- /Users/joi/switchboard/A K M Adam.md
+  - tags: people→person
+- /Users/joi/switchboard/A Sulzberger.md
+  - tags: people→person
+- /Users/joi/switchboard/AJ Phillips.md
+  - tags: people→person
+- /Users/joi/switchboard/Adam Back.md
+  - tags: people→person
+- /Users/joi/switchboard/Adam Lindemann.md
+  - tags: people→person
+- /Users/joi/switchboard/Adam Mullinax.md
+  - tags: people→person
+- /Users/joi/switchboard/Adela Avila.md
+  - tags: people→person
+- /Users/joi/switchboard/Ado Machida.md
+  - tags: people→person
+- /Users/joi/switchboard/Adrianna Ma.md
+  - tags: people→person
+- /Users/joi/switchboard/Aedhmar Hynes.md
+  - tags: people→person
+- /Users/joi/switchboard/Agata Jałosińska.md
+  - tags: people→person
+- /Users/joi/switchboard/Ahtisaari Marko.md
+  - tags: people→person
+- /Users/joi/switchboard/AiLun Ku.md
+  - tags: people→person
+- /Users/joi/switchboard/Aimi Sekiguchi.md
+  - tags: people→person
+- /Users/joi/switchboard/Aki Oba.md
+  - tags: people→person
+- /Users/joi/switchboard/Akihisa Shiozaki.md
+  - tags: people→person
+- /Users/joi/switchboard/Akiko Murakami.md
+  - tags: people→person
+- /Users/joi/switchboard/Akiko Yata.md
+  - tags: people→person
+- /Users/joi/switchboard/Akira Saka.md
+  - tags: people→person
+- /Users/joi/switchboard/Akito Someya.md
+  - tags: people→person
+- /Users/joi/switchboard/Akiyoshi Inasaka.md
+  - tags: people→person
+- /Users/joi/switchboard/Alaa Murabit.md
+  - tags: people→person
+- /Users/joi/switchboard/Albert Wenger.md
+  - tags: people→person
+- /Users/joi/switchboard/Albert-Laszlo Barabasi.md
+  - tags: people→person
+- /Users/joi/switchboard/Alberto Ibarguen.md
+  - tags: people→person
+- /Users/joi/switchboard/Alek Tarkowski.md
+  - tags: people→person
+- /Users/joi/switchboard/Alexander Karsner.md
+  - tags: people→person
+- /Users/joi/switchboard/Alexander Lourie.md
+  - tags: people→person
+- /Users/joi/switchboard/Alexander Macgillivray.md
+  - tags: people→person
+- /Users/joi/switchboard/Alexandra Mendelson.md
+  - tags: people→person
+- /Users/joi/switchboard/Alison Sander.md
+  - tags: people→person
+- /Users/joi/switchboard/Allen Guan.md
+  - tags: people→person
+- /Users/joi/switchboard/Allison Tauziet.md
+  - tags: people→person
+- /Users/joi/switchboard/Amanda Nguyen.md
+  - tags: people→person
+- /Users/joi/switchboard/Amy Brand.md
+  - tags: people→person
+- /Users/joi/switchboard/Ana Sofia Correia.md
+  - tags: people→person
+- /Users/joi/switchboard/Andre Uhl.md
+  - tags: people→person
+- /Users/joi/switchboard/Andrea Lauer.md
+  - tags: people→person
+- /Users/joi/switchboard/Andrea Lee.md
+  - tags: people→person
+- /Users/joi/switchboard/Andrew Cohen.md
+  - tags: people→person
+- /Users/joi/switchboard/Andrew Lee.md
+  - tags: people→person
+- /Users/joi/switchboard/Andrew Mangino.md
+  - tags: people→person
+- /Users/joi/switchboard/Andrew McLaughlin.md
+  - tags: people→person
+- /Users/joi/switchboard/Andrew Prague.md
+  - tags: people→person
+- /Users/joi/switchboard/Andrew Rabie.md
+  - tags: people→person
+- /Users/joi/switchboard/Anisia Gifford.md
+  - tags: people→person

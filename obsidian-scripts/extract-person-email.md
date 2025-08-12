@@ -32,8 +32,7 @@ if (activeFile && activeFile.path.includes('dailynote')) {
     }
 }
 -%>
----
-tags: people
+tags: person
 name: <% fileName %>
 emails: [<% extractedEmail %>]
 aliases: []
@@ -66,8 +65,7 @@ When you see a person without a page in your daily note:
 2. Copy this template:
 
 ```markdown
----
-tags: people
+tags: person
 name: Person Name
 emails: []
 aliases: []
