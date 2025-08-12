@@ -172,6 +172,32 @@ function report({ nodes, edges }) {
   fs.writeFileSync(REPORT_MD, lines.join("\n") + "\n", "utf8");
 }
 
+function buildResolvers(nodesMap) {
+  const slugToId = new Map();
+  const aliasToId = new Map();
+  for (const n of nodesMap.values()) {
+    if (n.slug) slugToId.set(n.slug, n.id);
+    if (Array.isArray(n.aliases)) {
+      for (const a of n.aliases) {
+        const s = kebabify(a);
+        if (s) aliasToId.set(s, n.id);
+      }
+    }
+    // Also map title kebab as fallback
+    if (n.title) {
+      const s = kebabify(n.title);
+      if (s && !slugToId.has(s)) slugToId.set(s, n.id);
+    }
+  }
+  function resolve(targetTitle) {
+    const s = kebabify(targetTitle);
+    if (slugToId.has(s)) return { id: slugToId.get(s), confidence: 1.0 };
+    if (aliasToId.has(s)) return { id: aliasToId.get(s), confidence: 0.8 };
+    return { id: `note:${s}`, confidence: 0.4 };
+  }
+  return { resolve };
+}
+
 async function main() {
   ensureDir(DATA_DIR);
   const mode = process.argv.includes("--report") ? "report" : "index";
@@ -184,8 +210,8 @@ async function main() {
   }
 
   const files = await scanVaults();
-  let newNodes = 0;
-  let newEdges = 0;
+  // First pass: parse all files → candidate nodes
+  const parsedFiles = [];
   for (const absPath of files) {
     const raw = safeRead(absPath);
     if (!raw) continue;
@@ -195,20 +221,44 @@ async function main() {
       const parsed = matter(raw);
       fm = parsed.data || {};
       content = parsed.content || raw;
-    } catch (err) {
-      // Malformed YAML frontmatter; skip FM and index as a generic note.
+    } catch (_) {
       fm = {};
       content = raw;
     }
     const node = toNode({ absPath, front: fm, content });
-    const edges = extractRelations({ id: node.id, absPath, fm, content });
+    parsedFiles.push({ absPath, fm, content, node });
+  }
 
+  // Build resolver map from candidate nodes and existingNodes
+  const combinedNodes = new Map(existingNodes);
+  for (const p of parsedFiles) combinedNodes.set(p.node.id, p.node);
+  const { resolve } = buildResolvers(combinedNodes);
+
+  let newNodes = 0;
+  let newEdges = 0;
+  for (const { absPath, fm, content, node } of parsedFiles) {
     // Upsert node
     const existing = existingNodes.get(node.id);
     if (!existing || JSON.stringify(existing) !== JSON.stringify(node)) {
       appendJsonl(GRAPH_JSONL, { kind: "node", data: node });
       existingNodes.set(node.id, node);
       newNodes += 1;
+    }
+
+    // Extract edges using resolver
+    const edges = [];
+    const wikilinkRegex = /\[\[([^\]|#]+)(?:#[^\]]+)?\]\]/g;
+    let match;
+    while ((match = wikilinkRegex.exec(content))) {
+      const targetTitle = match[1].trim();
+      const resolved = resolve(targetTitle);
+      edges.push({
+        src_id: node.id,
+        dst_id: resolved.id,
+        rel_type: "mentions",
+        confidence: resolved.confidence,
+        source: "wikilink",
+      });
     }
 
     // Append edges (dedupe naive by hash of fields)

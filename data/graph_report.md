@@ -1,7 +1,7 @@
 # Graph Report
 
 Nodes: 2824
-Edges: 8147
+Edges: 8790
 
 ## Nodes by Type
 - gtd-dashboard: 1

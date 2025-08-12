@@ -84,6 +84,23 @@ function addRelation({ src_id, dst_id, rel_type, note }) {
   return { ok: true };
 }
 
+function resolveWikilink({ text }) {
+  reloadIfChanged();
+  const key = String(text || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  // exact slug match first
+  for (const n of nodes.values()) if (n.slug === key) return { id: n.id, confidence: 1.0 };
+  // title and aliases
+  for (const n of nodes.values()) {
+    if (String(n.title || '').toLowerCase() === String(text).toLowerCase()) return { id: n.id, confidence: 0.9 };
+    if (Array.isArray(n.aliases)) {
+      for (const a of n.aliases) {
+        if (String(a).toLowerCase() === String(text).toLowerCase()) return { id: n.id, confidence: 0.85 };
+      }
+    }
+  }
+  return { id: `note:${key}`, confidence: 0.4 };
+}
+
 // JSON-RPC plumbing
 function send(result, id) { process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id, result }) + "\n"); }
 function sendJsonRpcError(message, id) { process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id, error: { code: -32000, message } }) + "\n"); }
@@ -132,6 +149,7 @@ const tools = [
   { name: "kg_get_node", description: "Get a node by ID", inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { name: "kg_search", description: "Search nodes by free text", inputSchema: { type: "object", properties: { text: { type: "string" }, limit: { type: "number" } }, required: ["text"] } },
   { name: "kg_add_relation", description: "Add an edge between nodes", inputSchema: { type: "object", properties: { src_id: { type: "string" }, dst_id: { type: "string" }, rel_type: { type: "string" }, note: { type: "string" } }, required: ["src_id", "dst_id", "rel_type"] } },
+  { name: "kg_resolve_wikilink", description: "Resolve a wikilink text to a node id", inputSchema: { type: "object", properties: { text: { type: "string" } }, required: ["text"] } },
 ];
 
 async function handleCall(name, params, id) {
@@ -140,6 +158,7 @@ async function handleCall(name, params, id) {
     if (name === "kg_get_node") return sendToolSuccess(getNode(params || {}), id);
     if (name === "kg_search") return sendToolSuccess(search(params || {}), id);
     if (name === "kg_add_relation") return sendToolSuccess(addRelation(params || {}), id);
+    if (name === "kg_resolve_wikilink") return sendToolSuccess(resolveWikilink(params || {}), id);
     return sendToolError("Unknown tool", id);
   } catch (e) { return sendToolError(e.message || "Tool error", id); }
 }
