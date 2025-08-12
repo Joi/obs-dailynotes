@@ -152,7 +152,7 @@ async function main() {
                     // Inject per-person agenda items under meeting when cache is present
                     if (remindersCache && remindersCache.byPerson && Array.isArray(event.attendees)) {
                         const attendeeNames = event.attendees.map(a => a.displayName || '').filter(Boolean);
-                        const attendeeEmails = event.attendees.map(a => a.email || '').filter(Boolean);
+                        const attendeeEmails = event.attendees.map(a => String(a.email || '').toLowerCase()).filter(Boolean);
                         const agendaLines = [];
                         for (const [personKey, info] of Object.entries(remindersCache.byPerson)) {
                             const aliasSet = new Set([info.name, ...(Array.isArray(info.aliases) ? info.aliases : [])]);
@@ -160,8 +160,9 @@ async function main() {
                             const matchedByEmail = attendeeEmails.some(e => emailSet.has(e));
                             const matchedByName = attendeeNames.some(n => aliasSet.has(n));
                             const matched = matchedByEmail || matchedByName;
-                            // Skip agenda injection for assistants when they are simply invitees (e.g., mika@example.com)
-                            const skipAsAssistant = matchedByEmail && Array.from(emailSet).some(e => assistantEmails.has(e));
+                            // Skip agenda injection for assistants (by email match OR by exact name match among attendees)
+                            const isAssistant = attendeeEmails.some(e => assistantEmails.has(e)) || attendeeNames.some(n => assistantEmails.has(String(n || '').toLowerCase()));
+                            const skipAsAssistant = isAssistant;
                             if (matched && !skipAsAssistant && !agendasInjectedForPerson.has(personKey) && Array.isArray(info.items) && info.items.length) {
                                 agendasInjectedForPerson.add(personKey);
                                 agendaLines.push(`\n- Agenda for [[${info.name}|${info.name}]]:`);
