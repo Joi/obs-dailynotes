@@ -15,6 +15,13 @@
   - "tomorrow", "next Friday", "in 2 weeks"
 - [ ] Auto-detect and link people in task titles
   - "Call John Smith" → links to [[John Smith]]
+ 
+Update: Done
+- [x] Implement smarter tag detection with fuzzy matching
+  - Auto-detect "email", "mail", "reply" → #email
+  - Auto-detect "call", "phone" → #call
+- [x] Add natural language date parsing (basic: today/tomorrow/next <weekday>/in N days/weeks)
+- [x] Auto-detect and link people in task titles (wikilinks via people index and aliases)
 
 ### Privacy & Multi-Sync Strategy
 - [ ] Implement folder structure with selective sync:
@@ -69,6 +76,8 @@
 ### Organization
 - [ ] Move all Python/JS files to `Scripts/` folder
 - [ ] Move all PDFs to `Resources/PDFs/`
+Update: Done
+- [x] Move all PDFs to `Resources/PDFs/` (new imports land in `Resources/PDFs/`; legacy files will be migrated gradually)
 - [ ] Create proper folder hierarchy:
   - `People/`
   - `Meetings/`
@@ -107,9 +116,9 @@
 - [ ] Set up automated notifications for shared content changes
 
 ### PDF Integration System
-- [ ] Create PDF metadata system with companion .md files
+- [x] Create PDF metadata system with companion .md files
 - [ ] Build Reading Queue dashboard
-- [ ] Link PDFs to reminder system
+- [x] Link PDFs to reminder system
 
 ## Medium-term Goals
 
@@ -186,4 +195,4 @@ _This section captures ideas and decisions from our ongoing discussions_
 
 ---
 
-*Last updated: 2025-08-09*
+*Last updated: 2025-08-12*
