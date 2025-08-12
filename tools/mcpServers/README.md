@@ -1,3 +1,7 @@
+---
+slug: readme
+id: 'undefined:readme'
+---
 ## MCP Servers (JSON-RPC) and gmail_deep mode
 
 This directory contains minimal MCP servers that speak JSON-RPC 2.0 over stdio. They are used by `tools/mcpClient.js` to fetch per‑person context (e.g., Gmail).

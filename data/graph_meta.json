@@ -1,10 +1,10 @@
 {
-  "updated_at": "2025-08-12T07:25:23.198Z",
+  "updated_at": "2025-08-12T07:39:39.976Z",
   "counts": {
-    "nodes": 2824,
-    "edges": 8790,
-    "newNodes": 2854,
-    "newEdges": 643
+    "nodes": 4863,
+    "edges": 17397,
+    "newNodes": 2914,
+    "newEdges": 0
   },
   "vaults": {
     "switchboard": "/Users/joi/switchboard",

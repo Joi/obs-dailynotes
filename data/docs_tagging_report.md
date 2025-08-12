@@ -1,0 +1,41 @@
+# Documentation Tagging Report
+
+Tagged files: 37
+
+- /Users/joi/switchboard/Bhutan.md
+- /Users/joi/switchboard/CLEANUP-SUMMARY.md
+- /Users/joi/switchboard/Cabinet Intelligence and Research Office.md
+- /Users/joi/switchboard/Chiba Institute of Technology.md
+- /Users/joi/switchboard/Co-Innovation Architecture Design.md
+- /Users/joi/switchboard/Cyberspace Solarium Commission.md
+- /Users/joi/switchboard/DA Logo and Design.md
+- /Users/joi/switchboard/Dx Ars Electronica Talk.md
+- /Users/joi/switchboard/Edvation × Summit.md
+- /Users/joi/switchboard/Epstein Links.md
+- /Users/joi/switchboard/Fundomo.md
+- /Users/joi/switchboard/GTD-SYSTEM-ANALYSIS.md
+- /Users/joi/switchboard/Global Startup Campus.md
+- /Users/joi/switchboard/Henkakukai.md
+- /Users/joi/switchboard/His Majesty King Jigme Khesar Namgyel Wangchuck.md
+- /Users/joi/switchboard/Journal of Design and Science.md
+- /Users/joi/switchboard/Keyboards.md
+- /Users/joi/switchboard/Personal Knowledge Management.md
+- /Users/joi/switchboard/Prompts.md
+- /Users/joi/switchboard/README_email_update.md
+- /Users/joi/switchboard/SCRIPTS.md
+- /Users/joi/switchboard/SOLUTION_SUMMARY.md
+- /Users/joi/switchboard/Shortcuts.md
+- /Users/joi/switchboard/TESTING.md
+- /Users/joi/switchboard/_Index_of_knowledge_graph.md
+- /Users/joi/switchboard/_Index_of_switchboard.md
+- /Users/joi/switchboard/email_archive.md
+- /Users/joi/switchboard/mailtopeoplepage_notes.md
+- /Users/joi/switchboard/obs-dailynotes.md
+- /Users/joi/switchboard/planck test.md
+- /Users/joi/switchboard/test.md
+- /Users/joi/switchboard/email_processor/COLD_START_PROMPT.md
+- /Users/joi/switchboard/email_processor/OPTIMIZATION_GUIDE.md
+- /Users/joi/switchboard/email_processor/PROMPT.md
+- /Users/joi/switchboard/email_processor/README.md
+- /Users/joi/switchboard/templates/_Index_of_templates.md
+- /Users/joi/switchboard/weeklynotes/_Index_of_weeklynotes.md

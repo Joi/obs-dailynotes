@@ -1,3 +1,97 @@
+---
+tags: [documentation]
+type: note
+slug: scripts
+id: note:scripts
+---
+
+# Scripts Reference
+
+Quick reference of npm scripts and tools in this repo. Run from `/Users/joi/obs-dailynotes`.
+
+## Daily operations
+
+```bash
+npm run daily                 # Generate today's note from Google Calendar
+npm run gtd:morning           # Pull Reminders, process GTD, generate today todos
+npm run gtd:sync              # Two-way sync (fast), then process GTD
+npm run gtd:evening           # Alias of gtd:sync
+```
+
+## Reminders
+
+```bash
+npm run reminders:pull        # Pull Apple Reminders (with shared)
+npm run reminders:sync-full   # Full sync back to Reminders
+npm run reminders:sync        # Deprecated alias → gtd:sync
+```
+
+## People tools
+
+```bash
+npm run people:index                 # Build people.index.json
+npm run people:generate-from-dailies # Extract people from dailies
+npm run people:enrich                # Enrich a person page
+npm run people:import-csv "file.csv" # Import contacts
+```
+
+## Knowledge Graph (JSON)
+
+```bash
+npm run graph:index        # Index switchboard + obs-dailynotes → data/graph.jsonl
+npm run graph:report       # Write data/graph_report.md
+
+# Tags normalization
+npm run graph:tags:plan    # Plan frontmatter tag changes (people→person, org_p→organization, etc.)
+npm run graph:tags:apply   # Apply frontmatter tag changes
+npm run graph:tags:inline:plan   # Plan inline hashtag fixes (#person_p → #person, etc.)
+npm run graph:tags:inline:apply  # Apply inline hashtag fixes
+npm run graph:tags:migrate-inline-to-fm:plan  # Plan moving inline tags into frontmatter
+npm run graph:tags:migrate-inline-to-fm:apply # Apply migration
+npm run graph:tags:validate      # Ensure deprecated tags are gone
+
+# Frontmatter harmonization (types/ids/slugs)
+npm run graph:fm:harmonize:plan  # Plan type/slug/id additions (orgs, ideas, etc.)
+npm run graph:fm:harmonize:apply # Apply to files (safe; skips malformed YAML)
+
+# Documentation auto-tagging
+npm run graph:docs:tag      # Tag likely docs with `documentation` and add ids/slugs
+```
+
+## MCP servers
+
+```bash
+# Knowledge Graph MCP (text-only responses for maximum compatibility)
+npm run mcp:kg
+
+# Usage examples in Claude/Cursor
+#   - Call kg_list_nodes with {type:'person', limit:5}
+#   - Call kg_search with {text:'Hayashi', limit:10}
+#   - Call kg_get_node with {id:'person:a-sulzberger'}
+#   - Call kg_add_relation with {src_id:'note:YYYY-MM-DD', dst_id:'person:slug', rel_type:'discussed_with'}
+#   - Call kg_resolve_wikilink with {text:'Taro Chiba'}
+```
+
+## Testing
+
+```bash
+npm test                # Python test suite via run_tests.py
+npm run test:js         # JS tests (Jest)
+```
+
+## Notes
+
+- The graph is JSONL-based (no SQLite). Nodes have `id` = `<type>:<slug>`.
+- Wikilinks are resolved to real IDs where possible; unresolved are `note:<slug>` with lower confidence.
+- Dataview index page: `switchboard/_Index_of_knowledge_graph.md`.
+
+---
+slug: scripts
+id: 'undefined:scripts'
+tags:
+  - documentation
+type: note
+---
 # Scripts & Automation Guide
 
 This page summarizes the scripts, exact commands, and when to run them.

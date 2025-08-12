@@ -31,11 +31,25 @@ function kebabify(text) {
 }
 
 function inferTypeFromPath(absPath) {
-  if (absPath.includes("/Private/People/") || absPath.match(/\/[^/]+\.md$/)) return "person";
   if (absPath.includes("/Organizations/")) return "organization";
   if (absPath.includes("/litnotes/")) return "idea";
   if (absPath.includes("/Literature/") || absPath.includes("/zotero-annotations/")) return "paper";
-  return "note";
+  if (absPath.includes("/Private/People/")) return "person";
+  // Unknown: leave undefined so we don't misclassify root files
+  return null;
+}
+
+function detectTypeFromFrontmatter(fm, absPath) {
+  if (typeof fm.type === "string" && fm.type.trim()) return fm.type.trim();
+  const tags = Array.isArray(fm.tags)
+    ? fm.tags.map((t) => String(t).toLowerCase())
+    : typeof fm.tags === "string"
+      ? fm.tags.split(/[\s,]+/).map((t) => t.toLowerCase())
+      : [];
+  const hasEmails = Array.isArray(fm.emails) ? fm.emails.length > 0 : typeof fm.emails === "string" && fm.emails.length > 0;
+  const hasReminders = fm.reminders && (typeof fm.reminders === "object" ? Boolean(fm.reminders.listName) : typeof fm.reminders === "string");
+  if (tags.includes("person") || hasEmails || hasReminders) return "person";
+  return inferTypeFromPath(absPath);
 }
 
 function harmonize(fm, absPath) {
@@ -43,8 +57,8 @@ function harmonize(fm, absPath) {
   const result = { changes: {}, fm: { ...fm } };
   // Type
   const currentType = typeof fm.type === "string" ? fm.type : null;
-  const inferredType = currentType || inferTypeFromPath(absPath);
-  if (!currentType || currentType !== inferredType) {
+  const inferredType = currentType || detectTypeFromFrontmatter(fm, absPath);
+  if (inferredType && (!currentType || currentType !== inferredType)) {
     result.fm.type = inferredType;
     result.changes.type = { from: currentType || null, to: inferredType };
   }
@@ -57,8 +71,9 @@ function harmonize(fm, absPath) {
   }
   // ID
   const currentId = typeof fm.id === "string" ? fm.id : null;
-  const proposedId = `${result.fm.type}:${result.fm.slug}`;
-  if (!currentId || currentId !== proposedId) {
+  const proposedId = result.fm.type ? `${result.fm.type}:${result.fm.slug}` : null;
+  const invalidId = !currentId || /^undefined:/.test(currentId) || !/^[a-z]+:[a-z0-9-]+$/.test(currentId || "");
+  if (proposedId && (invalidId || currentId !== proposedId)) {
     result.fm.id = proposedId;
     result.changes.id = { from: currentId || null, to: proposedId };
   }
@@ -74,7 +89,10 @@ async function main() {
     let raw;
     try { raw = fs.readFileSync(file, "utf8"); } catch { continue; }
     let parsed;
-    try { parsed = matter(raw); } catch { parsed = { data: {}, content: raw }; }
+    try { parsed = matter(raw); } catch { 
+      // Malformed YAML - skip rather than risking corruption
+      continue; 
+    }
     const fm = parsed.data || {};
     const { changes, fm: newFm } = harmonize(fm, file);
     const mutated = Object.keys(changes).length > 0;

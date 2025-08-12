@@ -1,3 +1,7 @@
+---
+slug: extract-person-email
+id: 'undefined:extract-person-email'
+---
 # Extract Person Email Script
 
 ## Setup Instructions
