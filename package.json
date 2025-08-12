@@ -29,6 +29,8 @@
     "people:import-csv": "node tools/importContactsFromCSV.js",
     "gtd:process": "node tools/processGTD.js",
     "gtd:morning": "npm run reminders:pull && npm run gtd:process && node tools/generateTodayTodos.js",
+    "ocr": "node tools/ocr_screenshots.js",
+    "gtd:morning-ocr": "npm run reminders:pull && npm run gtd:process && node tools/generateTodayTodos.js && npm run ocr",
     "gtd:sync": "npm run reminders:sync-fast && npm run reminders:pull && npm run gtd:process",
     "reminders:sync": "echo '\n[DEPRECATED] Use npm run gtd:sync or npm run reminders:sync-full\n' && npm run gtd:sync",
     "gtd:sync-full": "npm run reminders:sync-full && npm run reminders:pull && npm run gtd:process",
