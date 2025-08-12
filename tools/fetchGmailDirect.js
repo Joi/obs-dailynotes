@@ -17,13 +17,15 @@ function ensureDir(p) { fs.mkdirSync(p, { recursive: true }); }
 function resolveHome(p) { return p && p.startsWith('~') ? path.join(process.env.HOME, p.slice(1)) : p; }
 
 function parseArgs(argv) {
-  const args = { name: process.env.PERSON_KEY || '', email: process.env.PERSON_EMAIL || '', limit: 20, deep: false };
+  const args = { name: process.env.PERSON_KEY || '', email: process.env.PERSON_EMAIL || '', limit: 20, deep: false, fallbackScan: false, scanMax: 300 };
   const rest = [];
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if ((a === '--email' || a === '-e') && argv[i + 1]) { args.email = argv[++i]; continue; }
     if ((a === '--limit' || a === '-l') && argv[i + 1]) { args.limit = Math.max(1, Math.min(100, parseInt(argv[++i], 10) || 20)); continue; }
     if (a === '--deep' || a === '-d') { args.deep = true; continue; }
+    if (a === '--fallback-scan') { args.fallbackScan = true; continue; }
+    if (a === '--scan-max' && argv[i + 1]) { args.scanMax = Math.max(50, Math.min(1000, parseInt(argv[++i], 10) || 300)); continue; }
     rest.push(a);
   }
   if (!args.name && rest.length) args.name = rest.join(' ');
@@ -87,6 +89,38 @@ async function fetchMessagesForEmail(gmail, email, limit, deep) {
   return out;
 }
 
+function headerFieldIncludesEmail(headers, email) {
+  const fields = [headers?.From || '', headers?.To || '', headers?.Cc || '', headers?.Bcc || ''];
+  const needle = String(email || '').toLowerCase();
+  return fields.some(f => String(f).toLowerCase().includes(needle));
+}
+
+async function scanRecentMessagesForEmail(gmail, email, maxToScan, deep) {
+  const userId = 'me';
+  const out = [];
+  let scanned = 0;
+  let pageToken;
+  while (scanned < maxToScan) {
+    const res = await gmail.users.messages.list({ userId, maxResults: Math.min(100, maxToScan - scanned), pageToken });
+    const msgs = res.data.messages || [];
+    if (!msgs.length) break;
+    for (const m of msgs) {
+      const msg = await gmail.users.messages.get({ userId, id: m.id, format: deep ? 'full' : 'metadata', metadataHeaders: ['From', 'To', 'Cc', 'Bcc', 'Subject', 'Date'] });
+      const headers = Object.fromEntries((msg.data.payload?.headers || []).map(h => [h.name, h.value]));
+      scanned += 1;
+      if (headerFieldIncludesEmail(headers, email)) {
+        const item = { id: msg.data.id, threadId: msg.data.threadId, internalDate: msg.data.internalDate, headers };
+        if (deep) item.snippet = msg.data.snippet || '';
+        out.push(item);
+      }
+      if (scanned >= maxToScan) break;
+    }
+    pageToken = res.data.nextPageToken;
+    if (!pageToken) break;
+  }
+  return out;
+}
+
 function cachePathFor(personKey) {
   const root = path.join(__dirname, '..', 'data', 'people_cache');
   ensureDir(root);
@@ -124,7 +158,22 @@ async function main() {
     } catch (e) {
       const msg = e && (e.response && e.response.data ? JSON.stringify(e.response.data) : (e.message || String(e)));
       console.error(`Gmail fetch error for ${email}:`, msg);
-      byEmail[email] = null;
+      // If insufficient scope, and fallback-scan enabled or deep requested, try scanning recent messages without q
+      const insufficient = /ACCESS_TOKEN_SCOPE_INSUFFICIENT|insufficient/i.test(String(msg));
+      if (insufficient || args.fallbackScan) {
+        try {
+          const scanned = await scanRecentMessagesForEmail(gmail, email, args.scanMax, Boolean(args.deep));
+          byEmail[email] = scanned && scanned.length ? scanned.slice(0, args.limit) : null;
+          if (!byEmail[email] || !byEmail[email].length) {
+            console.error(`Fallback scan found no messages for ${email} in last ~${args.scanMax}.`);
+          }
+        } catch (e2) {
+          console.error(`Fallback scan error for ${email}:`, e2.response?.data || e2.message || String(e2));
+          byEmail[email] = null;
+        }
+      } else {
+        byEmail[email] = null;
+      }
     }
   }
   const p = writeCache(personKey, { gmailByEmail: byEmail });
