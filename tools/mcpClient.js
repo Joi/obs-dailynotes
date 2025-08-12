@@ -3,6 +3,10 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const dotenv = require('dotenv');
+
+// Load project .env so downstream servers see creds/tokens
+try { dotenv.config({ path: path.join(__dirname, '..', '.env') }); } catch {}
 
 function ensureDir(p) {
   fs.mkdirSync(p, { recursive: true });
@@ -20,7 +24,13 @@ class MCPClient {
   }
 
   start() {
-    this.proc = spawn(this.serverCmd, this.serverArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
+    // Inherit env so the server can see creds/tokens from .env (e.g., GMAIL_CREDS_PATH, GCAL_CREDS_PATH)
+    const env = { ...process.env, ...(this.options.env || {}) };
+    this.proc = spawn(this.serverCmd, this.serverArgs, { stdio: ['pipe', 'pipe', 'pipe'], env });
+    // Capture server stderr for debugging (auth prompts, errors)
+    const logsDir = path.join(__dirname, '..', 'logs');
+    try { fs.mkdirSync(logsDir, { recursive: true }); } catch {}
+    const errLog = path.join(logsDir, 'mcp-gmail-server.log');
     let buffer = '';
     this.proc.stdout.on('data', (chunk) => {
       buffer += chunk.toString();
@@ -40,7 +50,9 @@ class MCPClient {
         } catch (_) {}
       }
     });
-    this.proc.stderr.on('data', () => {});
+    this.proc.stderr.on('data', (chunk) => {
+      try { fs.appendFileSync(errLog, chunk.toString()); } catch {}
+    });
   }
 
   send(method, params) {

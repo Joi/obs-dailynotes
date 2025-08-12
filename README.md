@@ -33,14 +33,14 @@ To get started:
 
 1. Download Obsidian from [obsidian.md](https://obsidian.md)
 2. Create a vault (a folder on your computer)
-3. Configure this toolkit to point to your vault
+3. Configure this toolkit to point to your vaul
 
 ## Why Markdown
 
 Markdown is a plain text format that:
 
 - Works in any text editor
-- Tracks well in Git
+- Tracks well in Gi
 - Will be readable decades from now
 - Converts easily to HTML, PDF, or other formats
 
@@ -52,7 +52,7 @@ Example:
 - [[John Smith]], [[Sarah Chen]]
 - [ ] Send proposal #email
 - [ ] Review budget #task
-```text
+```tex
 
 ## Architecture
 
@@ -166,7 +166,7 @@ Apple Reminders serves as the "ground truth" for tasks because it:
 
 This creates a reliable, shared task system where Obsidian provides the thinking/linking layer while Apple Reminders handles the operational layer.
 
-### Person Page Management
+### Person Page Managemen
 
 - Standardized person page format with frontmatter
 - Email-based linking to calendar attendees
@@ -176,7 +176,7 @@ This creates a reliable, shared task system where Obsidian provides the thinking
 
 ## Installation
 
-### About Package Management
+### About Package Managemen
 
 This project follows a **Homebrew-first** approach on macOS. We prefer Homebrew for system tools and utilities because it:
 
@@ -207,7 +207,7 @@ brew install keith/formulae/reminders-cli
 
 # Install Python and pytest (for testing only)
 brew install python@3.12
-brew install pytest
+brew install pytes
 ```
 
 1. **Required access:**
@@ -239,15 +239,15 @@ npm install
 # Create a virtual environment to isolate Python dependencies
 python3 -m venv venv
 
-# Activate the virtual environment
+# Activate the virtual environmen
 source venv/bin/activate  # On macOS/Linux
 # or
 venv\Scripts\activate     # On Windows
 
 # Install test dependencies
-pip install -r requirements-test.txt
+pip install -r requirements-test.tx
 
-# When done, deactivate the virtual environment
+# When done, deactivate the virtual environmen
 deactivate
 ```
 
@@ -255,6 +255,7 @@ deactivate
 Virtual environments (`venv`) create isolated Python installations for each project. This prevents conflicts when different projects need different library versions. Always use `venv` for Python development - it's like having a separate, clean Python install just for this project.
 
 1. **Configure environment (.env):**
+
 
 ```env
 # Google Calendar OAuth
@@ -278,6 +279,7 @@ EVENTS_FILTER=Lunch,Focus Time
 
 3. **Copy and customize config:**
 
+
 ```bash
 cp config.example.json config.json
 ```
@@ -293,10 +295,11 @@ cp config.example.json config.json
 **When to use each:**
 
 - **Homebrew**: Command-line tools, system utilities, language runtimes
-- **npm**: JavaScript libraries specific to this project
+- **npm**: JavaScript libraries specific to this projec
 - **pip + venv**: Python libraries for testing/development only
 
 **Keeping dependencies updated:**
+
 
 ```bash
 # Update Homebrew packages
@@ -454,19 +457,24 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 - `node tools/mcpClient.js` - Call MCP servers (Gmail/Calendar) to cache per-person context
   - Example (standalone Gmail MCP):
     - Terminal 1 (server):
+
       ```bash
       cd /Users/<Owner>/obs-dailynotes
       GMAIL_CREDS_PATH=~/.gcalendar/credentials.json \
       GMAIL_TOKEN_PATH=~/.gmail/token.json \
+
       node tools/mcpServers/gmailServer.js
-      ```
-    - Terminal 2 (client call):
-      ```bash
-      cd /Users/<Owner>/obs-dailynotes
-      PERSON_EMAIL="user@example.com" \
-      MCP_GMAIL_CMD="node" MCP_GMAIL_ARGS="tools/mcpServers/gmailServer.js" \
-      node tools/mcpClient.js
-      ```
+
+        ```
+
+      - Terminal 2 (client call):
+
+        ```bash
+        cd /Users/<Owner>/obs-dailynotes
+        PERSON_EMAIL="user@example.com" \
+        MCP_GMAIL_CMD="node" MCP_GMAIL_ARGS="tools/mcpServers/gmailServer.js" \
+        node tools/mcpClient.js
+        ```
 
 ### Reminders Sync
 
@@ -513,7 +521,8 @@ Create macros for one-click operations:
 
 1. **Daily Update Macro** - Pull reminders and generate note:
 
-```bash
+  
+  ```bash
 /Users/<Owner>/obs-dailynotes/tools/run_daily.sh
 ```
 
@@ -556,16 +565,47 @@ The `tools/` directory contains automation scripts:
 - The generator replaces a single `MEETINGS` block on each run. If you update `EVENTS_FILTER` during the day, rerun the script to rebuild the block with the new filters.
 - To include a specific meeting that is being filtered, temporarily override the env for one run:
 
-```bash
-# Example: run once without filtering "CCRC/IP-Asia"
-EVENTS_FILTER="Tateki / <Owner>,Shower,Suite" node index.js
-```
+
+  ```bash
+  # Example: run once without filtering "CCRC/IP-Asia"
+  EVENTS_FILTER="Tateki / <Owner>,Shower,Suite" node index.js
+  ```
+
 - Next runs will use whatever is in `.env` again.
 
 **Person Page Links:**
 
 - Run `npm run people:index` to rebuild index
 - Verify email addresses in frontmatter
+
+**Gmail MCP and Enrichment:**
+
+- Ensure these env vars are set (either in `.env` or exported):
+
+
+```env
+GMAIL_CREDS_PATH=~/.gcalendar/credentials.json
+GMAIL_TOKEN_PATH=~/.gmail/token.json
+# Optional owner name exclusions for Connected People
+OWNER_PRIMARY_NAME="<Owner Name>"
+OWNER_NAMES="<Owner Name>, <Owner Name>, <Owner Name> Mailstore"
+```
+
+- One-time Gmail auth for readonly scope (enables search queries):
+
+
+```bash
+GMAIL_DEEP=1 node tools/mcpServers/bootstrapGmailAuth.js
+# paste code
+GMAIL_DEEP=1 GMAIL_OAUTH_CODE="<code>" node tools/mcpServers/bootstrapGmailAuth.js
+```
+
+- If MCP fetch returns null, the LLM enricher falls back to a direct Gmail fetcher:
+
+
+```bash
+node tools/fetchGmailDirect.js "Full Name" --deep
+```
 
 ## Person Pages Example
 
