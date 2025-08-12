@@ -1,3 +1,10 @@
+---
+tags: [documentation]
+type: note
+slug: obs-dailynotes-readme
+id: note:obs-dailynotes-readme
+---
+
 # Obsidian Daily Notes & GTD System
 
 A Node.js toolkit that integrates Google Calendar events, Apple Reminders, and Getting Things Done (GTD) methodology to create an organized daily workflow in Obsidian.
@@ -51,7 +58,80 @@ Example:
 
 This codebase uses JavaScript for API integrations and Python for file operations. Scripts run on-demand or via automation to keep your notes synchronized with external services while maintaining all data locally in an open format.
 
-See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for detailed system design and [GTD_SYSTEM_DESIGN.md](GTD_SYSTEM_DESIGN.md) for the complete GTD implementation guide.
+### Knowledge Graph Overview
+
+The personal knowledge graph spans `~/switchboard` and `~/obs-dailynotes` using a JSON graph store (no SQLite). See the roadmap for details. High-level diagram:
+
+```mermaid
+flowchart TD
+  subgraph Sources
+    A1["Manual notes in Obsidian"]
+    A2["Gmail"]
+    A3["Google Calendar"]
+    A4["Apple Reminders"]
+    A5["Attachments / PDFs"]
+  end
+
+  subgraph Processors
+    P1["Markdown Parser + Frontmatter Extractor"]
+    P2["Relation Extractor<br/>(frontmatter + wikilinks)"]
+    P3["Normalizer<br/>(slugs, aliases, IDs)"]
+    P4["Enricher<br/>(GPT-5 + rules, #no-enrich)"]
+    P5["Indexer<br/>(Graph + FTS + Embeddings)"]
+  end
+
+  subgraph Storage
+    S1[("Markdown Vault<br/>~/switchboard, ~/obs-dailynotes")]
+    S2[("Graph Store<br/>JSONL / JSON")]
+    S3[("Search Index<br/>FTS (future)")]
+    S4[("Embeddings<br/>(future)")]
+    S5[("Cache<br/>people_cache / agendas")]
+  end
+
+  subgraph Access
+    X1["Obsidian UI"]
+    X2["CLI / Node tools"]
+    X3["MCP: KnowledgeGraph"]
+    X4["MCP: Gmail / Calendar"]
+  end
+
+  subgraph Users
+    U1["Claude Desktop"]
+    U2["Cursor / Claude Code"]
+    U3["ChatGPT"]
+    U4["Keyboard Maestro"]
+  end
+
+  A1-->P1
+  A2-->X4
+  A3-->X4
+  A4-->X2
+  A5-->P1
+
+  P1-->P2-->P3-->P5
+  P4-->P5
+
+  P1-->S1
+  P5-->S2
+  P5-->S3
+  P5-->S4
+  P5-->S5
+
+  S1<-->X1
+  S1<-->X2
+  S2<-->X2
+  S2<-->X3
+  S3<-->X2
+  S4<-->X3
+
+  X3-->U1
+  X2-->U2
+  X4-->U1
+  X3-->U3
+  X2-->U4
+```
+
+See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for detailed system design, [GTD_SYSTEM_DESIGN.md](GTD_SYSTEM_DESIGN.md) for the complete GTD implementation guide, and [Knowledge Graph MCP.md](Knowledge%20Graph%20MCP.md) for MCP usage (tagged `documentation`).
 
 ## Roadmap
 
@@ -495,7 +575,7 @@ Create a file named `Taro Chiba.md` with this frontmatter:
 
 ```markdown
 ---
-tags: [people]
+tags: [person]
 name: Taro Chiba
 aliases: [Taro, T. Chiba]
 emails: [taro@example.com]

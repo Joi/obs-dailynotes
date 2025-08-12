@@ -37,7 +37,7 @@ def temp_vault(tmp_path):
 def sample_person_page():
     """Sample person page content"""
     return """---
-tags: [people]
+tags: [person]
 name: John Smith
 emails: [john@example.com, jsmith@company.org]
 aliases: [John, J. Smith]

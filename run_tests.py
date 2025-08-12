@@ -243,7 +243,7 @@ Person page validation tests have failed.
    ```
 
 2. Common fixes needed:
-   - Standardize tags from `tags: people` to `tags: [people]`
+   - Standardize tags from `tags: person` to `tags: [person]`
    - Add missing required fields (name, emails array)
    - Fix invalid email formats
    - Ensure reminders.listName matches person name

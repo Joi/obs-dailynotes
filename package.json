@@ -5,7 +5,9 @@
   "main": "index.js",
   "dependencies": {
     "dotenv": "^16.6.1",
-    "googleapis": "^66.0.0"
+    "googleapis": "^66.0.0",
+    "fast-glob": "^3.3.2",
+    "gray-matter": "^4.0.3"
   },
   "scripts": {
     "daily": "node index.js",
@@ -33,14 +35,28 @@
     "gtd:morning-ocr": "npm run reminders:pull && npm run gtd:process && node tools/generateTodayTodos.js && npm run ocr",
     "gtd:sync": "npm run reminders:sync-fast && npm run reminders:pull && npm run gtd:process",
     "reminders:sync": "echo '\n[DEPRECATED] Use npm run gtd:sync or npm run reminders:sync-full\n' && npm run gtd:sync",
-    "gtd:sync-full": "npm run reminders:sync-full && npm run reminders:pull && npm run gtd:process",
+    "reminders:migrate-note-tags": "node tools/migrateNoteTagsToTitle.js",
+    "gtd:sync-full": "npm run reminders:sync-full && npm run reminders:migrate-note-tags && npm run reminders:pull && npm run gtd:process",
     "gtd:evening": "npm run gtd:sync",
     "test": "python run_tests.py all",
     "test:unit": "python run_tests.py unit",
     "test:integration": "python run_tests.py integration",
     "test:coverage": "python run_tests.py coverage",
     "test:watch": "python run_tests.py watch",
-    "test:js": "jest"
+    "test:js": "jest",
+    "graph:index": "node tools/knowledgeGraph/indexer.js",
+    "graph:report": "node tools/knowledgeGraph/indexer.js --report",
+    "graph:tags:plan": "node tools/knowledgeGraph/normalizeTags.js",
+    "graph:tags:apply": "node tools/knowledgeGraph/normalizeTags.js --apply",
+    "graph:tags:scan-code": "node tools/knowledgeGraph/planTagRefactor.js",
+    "graph:tags:inline:plan": "node tools/knowledgeGraph/normalizeInlineTags.js",
+    "graph:tags:inline:apply": "node tools/knowledgeGraph/normalizeInlineTags.js --apply",
+    "graph:tags:migrate-inline-to-fm:plan": "node tools/knowledgeGraph/migrateInlineTagsToFrontmatter.js",
+    "graph:tags:migrate-inline-to-fm:apply": "node tools/knowledgeGraph/migrateInlineTagsToFrontmatter.js --apply",
+    "graph:tags:validate": "node tools/knowledgeGraph/validateTags.js",
+    "mcp:kg": "node tools/mcpServers/knowledgeGraph.js",
+    "graph:fm:harmonize:plan": "node tools/knowledgeGraph/harmonizeFrontmatter.js",
+    "graph:fm:harmonize:apply": "node tools/knowledgeGraph/harmonizeFrontmatter.js --apply"
   },
   "devDependencies": {
     "jest": "^30.0.5",

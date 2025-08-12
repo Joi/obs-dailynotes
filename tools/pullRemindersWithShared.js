@@ -21,6 +21,17 @@ const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
 // Ensure reminders directory exists
 fs.mkdirSync(remindersDir, { recursive: true });
 
+function extractTags(text) {
+  if (!text || typeof text !== 'string') return [];
+  const tags = new Set();
+  const re = /#([A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)?)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    tags.add(m[1]);
+  }
+  return Array.from(tags);
+}
+
 /**
  * Optional mock support for tests: if REMINDERS_MOCK_FILE is set, read from it.
  * The mock JSON format should be: { "byList": { "List Name": [ {id,title,notes,completed,externalId,dueDate,priority} ] } }
@@ -136,14 +147,19 @@ async function pullReminders() {
     for (const reminder of reminders) {
       if (reminder.completed || reminder.isCompleted) continue;
       
+      const extId = reminder.externalId || reminder.id;
       const reminderData = {
-        id: reminder.externalId || reminder.id,
+        id: extId,
         title: reminder.title,
         list: listName,
         notes: reminder.notes || '',
         dueDate: reminder.dueDate || reminder.due,
         priority: reminder.priority,
-        isShared: isSharedList || personInfo?.isShared || false
+        isShared: isSharedList || personInfo?.isShared || false,
+        tags: (() => {
+          // Only use tags present in the title for stability across systems
+          return extractTags(reminder.title || '');
+        })()
       };
       
       allReminders.push(reminderData);
@@ -157,7 +173,8 @@ async function pullReminders() {
         notes: reminderData.notes,
         due: reminderData.dueDate || null,
         completed: false,
-        flagged: Boolean(reminder.flagged)
+        flagged: Boolean(reminder.flagged),
+        tags: reminderData.tags
       });
       
       // Organize by person

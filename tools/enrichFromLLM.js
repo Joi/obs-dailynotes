@@ -895,7 +895,7 @@ async function main() {
     updatePersonPage(fullPath, publicFields, cache);
   } else {
     console.log('Person file not found; creating minimal page.');
-    fs.writeFileSync(fullPath, `---\nname: ${personKey}\ntags: [people]\n---\n\n# ${personKey}\n`);
+    fs.writeFileSync(fullPath, `---\nname: ${personKey}\ntags: [person]\n---\n\n# ${personKey}\n`);
     updatePersonPage(fullPath, publicFields, cache);
   }
   const privPath = writePrivate(personKey, privateText);

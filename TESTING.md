@@ -1,3 +1,10 @@
+---
+tags: [documentation]
+type: note
+slug: testing
+id: note:testing
+---
+
 # Testing
 
 This project uses pytest. Tests help catch regressions and keep the vault healthy.

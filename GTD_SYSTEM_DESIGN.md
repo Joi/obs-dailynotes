@@ -1,3 +1,10 @@
+---
+tags: [documentation]
+type: note
+slug: gtd-system-design
+id: note:gtd-system-design
+---
+
 # GTD System: Apple Reminders + Obsidian
 
 ## What this gives you

@@ -11,6 +11,17 @@ const outputPath = path.join(dailyDir, 'reminders', 'todo-today.md');
 const cachePath = path.join(dailyDir, 'reminders', 'reminders_cache.json');
 const CACHE_TTL_MIN = Number(process.env.TODO_CACHE_TTL_MIN || '0');
 
+// No JXA/system tag enrichment for stability; keep logic strictly reminders-cli based
+
+function extractTags(text) {
+  if (!text || typeof text !== 'string') return [];
+  const tags = new Set();
+  const re = /#([A-Za-z0-9_-]+(?::[A-Za-z0-9_-]+)?)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) tags.add(m[1].toLowerCase());
+  return Array.from(tags);
+}
+
 // Helper to check if a reminder is due today or urgent
 function isDueToday(reminder) {
   if (!reminder.dueDate) return false;
@@ -25,16 +36,43 @@ function isDueToday(reminder) {
 }
 
 function isPriority(reminder) {
-  // Check for high priority flag or urgent keywords
-  return reminder.priority === 1 || 
-         (reminder.title && reminder.title.match(/urgent|asap|important|critical/i));
+  const title = String(reminder.title || '');
+  const notes = String(reminder.notes || '');
+  const tags = new Set([...(reminder._tags || []), ...extractTags(title), ...extractTags(notes)]);
+  // Explicit markers
+  if (title.includes('!!')) return true; // urgent marker
+  if (/\burgent\b|\basap\b|\bimportant\b|\bcritical\b/i.test(title + ' ' + notes)) return true;
+  if (tags.has('urgent') || tags.has('today')) return true;
+  // Apple Reminders numeric priority: treat any non-zero as priority
+  if (typeof reminder.priority === 'number' && reminder.priority > 0) return true;
+  // Allow single '!' as high priority
+  if (/\s!\s?|!$/.test(title)) return true;
+  return false;
 }
 
 function isWaiting(reminder) {
   const list = String(reminder.list || '');
   const title = String(reminder.title || '');
+  const notes = String(reminder.notes || '');
   if (/waiting/i.test(list)) return true;
   if (/#waiting\b/i.test(title)) return true;
+  if (/#waiting\b/i.test(notes)) return true;
+  return false;
+}
+
+function isNext(reminder) {
+  const title = String(reminder.title || '');
+  const notes = String(reminder.notes || '');
+  const tags = new Set([...(reminder._tags || []), ...extractTags(title), ...extractTags(notes)]);
+  return tags.has('next') || /\bnext action\b/i.test(title + ' ' + notes);
+}
+
+function isToday(reminder) {
+  const title = String(reminder.title || '');
+  const notes = String(reminder.notes || '');
+  const tags = new Set([...(reminder._tags || []), ...extractTags(title), ...extractTags(notes)]);
+  if (tags.has('today')) return true;
+  if (/\btoday\b/i.test(title) || /\btoday\b/i.test(notes)) return true;
   return false;
 }
 
@@ -79,10 +117,13 @@ async function generateTodayTodos() {
       });
     });
   }
+  // No system tag enrichment
   
-  // Filter for today's items and urgent items
+  // Filter for today's items, urgent, or next actions
   const todayItems = items.filter(item => 
-    !item.isCompleted && !isWaiting(item) && (isDueToday(item) || isPriority(item))
+    !item.isCompleted &&
+    !isWaiting(item) &&
+    (isDueToday(item) || isToday(item) || isPriority(item) || isNext(item))
   );
   
   // Sort by priority and due date

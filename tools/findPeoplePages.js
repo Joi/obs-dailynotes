@@ -37,14 +37,14 @@ function hasPeopleTag(filePath) {
     const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (!m) return false;
     const fm = m[1];
-    // Inline: tags: [people, ...] OR tags: people
-    if (/^tags:\s*\[[^\]]*\bpeople\b[^\]]*\]\s*$/mi.test(fm)) return true;
-    if (/^tags:\s*people\s*$/mi.test(fm)) return true;
+    // Inline: tags: [person, ...] OR tags: person
+    if (/^tags:\s*\[[^\]]*\bperson\b[^\]]*\]\s*$/mi.test(fm)) return true;
+    if (/^tags:\s*person\s*$/mi.test(fm)) return true;
     // Multiline block
     const mm = fm.match(/^tags:\s*\n([\s\S]*?)(?=^\w+:|$)/m);
     if (mm) {
       const block = mm[1];
-      if (/^\s*-\s*people\s*$/mi.test(block)) return true;
+      if (/^\s*-\s*person\s*$/mi.test(block)) return true;
     }
     return false;
   } catch {

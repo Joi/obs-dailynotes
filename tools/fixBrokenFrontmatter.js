@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * Scan the vault for frontmatter patterns like:
- *   tags: [people]
+ *   tags: [person]
  *     - people
  *     - something
- * and fix them to a single inline array: tags: [people, something]
+ * and fix them to a single inline array: tags: [person, something]
  * Also removes duplicate keys inside the YAML block when obvious duplicates occur
  * with the same scalar type/structure.
  */

@@ -1,198 +1,151 @@
-# obs-dailynotes Roadmap
-
-## Immediate Tasks
-
-### GTD System Improvements
-- [x] Remove @ context system (redundant, conflicts with Obsidian extensions)
-- [x] Rename 'evening' sync to just 'sync' for flexible timing
-- [x] Fix missing 'daily' npm script
-- [x] Enable full editing of reminders in Obsidian (not just completion)
-- [x] Detect and sync new tasks created in daily note meeting sections
-- [ ] Implement smarter tag detection with fuzzy matching
-  - Auto-detect "email", "mail", "reply" → #email
-  - Auto-detect "call", "phone" → #call
-- [ ] Add natural language date parsing
-  - "tomorrow", "next Friday", "in 2 weeks"
-- [ ] Auto-detect and link people in task titles
-  - "Call John Smith" → links to [[John Smith]]
- 
-Update: Done
-- [x] Implement smarter tag detection with fuzzy matching
-  - Auto-detect "email", "mail", "reply" → #email
-  - Auto-detect "call", "phone" → #call
-- [x] Add natural language date parsing (basic: today/tomorrow/next <weekday>/in N days/weeks)
-- [x] Auto-detect and link people in task titles (wikilinks via people index and aliases)
-
-### Privacy & Multi-Sync Strategy
-- [ ] Implement folder structure with selective sync:
-  - **`_private/`**: Personal only (Obsidian Sync only, never GitHub)
-  - **`_shared/`**: Team collaboration (separate sync strategy needed)
-  - **Regular folders**: GitHub private repo
-- [ ] Set up multi-tier sync system:
-  - **Obsidian Sync**: For all personal content including private folders
-  - **GitHub Private Repo**: For non-sensitive content (excluding `_private/`)
-  - **Team Sync Solution**: For `_shared/` folder collaboration
-  - **Local Git Script**: Run on one machine to manage what gets pushed where
-- [ ] Create git automation script that:
-  - Respects `_private/` folder exclusions
-  - Potentially pushes `_shared/` to separate team repository
-  - Runs on a single designated machine
-  - Allows Obsidian Sync to handle all content while GitHub gets filtered subset
-
-### Team Collaboration Strategy (`_shared/` folder)
-- [ ] Evaluate team sync options:
-  - **Option 1**: Separate GitHub repo just for shared content
-  - **Option 2**: Obsidian Sync with shared vault for team
-  - **Option 3**: Syncthing or similar P2P solution
-  - **Option 4**: Cloud service (Dropbox/Google Drive) for just `_shared/`
-- [ ] Define shared content structure:
-  - Project documentation
-  - Meeting notes with multiple attendees
-  - Shared resources and references
-  - Team task lists
-- [ ] Set up access controls:
-  - Read-only vs read-write permissions
-  - Team member onboarding process
-  - Conflict resolution strategy
-
-### Tag System Implementation
-- [ ] Implement hierarchical/nested tags system for people (e.g., `people/professional/client`)
-- [ ] Standardize all person pages to use array format for tags: `tags: [people]`
-- [ ] Implement subcategory tags:
-  - `people/personal/family`
-  - `people/personal/friend`
-  - `people/professional/colleague`
-  - `people/professional/client`
-  - `people/professional/investor`
-  - `people/professional/advisor`
-  - `people/research/collaborator`
-- [ ] Add privacy/sharing markers:
-  - `tags: [private]` - never leaves local machine
-  - `tags: [shared]` - available to team
-  - `tags: [public]` - can be shared publicly
-
-## Short-term Improvements
-
-### Organization
-- [ ] Move all Python/JS files to `Scripts/` folder
-- [ ] Move all PDFs to `Resources/PDFs/`
-Update: Done
-- [x] Move all PDFs to `Resources/PDFs/` (new imports land in `Resources/PDFs/`; legacy files will be migrated gradually)
-- [ ] Create proper folder hierarchy:
-  - `People/`
-  - `Meetings/`
-  - `Organizations/`
-  - `Projects/`
-  - `Resources/`
-  - `_private/` (local only, Obsidian Sync)
-  - `_shared/` (team collaboration)
-  - `_local/` (cache/drafts, never synced)
-
-### Sync Architecture Implementation
-- [ ] Configure `.gitignore`:
-  ```gitignore
-  _private/
-  _local/
-  .obsidian/workspace.json
-  .DS_Store
-  ```
-- [ ] Set up `_shared/.gitignore` for team repo:
-  ```gitignore
-  **/private-*
-  **/personal-*
-  .obsidian/workspace.json
-  ```
-- [ ] Create sync scripts:
-  - `sync-to-github.sh` - Main vault to GitHub (excluding private)
-  - `sync-shared.sh` - Shared folder to team repository
-  - `sync-status.sh` - Check sync status across all remotes
-
-### Team Collaboration Features
-- [ ] Create templates for shared content:
-  - Shared meeting notes template
-  - Project documentation template
-  - Team task template
-- [ ] Implement naming conventions for shared files
-- [ ] Set up automated notifications for shared content changes
-
-### PDF Integration System
-- [x] Create PDF metadata system with companion .md files
-- [ ] Build Reading Queue dashboard
-- [x] Link PDFs to reminder system
-
-## Medium-term Goals
-
-### Automation
-- [ ] Create pre-commit hooks:
-  - Check for private tags in public repos
-  - Validate shared content format
-  - Ensure proper file locations
-- [ ] Build script to automatically segregate files by privacy level
-- [ ] Implement automated file organization based on tags
-- [ ] Enhance git scripts to handle:
-  - Automatic daily commits
-  - Smart commit messages
-  - Conflict resolution between multiple sync sources
-  - Team member change notifications
-
-### Enhanced Features
-- [ ] Person page enrichment (last_contact, relationship type)
-- [ ] Smart lists for Obsidian (people to reconnect with, pending readings)
-- [ ] Meeting notes standardization
-- [ ] Team dashboard showing recent shared updates
-
-## Long-term Vision
-
-### System Integration
-- [ ] Full GTD integration with all document types
-- [ ] Automated reminder generation from PDFs and documents
-- [ ] Cross-platform sync with privacy preservation
-- [ ] Team task management integration
-
-### Archive Strategy
-- [ ] Implement inactive contact archiving
-- [ ] Old meeting archival system
-- [ ] Completed project cleanup automation
-- [ ] Shared content retention policies
-
-### Advanced Team Features
-- [ ] Real-time collaboration on shared documents
-- [ ] Version control with blame/attribution
-- [ ] Team member activity dashboard
-- [ ] Automated team reports generation
-
-## Notes from Conversations
-
-_This section captures ideas and decisions from our ongoing discussions_
-
-### 2025-08-09
-- **Three-tier sync strategy**:
-  - `_private/`: Personal only (Obsidian Sync only)
-  - `_shared/`: Team collaboration (needs separate sync solution)
-  - Regular content: GitHub private repo
-- **Single machine git approach**: One designated machine will run git scripts to push filtered content to GitHub
-- **Team collaboration needs**: Share specific content with team members while maintaining personal privacy
-- **Folder naming convention**: Use underscore prefix (`_`) for special folders with custom sync rules
-- Use nested tags with forward slashes in YAML for hierarchical organization
-- Both folder-based (`_private/`, `_shared/`) and tag-based (`tags: [private]`, `tags: [shared]`) approaches will be supported
-
-### Implementation Considerations for `_shared/` folder:
-1. **Separate Repository Approach** (Recommended):
-   - Create `team-switchboard` GitHub repo
-   - Only `_shared/` contents get pushed there
-   - Team members clone just this repo
-   - Simpler permissions management
-
-2. **Symlink Approach**:
-   - Team members have separate checkout of shared repo
-   - Symlink `_shared/` to their Obsidian vault
-   - Allows integration while maintaining separation
-
-3. **Branch Strategy**:
-   - Use `shared` branch in main repo
-   - Only `_shared/` folder exists in this branch
-   - Team members track only this branch
-
 ---
+tags: [documentation]
+type: note
+slug: knowledge-graph-roadmap
+id: note:knowledge-graph-roadmap
+---
+
+# Knowledge Graph Roadmap (obs-dailynotes / switchboard)
+
+This roadmap defines a typed personal knowledge graph over `~/switchboard` and `~/obs-dailynotes` that tools, people, and LLMs can follow and contribute to. The initial implementation uses a JSON graph store (no SQLite) and is non-destructive to Markdown files.
+
+## Architecture (high-level)
+
+```mermaid
+flowchart TD
+  subgraph Sources
+    A1["Manual notes in Obsidian"]
+    A2["Gmail"]
+    A3["Google Calendar"]
+    A4["Apple Reminders"]
+    A5["Attachments / PDFs"]
+  end
+
+  subgraph Processors
+    P1["Markdown Parser + Frontmatter Extractor"]
+    P2["Relation Extractor<br/>(frontmatter + wikilinks)"]
+    P3["Normalizer<br/>(slugs, aliases, IDs)"]
+    P4["Enricher<br/>(GPT-5 + rules, #no-enrich)"]
+    P5["Indexer<br/>(Graph + FTS + Embeddings)"]
+  end
+
+  subgraph Storage
+    S1[("Markdown Vault<br/>~/switchboard, ~/obs-dailynotes")]
+    S2[("Graph Store<br/>JSONL / JSON")]
+    S3[("Search Index<br/>FTS (future)")]
+    S4[("Embeddings<br/>(future)")]
+    S5[("Cache<br/>people_cache / agendas")]
+  end
+
+  subgraph Access
+    X1["Obsidian UI"]
+    X2["CLI / Node tools"]
+    X3["MCP: KnowledgeGraph"]
+    X4["MCP: Gmail / Calendar"]
+  end
+
+  subgraph Users
+    U1["Claude Desktop"]
+    U2["Cursor / Claude Code"]
+    U3["ChatGPT"]
+    U4["Keyboard Maestro"]
+  end
+
+  A1-->P1
+  A2-->X4
+  A3-->X4
+  A4-->X2
+  A5-->P1
+
+  P1-->P2-->P3-->P5
+  P4-->P5
+
+  P1-->S1
+  P5-->S2
+  P5-->S3
+  P5-->S4
+  P5-->S5
+
+  S1<-->X1
+  S1<-->X2
+  S2<-->X2
+  S2<-->X3
+  S3<-->X2
+  S4<-->X3
+
+  X3-->U1
+  X2-->U2
+  X4-->U1
+  X3-->U3
+  X2-->U4
+```
+
+## Object model (frontmatter)
+
+Use consistent `type`, `id`, `slug`, `aliases`, `links`, `tags`. IDs are stable and recorded in `config/slugToId.json`. Bodies stay human-friendly; relations live in frontmatter.
+
+```yaml
+type: person | organization | idea | paper | note
+id: <type>:<slug>
+slug: <kebab-case>
+aliases: []
+links: {}
+topics: []
+relations: {}
+```
+
+Type-specific fields:
+- person: `emails[]`, `orgs[]`, `sensitivity`
+- organization: `people[]`, `parents[]`, `children[]`
+- idea: `related[]`, `status`
+- paper: `authors[]`, `year`, `doi`, `venue`, `file`
+- note: `related[]`
+
+## JSON graph store
+
+- Location: `data/graph.jsonl` (append-only upserts) and `data/graph_meta.json` for indexes.
+- Nodes: `{ id, type, slug, title, path, aliases[], topics[], updated_at }`
+- Edges: `{ src_id, dst_id, rel_type, confidence, source }`
+- Indexing is derived from Markdown; no file edits in Phase 1.
+
+## MCP endpoints (initial)
+
+- `kg_list_nodes({type?, query?})`
+- `kg_get_node({id})`
+- `kg_search({text})` (simple text filter for now)
+- `kg_add_relation({src_id, dst_id, rel_type, note?})` (writes to JSONL)
+
+## Migration status
+
+- [x] Approve plan: typed graph, JSON store, diagram with Users
+- [x] Add `graph:index` script and scaffolding
+- [x] Phase 1: Initial non-destructive index over `~/switchboard` and `~/obs-dailynotes`
+- [x] Phase 1: Generate `data/graph.jsonl` and `data/graph_meta.json`
+- [ ] Phase 2: Frontmatter harmonization (ids/slugs) – proposal draft
+- [x] Phase 3: MCP server (`tools/mcpServers/knowledgeGraph.js`) – JSON-backed
+- [ ] Phase 4: Obsidian Dataview dashboard templates
+- [ ] Phase 5: LLM enrichment uses graph context, respects `#no-enrich`
+
+## How to contribute (people, LLMs, tools)
+
+Follow this contract:
+
+1) Frontmatter contract
+- Keep a `type` and `slug` in relevant files; if missing, propose values but do not edit without approval.
+- Do not rewrite note bodies; add relations only in frontmatter proposals.
+
+2) Graph contract
+- Write new edges via `tools/knowledgeGraph/indexer.js --add-edge` or MCP method.
+- Do not delete nodes; mark superseded via a `rel_type: supersedes` edge.
+
+3) Formatting contract
+- Preserve a single blank line between sections in Markdown.
+- Respect `#no-enrich` and source-only usernames.
+
+## Next actions
+
+- Run: `npm run graph:index` to refresh the JSON graph.
+- Start MCP server: `npm run mcp:kg` (tools available: list_nodes, get_node, search, add_relation).
+- Review `data/graph_report.md` for counts and missing metadata.
 
 *Last updated: 2025-08-12*
