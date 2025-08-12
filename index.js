@@ -97,11 +97,52 @@ async function main() {
             remindersCache = JSON.parse(raw);
         } catch (_) {}
 
-        // Build and upsert a single MEETINGS section in chronological order
-        let processedCount = 0;
-        const meetingBlocks = [];
+        // Ensure a Meetings heading exists; insert once if missing
+        try {
+            const todayPath = path.join(PATH_PREFIX, new Date().toISOString().slice(0,10) + '.md');
+            let txt = '';
+            try { txt = await fs.promises.readFile(todayPath, 'utf8'); } catch {}
+            if (!/\n##\s*Meetings\b/m.test('\n' + txt)) {
+                await upsertTodaySection('MEETINGS', '## Meetings', PATH_PREFIX);
+                // refresh txt
+                try { txt = await fs.promises.readFile(todayPath, 'utf8'); } catch {}
+            }
+            // Clean up legacy and unmarked content both outside and inside the MEETINGS block
+            if (txt) {
+                const begin = '<!-- BEGIN MEETINGS -->';
+                const end = '<!-- END MEETINGS -->';
+                const beginIdx = txt.indexOf(begin);
+                const endIdx = txt.indexOf(end);
+                let kept = txt;
+                let block = '';
+                if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {
+                    block = txt.slice(beginIdx, endIdx + end.length);
+                    kept = txt.slice(0, beginIdx) + '[[[MEET_BLOCK]]]' + txt.slice(endIdx + end.length);
+                }
+                const cleaned = kept.replace(/(\n##\s*Meetings\s*\n)[\s\S]*?(?=(\n##\s|\n<!-- BEGIN |$))/gm, '$1');
+                let restored = cleaned.replace('[[[MEET_BLOCK]]]', block);
+                // Also normalize the content INSIDE the MEETINGS block to only keep header and per-meeting markers
+                if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {
+                    const inner = txt.slice(beginIdx + begin.length, endIdx);
+                    const headerMatch = inner.match(/\n##\s*Meetings\s*\n/);
+                    const meetings = inner.match(/<!--\s*BEGIN MEETING\s+[\s\S]*?<!--\s*END MEETING\s+\d{4}-\d{2}-\d{2}-\d{4}\s*-->/g) || [];
+                    const rebuiltInner = `\n## Meetings\n\n${meetings.join('\n\n')}\n`;
+                    restored = txt.slice(0, beginIdx + begin.length) + rebuiltInner + txt.slice(endIdx);
+                }
+                if (restored !== txt) await fs.promises.writeFile(todayPath, restored, 'utf8');
+            }
+        } catch {}
+
+        // Upsert each meeting independently to avoid overwriting user notes
+        // Sort by start time ascending, then insert in reverse to maintain ascending order under the heading
         const agendasInjectedForPerson = new Set();
-        for (const event of events) {
+        // Assistant emails to exclude from agenda injection (comma-separated env; default includes mika@example.com)
+        const assistantEmails = new Set(
+            (process.env.ASSISTANT_EMAILS ? process.env.ASSISTANT_EMAILS.split(',') : ['mika@example.com'])
+                .map(e => String(e || '').trim().toLowerCase()).filter(Boolean)
+        );
+        const sortedEvents = [...events].sort((a, b) => new Date(a.start.dateTime || a.start.date) - new Date(b.start.dateTime || b.start.date));
+        for (const event of sortedEvents.reverse()) {
             if (shouldFilterEvent(event, config, eventsFilterRegex)) continue;
             const parsers = [parseGoogleHangout, parseZoom, parseOtherMeetingType];
             for (const parser of parsers) {
@@ -115,11 +156,13 @@ async function main() {
                         const agendaLines = [];
                         for (const [personKey, info] of Object.entries(remindersCache.byPerson)) {
                             const aliasSet = new Set([info.name, ...(Array.isArray(info.aliases) ? info.aliases : [])]);
-                            const emailSet = new Set(Array.isArray(info.emails) ? info.emails : []);
+                            const emailSet = new Set((Array.isArray(info.emails) ? info.emails : []).map(e => String(e || '').toLowerCase()));
                             const matchedByEmail = attendeeEmails.some(e => emailSet.has(e));
                             const matchedByName = attendeeNames.some(n => aliasSet.has(n));
                             const matched = matchedByEmail || matchedByName;
-                            if (matched && !agendasInjectedForPerson.has(personKey) && Array.isArray(info.items) && info.items.length) {
+                            // Skip agenda injection for assistants when they are simply invitees (e.g., mika@example.com)
+                            const skipAsAssistant = matchedByEmail && Array.from(emailSet).some(e => assistantEmails.has(e));
+                            if (matched && !skipAsAssistant && !agendasInjectedForPerson.has(personKey) && Array.isArray(info.items) && info.items.length) {
                                 agendasInjectedForPerson.add(personKey);
                                 agendaLines.push(`\n- Agenda for [[${info.name}|${info.name}]]:`);
                                 for (const it of info.items.slice(0, 5)) {
@@ -131,15 +174,45 @@ async function main() {
                             content += `\n${agendaLines.join('\n')}`;
                         }
                     }
-                    meetingBlocks.push({ start: result.fullStartDate, content });
-                    processedCount++;
+                    // Add a convenient notes bullet line after the meeting details
+                    content += `\n - `;
+                    const ymd = result.fullStartDate.getFullYear() + '-' +
+                      String(result.fullStartDate.getMonth()+1).padStart(2,'0') + '-' +
+                      String(result.fullStartDate.getDate()).padStart(2,'0') + '-' +
+                      String(result.fullStartDate.getHours()).padStart(2,'0') +
+                      String(result.fullStartDate.getMinutes()).padStart(2,'0');
+                    await upsertTodayMeeting(ymd, content, PATH_PREFIX);
                     break;
                 }
             }
         }
-        meetingBlocks.sort((a, b) => a.start - b.start);
-        const meetingsSection = ['## Meetings', meetingBlocks.map(b => b.content).join('\n')].filter(Boolean).join('\n');
-        await upsertTodaySection('MEETINGS', meetingsSection, PATH_PREFIX);
+        // Reorder existing per-meeting blocks inside MEETINGS by timestamp ascending (earliest at top)
+        try {
+            const todayPath = path.join(PATH_PREFIX, new Date().toISOString().slice(0,10) + '.md');
+            let txt = '';
+            try { txt = await fs.promises.readFile(todayPath, 'utf8'); } catch {}
+            const begin = '<!-- BEGIN MEETINGS -->';
+            const end = '<!-- END MEETINGS -->';
+            const b = txt.indexOf(begin); const e = txt.indexOf(end);
+            if (b !== -1 && e !== -1 && e > b) {
+                const before = txt.slice(0, b + begin.length);
+                const inner = txt.slice(b + begin.length, e);
+                const after = txt.slice(e);
+                const blocks = [];
+                const re = /(<!--\s*BEGIN MEETING\s+(\d{4}-\d{2}-\d{2}-\d{4})\s*-->[\s\S]*?<!--\s*END MEETING\s+\2\s*-->)/g;
+                let m;
+                while ((m = re.exec(inner)) !== null) {
+                    blocks.push({ key: m[2], block: m[1] });
+                }
+                if (blocks.length) {
+                    blocks.sort((a, b) => a.key.localeCompare(b.key));
+                    const rebuilt = ['\n## Meetings\n', ...blocks.map(x => x.block)].join('\n') + '\n';
+                    const out = before + rebuilt + after;
+                    if (out !== txt) await fs.promises.writeFile(todayPath, out, 'utf8');
+                }
+            }
+        } catch {}
+        // Do not rewrite the full Meetings block; per-meeting upserts preserve user notes
         
         // Append Reminders tasks query at the very bottom so Tasks plugin shows macOS reminders
         const remindersQuery = [

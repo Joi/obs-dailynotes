@@ -20,6 +20,9 @@ node tools/generateTodayTodos.js >/dev/null 2>&1 || true
 # Generate today's daily note content (silent by default)
 node index.js >/dev/null 2>&1
 
+# OCR screenshots in today's note (non-fatal)
+node tools/ocr_screenshots.js >/dev/null 2>&1 || true
+
 exit 0
 
 
