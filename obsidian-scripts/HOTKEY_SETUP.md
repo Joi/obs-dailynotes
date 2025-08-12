@@ -1,3 +1,7 @@
+---
+slug: hotkey-setup
+id: 'undefined:hotkey-setup'
+---
 # Obsidian Hotkey Setup for Person Pages
 
 ## Essential Hotkeys for Person Page Workflow

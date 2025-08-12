@@ -1,3 +1,7 @@
+---
+slug: config
+id: 'undefined:config'
+---
 # Configuration Guide
 
 This application supports extensive configuration through a `config.json` file. Copy `config.example.json` to `config.json` and customize as needed.

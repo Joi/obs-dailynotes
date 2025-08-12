@@ -1,3 +1,7 @@
+---
+slug: summary
+id: 'undefined:summary'
+---
 # Test Suite Summary
 
 This document concisely summarizes the Python (pytest) and JavaScript (Jest) tests in this repository.

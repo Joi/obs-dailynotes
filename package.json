@@ -56,7 +56,8 @@
     "graph:tags:validate": "node tools/knowledgeGraph/validateTags.js",
     "mcp:kg": "node tools/mcpServers/knowledgeGraph.js",
     "graph:fm:harmonize:plan": "node tools/knowledgeGraph/harmonizeFrontmatter.js",
-    "graph:fm:harmonize:apply": "node tools/knowledgeGraph/harmonizeFrontmatter.js --apply"
+    "graph:fm:harmonize:apply": "node tools/knowledgeGraph/harmonizeFrontmatter.js --apply",
+    "graph:docs:tag": "node tools/knowledgeGraph/tagDocumentation.js"
   },
   "devDependencies": {
     "jest": "^30.0.5",

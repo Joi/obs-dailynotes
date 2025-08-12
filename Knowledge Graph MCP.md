@@ -37,6 +37,7 @@ Claude/Cursor MCP config:
 - `kg_get_node {id: string}`
 - `kg_search {text: string, limit?: number}`
 - `kg_add_relation {src_id: string, dst_id: string, rel_type: string, note?: string}`
+- `kg_resolve_wikilink {text: string}`
 
 Returns are plain text summaries for UI safety. IDs follow `<type>:<slug>`.
 
@@ -47,6 +48,7 @@ Returns are plain text summaries for UI safety. IDs follow `<type>:<slug>`.
 - Search by text: “Call `kg_search` with `{text:'Hayashi', limit:10}`.”
 - Get details: “Call `kg_get_node` with `{id:'person:a-sulzberger'}`.”
 - Add relation: “Call `kg_add_relation` with `{src_id:'note:YYYY-MM-DD', dst_id:'person:a-sulzberger', rel_type:'discussed_with', note:'agenda'}`.”
+- Resolve: “Call `kg_resolve_wikilink` with `{text:'Taro Chiba'}`.”
 
 ## Troubleshooting
 
