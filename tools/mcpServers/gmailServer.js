@@ -152,10 +152,13 @@ async function handleCall(name, params, id) {
 
 async function main() {
   const creds = process.env.GMAIL_CREDS_PATH || process.env.GCAL_CREDS_PATH; // allow reuse
-  // Accept GCAL_TOKEN_PATH as alias to avoid duplicated auth locations
-  const token = process.env.GMAIL_TOKEN_PATH || process.env.GCAL_TOKEN_PATH || path.join(process.env.HOME, '.gmail', 'token.json');
+  // Prioritize GMAIL_TOKEN_PATH for Gmail operations
+  const token = process.env.GMAIL_TOKEN_PATH || path.join(process.env.HOME, '.gmail', 'token.json');
+  // Only fall back to GCAL_TOKEN_PATH if GMAIL_TOKEN_PATH is not set and the Gmail token doesn't exist
+  const gmailTokenExists = fs.existsSync(resolveHome(token));
+  const finalToken = gmailTokenExists ? token : (process.env.GCAL_TOKEN_PATH || token);
   if (!creds) { process.stderr.write('Set GMAIL_CREDS_PATH (or GCAL_CREDS_PATH)\n'); process.exit(1); }
-  authPromise = authorize(creds, token);
+  authPromise = authorize(creds, finalToken);
 
   let buffer = '';
   process.stdin.on('data', async (chunk) => {

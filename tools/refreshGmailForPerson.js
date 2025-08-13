@@ -49,6 +49,8 @@ function readFrontmatterFor(name) {
   }
   const deep = fm.match(/^gmail_deep:\s*(true|false)/mi);
   if (deep) out.gmail_deep = /true/i.test(deep[1]);
+  const md = fm.match(/^mail_depth:\s*(\d+)/mi);
+  if (md) out.mail_depth = parseInt(md[1], 10);
   return out;
 }
 

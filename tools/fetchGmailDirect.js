@@ -52,19 +52,32 @@ function readEmailsFromFrontmatter(personName) {
   } catch { return []; }
 }
 
+const { GmailAuth } = require('./gmailAuth');
+
 async function authorizeGmail(deep) {
   const credsPath = process.env.GMAIL_CREDS_PATH || process.env.GCAL_CREDS_PATH || path.join(process.env.HOME, '.gcalendar', 'credentials.json');
-  const tokenPath = process.env.GMAIL_TOKEN_PATH || process.env.GCAL_TOKEN_PATH || path.join(process.env.HOME, '.gmail', 'token.json');
+  const gmailTokenPath = process.env.GMAIL_TOKEN_PATH || path.join(process.env.HOME, '.gmail', 'token.json');
+  const tokenPath = fs.existsSync(resolveHome(gmailTokenPath)) ? gmailTokenPath : 
+                    (process.env.GCAL_TOKEN_PATH || gmailTokenPath);
   const SCOPES = [deep ? 'https://www.googleapis.com/auth/gmail.readonly' : 'https://www.googleapis.com/auth/gmail.metadata'];
-  const content = JSON.parse(fs.readFileSync(resolveHome(credsPath), 'utf8'));
-  const { client_secret, client_id, redirect_uris } = content.installed || content.web;
-  const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-  const token = JSON.parse(fs.readFileSync(resolveHome(tokenPath), 'utf8'));
-  // If token lacks desired scope, keep using it; Google APIs allow requesting broader via refresh
-  oAuth2Client.setCredentials(token);
-  // Force scope on this client
-  oAuth2Client.scopes = SCOPES;
-  return oAuth2Client;
+  
+  // Use the new auth module with auto-refresh
+  const auth = new GmailAuth(credsPath, tokenPath, SCOPES);
+  
+  try {
+    // This will automatically refresh if needed
+    return await auth.getAuthClient();
+  } catch (err) {
+    // Fallback to old method if new auth fails
+    console.error('New auth failed, using fallback:', err.message);
+    const content = JSON.parse(fs.readFileSync(resolveHome(credsPath), 'utf8'));
+    const { client_secret, client_id, redirect_uris } = content.installed || content.web;
+    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+    const token = JSON.parse(fs.readFileSync(resolveHome(tokenPath), 'utf8'));
+    oAuth2Client.setCredentials(token);
+    oAuth2Client.scopes = SCOPES;
+    return oAuth2Client;
+  }
 }
 
 async function fetchMessagesForEmail(gmail, email, limit, deep) {

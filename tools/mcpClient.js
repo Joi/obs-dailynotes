@@ -219,15 +219,35 @@ async function main() {
 
   if (gmailCmd) {
     let deep = (process.env.GMAIL_DEEP === '1' || /^(true|1)$/i.test(process.env.GMAIL_DEEP || ''));
+    const personFilePath = resolvePersonFilePath(personKey, process.env.PERSON_FILE);
     if (!deep) {
-      const personFilePath = resolvePersonFilePath(personKey, process.env.PERSON_FILE);
       const flag = readFrontmatterFlag(personFilePath, 'gmail_deep');
       if (flag === true) deep = true;
     }
-    if (deep) process.env.GMAIL_DEEP = '1';
-    const gmail = await withServer({ cmd: gmailCmd, args: gmailArgs, fn: (c) => deep ? fetchGmailMessagesWithPreview(c, email, 10) : fetchGmailSummaryByEmail(c, email, 10) });
-    const prev = (existing.data && existing.data.gmailByEmail) || {};
-    out.gmailByEmail = { ...prev, [email]: gmail };
+    // mail_depth: 0=no mail, 1=gmail summary/deep, 2=mailstore+gmail (gmail side still controls deep via gmail_deep or env)
+    let mailDepth = null;
+    try {
+      if (personFilePath && fs.existsSync(personFilePath)) {
+        const txt = fs.readFileSync(personFilePath, 'utf8');
+        const m = txt.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+        if (m) {
+          const fm = m[1];
+          const md = fm.match(/^mail_depth:\s*(\d+)/mi);
+          if (md) {
+            const n = parseInt(md[1], 10);
+            if (!Number.isNaN(n)) mailDepth = n;
+          }
+        }
+      }
+    } catch {}
+    if (mailDepth === 0) {
+      console.log('mail_depth: 0 — skipping Gmail fetch.');
+    } else {
+      if (deep) process.env.GMAIL_DEEP = '1';
+      const gmail = await withServer({ cmd: gmailCmd, args: gmailArgs, fn: (c) => deep ? fetchGmailMessagesWithPreview(c, email, 10) : fetchGmailSummaryByEmail(c, email, 10) });
+      const prev = (existing.data && existing.data.gmailByEmail) || {};
+      out.gmailByEmail = { ...prev, [email]: gmail };
+    }
   }
   if (calCmd) {
     const calendar = await withServer({ cmd: calCmd, args: calArgs, fn: (c) => fetchCalendarByAttendee(c, email, 365, 60) });
