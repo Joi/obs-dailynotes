@@ -20,7 +20,7 @@ This toolkit automatically:
 - Pulls your Google Calendar events into daily markdown notes
 - Syncs Apple Reminders as GTD-organized tasks
 - Links meeting attendees to person pages with contact information
-- Generates agenda items for each person you're meeting
+- Generates agenda items for each person you're meeting (optional; disabled by default via `ENABLE_AGENDAS=false`)
 - Creates task dashboards organized by project and status
 
 All data is stored as plain Markdown files in your Obsidian vault, giving you full control over your information.
@@ -145,7 +145,7 @@ See [ROADMAP.md](ROADMAP.md) for planned features, improvements, and sync strate
 - Parses meeting details (Google Meet, Zoom links, locations)
 - Creates markdown-formatted notes with navigation links
 - Automatically links attendees to person pages
-- Injects per-person agenda items from Apple Reminders
+- Injects per-person agenda items from Apple Reminders (optional; disabled by default via `ENABLE_AGENDAS=false`)
 
 ### GTD Processing System
 
@@ -326,24 +326,32 @@ npm run gtd:morning
 - Generates today's priorities
 - Creates/updates GTD dashboard
 
-### Sync Tasks with Reminders
+### Sync Tasks with Reminders (Stability Mode default)
 
 ```bash
 npm run gtd:sync
 ```
 
-- **Full two-way sync** with Apple Reminders:
-  - Syncs completed tasks back to Reminders
-  - Syncs edited task text (changes you make in Obsidian)
-  - Creates new reminders from tasks added in Obsidian
-  - Auto-detects new tasks in meeting agendas
-- Pulls latest changes from Reminders
-- Refreshes all task views
-- Adds reminder IDs to new tasks automatically
+- Default behavior prioritizes stability and deduplication:
+  - Syncs completed tasks back to Apple Reminders (by ID)
+  - Pulls latest changes from Apple Reminders
+  - Refreshes GTD views
+  - Uses minimal sources (today’s daily note and `reminders/todo-today.md`) to avoid duplicates
+- Creation of new reminders from markdown and text edits are disabled by default
 
-Run this whenever you want to sync between Obsidian and Apple Reminders - after making changes in either system.
+Opt-in flags (set in `.env`):
 
-**New Task Detection**: The sync will find tasks in meeting sections even without IDs:
+```env
+# Stability-mode defaults
+SYNC_MINIMAL_SOURCES=true      # Only today’s note + reminders/todo-today.md
+SYNC_CREATE_NEW=false          # Do not create new reminders from markdown
+SYNC_EDIT_EXISTING=false       # Do not edit reminder text from markdown
+ENABLE_AGENDAS=false           # Do not inject per-person agendas under meetings
+```
+
+To enable richer two‑way behavior, set `SYNC_CREATE_NEW=true` and/or `SYNC_EDIT_EXISTING=true` and `ENABLE_AGENDAS=true` as needed.
+
+**New Task Detection (opt‑in)**: When `SYNC_CREATE_NEW=true`, the sync will find tasks in meeting sections even without IDs:
 
 ```markdown
 ### Team Meeting #mtg
@@ -498,7 +506,8 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
 ### Reminders Sync
 
 - `npm run reminders:pull` - Fetch from Apple Reminders
-- `npm run reminders:sync` - Sync completed tasks back
+- `npm run reminders:dedupe` - Dry-run dedupe Reminders by title; use `node tools/dedupeRemindersByTitle.js --apply` to apply
+- `npm run reminders:sync` - Deprecated; use `npm run gtd:sync` or `npm run reminders:sync-full`
 - `npm run reminders:generate` - Create agenda files
 
 ### Testing & Maintenance
