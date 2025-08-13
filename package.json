@@ -43,6 +43,7 @@
     "reminders:dedupe": "node tools/dedupeRemindersByTitle.js",
     "reminders:export-outbox": "node tools/exportAgendaToOutbox.js",
     "reminders:apply-outbox": "node tools/applyOutboxToReminders.js",
+    "gtd:sync-dashboard": "node tools/syncFromDashboard.js",
     "test": "python run_tests.py all",
     "test:unit": "python run_tests.py unit",
     "test:integration": "python run_tests.py integration",
