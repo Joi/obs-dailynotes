@@ -41,6 +41,8 @@
     "gtd:sync-full": "npm run reminders:sync-full && npm run reminders:migrate-note-tags && npm run reminders:pull && npm run gtd:process",
     "gtd:evening": "npm run gtd:sync",
     "reminders:dedupe": "node tools/dedupeRemindersByTitle.js",
+    "reminders:export-outbox": "node tools/exportAgendaToOutbox.js",
+    "reminders:apply-outbox": "node tools/applyOutboxToReminders.js",
     "test": "python run_tests.py all",
     "test:unit": "python run_tests.py unit",
     "test:integration": "python run_tests.py integration",
