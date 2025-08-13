@@ -18,7 +18,7 @@ const vaultRoot = path.resolve(dailyDir, '..');
 const remindersDir = path.join(vaultRoot, 'reminders');
 
 // Load sync functions from enhanced sync
-const { parseTasksFromContent } = require('./syncRemindersEnhanced');
+const { parseTasksFromContent, findReminderById, completeReminder } = require('./syncRemindersEnhanced');
 
 /**
  * Get today's daily note path
@@ -102,51 +102,18 @@ async function completeReminder(list, id) {
  * Main sync function - optimized for people with #list tag
  */
 async function syncRemindersFast() {
-  console.log('Starting fast sync (people with #list tag only)...');
+  console.log('Starting fast sync (minimal sources)...');
   
   const syncState = loadSyncState();
   const allTasks = new Map();
   
-  // Load people index
-  const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
-  if (!fs.existsSync(peopleIndexPath)) {
-    console.log('People index not found. Run: npm run people:index');
-    return;
-  }
-  
-  const peopleIndex = JSON.parse(fs.readFileSync(peopleIndexPath, 'utf8'));
-  
-  // Build list of sources to check
+  // Build minimal list of sources to check to avoid duplicates
   const sources = [
-    path.join(remindersDir, 'reminders_inbox.md'),
-    path.join(remindersDir, 'reminders.md'),
     path.join(remindersDir, 'todo-today.md'),
-    getTodayDailyNotePath(),
-    path.join(vaultRoot, 'GTD', 'dashboard.md')
+    getTodayDailyNotePath()
   ];
   
-  // Only add person pages that have #list tag or reminders configuration
-  let peopleWithLists = 0;
-  for (const [name, info] of Object.entries(peopleIndex)) {
-    // Check if person has reminders configuration or list tag
-    if (info.reminders && (info.reminders.listName || info.reminders.sharedListName)) {
-      const personPath = path.join(vaultRoot, info.pagePath);
-      if (fs.existsSync(personPath)) {
-        // Quick check if page has #list tag (faster than full parse)
-        const content = fs.readFileSync(personPath, 'utf8');
-        const hasFrontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-        if (hasFrontmatter) {
-          const fm = hasFrontmatter[1];
-          if (fm.includes('- list') || fm.includes('reminders:')) {
-            sources.push(personPath);
-            peopleWithLists++;
-          }
-        }
-      }
-    }
-  }
-  
-  console.log(`Checking ${peopleWithLists} people with lists + ${sources.length - peopleWithLists} other sources`);
+  console.log(`Checking minimal sources: ${sources.length}`);
   
   // Collect tasks from sources
   for (const source of sources) {
@@ -178,23 +145,17 @@ async function syncRemindersFast() {
   let completions = 0;
   for (const [key, task] of allTasks.entries()) {
     if (!task.hasId || !task.done) continue;
-    
-    const stateTask = syncState.tasks[key];
-    if (stateTask && !stateTask.done) {
-      // Task was marked complete in Obsidian
-      try {
-        const found = await findReminderById(task.list, task.id);
-        if (found) {
-          const isReminderCompleted = found.reminder.completed || found.reminder.isCompleted;
-          if (!isReminderCompleted) {
-            console.log(`Completing: "${task.title}" in list "${task.list}"`);
-            await completeReminder(task.list, task.id);
-            completions++;
-          }
-        }
-      } catch (e) {
-        console.error(`Error syncing task "${task.title}":`, e.message);
+    // Complete regardless of previous sync state, and search across lists if needed
+    try {
+      const found = await findReminderById(task.list, task.id);
+      const isReminderCompleted = found && (found.reminder.completed || found.reminder.isCompleted);
+      if (!isReminderCompleted) {
+        console.log(`Completing: "${task.title}" (list may vary; starting at "${task.list}")`);
+        const ok = await completeReminder(task.list, task.id);
+        if (ok) completions++;
       }
+    } catch (e) {
+      console.error(`Error syncing task "${task.title}":`, e.message);
     }
     
     // Update sync state
