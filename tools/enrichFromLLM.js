@@ -47,6 +47,11 @@ function readFrontmatterInfo(personFilePath) {
     }
     const deep = fm.match(/^gmail_deep:\s*(true|false)/mi);
     if (deep) out.gmail_deep = /true/i.test(deep[1]);
+    const depth = fm.match(/^mail_depth:\s*(\d+)/mi);
+    if (depth) {
+      const n = parseInt(depth[1], 10);
+      if (!Number.isNaN(n)) out.mail_depth = n;
+    }
     return out;
   } catch {
     return { emails: [], gmail_deep: false };
@@ -774,8 +779,13 @@ function formatYearRange(msStart, msEnd) {
 function formatPrivateSummary(cache) {
   try {
     const byEmail = cache?.data?.gmailByEmail || {};
+    const metadata = cache?.data?.gmailMetadata || {};
+    const mailstoreByEmail = cache?.data?.mailstoreByEmail || {};
+    const dataSource = cache?.data?.dataSource || 'Mixed';
     const items = [];
     const subjectStats = new Map(); // subject -> { firstMs, lastMs, count }
+    
+    // Process Gmail messages
     for (const [email, messages] of Object.entries(byEmail)) {
       if (!Array.isArray(messages)) continue;
       for (const m of messages) {
@@ -783,9 +793,30 @@ function formatPrivateSummary(cache) {
         const subject = normalizeSubject(m.headers?.Subject || '');
         const msgIdRaw = m.headers?.['Message-ID'] || m.headers?.['Message-Id'] || '';
         const msgId = msgIdRaw.replace(/[<>]/g, '');
-        const mailLink = msgId ? `message:%3C${encodeURIComponent(msgId)}%3E` : '';
-        const gmailLink = msgId ? `https://mail.google.com/mail/u/0/#search/rfc822msgid%3A${encodeURIComponent(msgId)}` : '';
-        items.push({ dateMs: d, date: new Date(d).toISOString().slice(0, 10), subject, mailLink, gmailLink });
+        
+        // Links for Gmail messages
+        let mailLink = '';
+        let gmailLink = '';
+        
+        if (m.source === 'MailStore') {
+          // MailStore messages don't have Gmail links
+          mailLink = '';
+          gmailLink = '';
+        } else if (msgId) {
+          mailLink = `message:%3C${encodeURIComponent(msgId)}%3E`;
+          gmailLink = `https://mail.google.com/mail/u/0/#search/rfc822msgid%3A${encodeURIComponent(msgId)}`;
+        }
+        
+        items.push({ 
+          dateMs: d, 
+          date: new Date(d).toISOString().slice(0, 10), 
+          subject, 
+          mailLink, 
+          gmailLink,
+          isOldest: m.isOldest === true,
+          isNewest: m.isNewest === true,
+          source: m.source || 'Gmail'
+        });
         if (subject) {
           const prev = subjectStats.get(subject) || { firstMs: d, lastMs: d, count: 0 };
           prev.firstMs = Math.min(prev.firstMs, d);
@@ -795,15 +826,70 @@ function formatPrivateSummary(cache) {
         }
       }
     }
+    
+    // Process MailStore messages separately if they exist
+    for (const [email, messages] of Object.entries(mailstoreByEmail)) {
+      if (!Array.isArray(messages)) continue;
+      for (const m of messages) {
+        const d = new Date(m.date).getTime();
+        const subject = normalizeSubject(m.subject || '');
+        
+        items.push({ 
+          dateMs: d, 
+          date: new Date(d).toISOString().slice(0, 10), 
+          subject, 
+          mailLink: '', 
+          gmailLink: '',
+          isOldest: false, // Will be determined after sorting
+          isNewest: false,
+          source: 'MailStore'
+        });
+        if (subject) {
+          const prev = subjectStats.get(subject) || { firstMs: d, lastMs: d, count: 0 };
+          prev.firstMs = Math.min(prev.firstMs, d);
+          prev.lastMs = Math.max(prev.lastMs, d);
+          prev.count += 1;
+          subjectStats.set(subject, prev);
+        }
+      }
+    }
+    
     if (!items.length) return '';
+    
+    // Sort all items by date
     items.sort((a, b) => b.dateMs - a.dateMs);
+    
+    // Mark the actual oldest and newest if not already marked
+    if (items.length > 0) {
+      // Find the 10 oldest and 10 newest
+      const sortedByDate = [...items].sort((a, b) => a.dateMs - b.dateMs);
+      const oldestN = 10;
+      const newestN = 10;
+      
+      // Mark oldest
+      for (let i = 0; i < Math.min(oldestN, sortedByDate.length); i++) {
+        sortedByDate[i].isOldest = true;
+      }
+      
+      // Mark newest (from the end)
+      for (let i = Math.max(0, sortedByDate.length - newestN); i < sortedByDate.length; i++) {
+        sortedByDate[i].isNewest = true;
+      }
+    }
+    
     const lastDate = items[0].date;
     const firstDate = items[items.length - 1].date;
+    
+    // Get oldest and newest items - ENSURE we get both sets
+    const oldestItems = items.filter(i => i.isOldest).sort((a, b) => a.dateMs - b.dateMs).slice(0, 10);
+    const newestItems = items.filter(i => i.isNewest).sort((a, b) => b.dateMs - a.dateMs).slice(0, 10);
+    
     // Pick top subjects by count, then recency
     const topSubjects = Array.from(subjectStats.entries())
       .sort((a, b) => (b[1].count - a[1].count) || (b[1].lastMs - a[1].lastMs))
       .slice(0, 8)
       .map(([subj, stat]) => ({ subj, yr: formatYearRange(stat.firstMs, stat.lastMs) }));
+    
     const nameStats = extractConnectedNameStats(cache);
     const names = Array.from(nameStats.entries()).slice(0, 8)
       .map(([name, stat]) => `${name} (${formatYearRange(stat.firstMs, stat.lastMs)})`);
@@ -811,31 +897,84 @@ function formatPrivateSummary(cache) {
     const lines = [];
     lines.push('#### Relationship Summary');
     lines.push(`- Email history spans ${firstDate} to ${lastDate} (${items.length} messages indexed).`);
+    
+    // Show data sources
+    const sources = new Set(items.map(i => i.source));
+    if (sources.size > 1) {
+      lines.push(`- Sources: ${Array.from(sources).join(', ')}`);
+    } else if (sources.size === 1) {
+      lines.push(`- Source: ${Array.from(sources)[0]}`);
+    }
+    
+    // Add metadata if available
+    for (const [email, meta] of Object.entries(metadata)) {
+      if (meta && meta.oldestDate && meta.newestDate) {
+        const oldYear = new Date(meta.oldestDate).getFullYear();
+        const newYear = new Date(meta.newestDate).getFullYear();
+        if (oldYear !== newYear) {
+          lines.push(`- Relationship with ${email}: ${oldYear}–${newYear}`);
+        }
+      }
+    }
+    
     if (topSubjects.length) {
       lines.push('- Topics discussed include:');
       for (const o of topSubjects) lines.push(`  - ${o.subj} (${o.yr})`);
     }
-    lines.push('');
-    lines.push('#### Recent Interactions (links open in Mail.app)');
-    for (const it of items.slice(0, 10)) {
-      const label = it.subject || '(no subject)';
-      const openMail = it.mailLink ? ` [Mail](${it.mailLink})` : '';
-      const openGmail = it.gmailLink ? ` [Gmail](${it.gmailLink})` : '';
-      lines.push(`- ${it.date} — ${label}${openMail}${openGmail}`);
+    
+    // Show BOTH oldest and newest interactions
+    if (oldestItems.length > 0) {
+      lines.push('');
+      lines.push('#### First Interactions (Oldest Emails)');
+      lines.push(`_From ${oldestItems[0].source}_`);
+      for (const it of oldestItems.slice(0, 10)) {
+        const label = it.subject || '(no subject)';
+        const sourceTag = it.source === 'MailStore' ? ' [MailStore]' : '';
+        lines.push(`- ${it.date} — ${label}${sourceTag}`);
+      }
     }
+    
+    if (newestItems.length > 0) {
+      lines.push('');
+      lines.push('#### Recent Interactions (Newest Emails)');
+      const gmailItems = newestItems.filter(i => i.source === 'Gmail');
+      if (gmailItems.length > 0) {
+        lines.push('_Gmail messages with links:_');
+      }
+      for (const it of newestItems.slice(0, 10)) {
+        const label = it.subject || '(no subject)';
+        const links = [];
+        if (it.mailLink) links.push(`[Mail](${it.mailLink})`);
+        if (it.gmailLink) links.push(`[Gmail](${it.gmailLink})`);
+        const linkStr = links.length > 0 ? ` ${links.join(' ')}` : '';
+        const sourceTag = it.source === 'MailStore' ? ' [MailStore]' : '';
+        lines.push(`- ${it.date} — ${label}${linkStr}${sourceTag}`);
+      }
+    }
+    
     lines.push('');
     lines.push('#### How we met');
-    if (names.length) {
+    if (oldestItems.length > 0 && oldestItems[0].subject) {
+      const firstSubject = oldestItems[0].subject;
+      const firstYear = new Date(oldestItems[0].dateMs).getFullYear();
+      lines.push(`- First email in ${firstYear} about: ${firstSubject}`);
+    } else if (names.length) {
       const firstName = names[0].replace(/\s*\([^)]*\)$/, '');
-      lines.push(`- Uncertain; possibly connected via ${firstName} (inferred from headers).`);
-    } else lines.push('- Uncertain.');
+      lines.push(`- Possibly connected via ${firstName} (inferred from headers).`);
+    } else {
+      lines.push('- Uncertain.');
+    }
+    
     lines.push('');
     lines.push('#### Recent Interests');
     if (topSubjects.length) {
       for (const o of topSubjects.slice(0, 5)) lines.push(`- ${o.subj} (${o.yr})`);
     } else lines.push('- Uncertain.');
+    
     return lines.join('\n');
-  } catch { return ''; }
+  } catch { 
+    return ''; 
+  }
 }
 
 // Utilities to help debug Gmail token scope issues
@@ -878,7 +1017,10 @@ async function main() {
   const apiKey = process.env.OPENAI_API_KEY;
   const model = process.env.LLM_MODEL || 'gpt-5';
   const personFile = process.env.PERSON_FILE; // absolute or vault-relative
-  const personKey = process.env.PERSON_KEY || (personFile ? path.basename(personFile, '.md') : '');
+  // Prefer PERSON_FILE when present to avoid stale PERSON_KEY overriding
+  const personKey = personFile
+    ? path.basename(personFile, '.md')
+    : (process.env.PERSON_KEY || '');
   if (!personKey) { console.error('Set PERSON_KEY or PERSON_FILE'); process.exit(1); }
   const CACHE_ONLY = !apiKey;
 
@@ -890,7 +1032,22 @@ async function main() {
   globalThis.__personKey = personKey;
   globalThis.__personFile = fullPath;
 
-  // Optional prefetch: public snippets and Gmail (deep if flagged)
+  // Load cache first to check if we need to fetch
+  let cache = loadCache(personKey) || {};
+  
+  // Check if cache has valid Gmail data
+  const hasValidGmail = () => {
+    const gmailByEmail = cache?.data?.gmailByEmail || {};
+    for (const messages of Object.values(gmailByEmail)) {
+      if (Array.isArray(messages) && messages.length > 0) return true;
+    }
+    return false;
+  };
+  
+  // Optional prefetch: public snippets and email data
+  // Force fetch if cache is empty/invalid
+  const forceRefetch = process.env.FORCE_REFETCH === '1' || !hasValidGmail();
+  
   if (process.env.SKIP_PREFETCH !== '1') {
     // Public snippets (Wikipedia, GitHub)
     try {
@@ -900,30 +1057,113 @@ async function main() {
         env: { ...process.env, PERSON_KEY: personKey }
       });
     } catch {}
-    // Gmail via MCP server if we have an email
+    
+    // Email fetching strategy: Try MailStore for oldest, Gmail for newest
     const fm = readFrontmatterInfo(fullPath);
     const confEmails = loadPeopleConfigEmails(personKey);
     const fmEmails = Array.isArray(fm.emails) ? fm.emails : [];
     const allEmails = Array.from(new Set([process.env.PERSON_EMAIL, ...fmEmails, ...confEmails].filter(Boolean)));
     const wantDeep = (process.env.GMAIL_DEEP === '1') || fm.gmail_deep;
-    const gmailCmd = process.env.MCP_GMAIL_CMD || 'node';
-    const gmailArgs = process.env.MCP_GMAIL_ARGS || 'tools/mcpServers/gmailServer.js';
-    for (const email of allEmails.slice(0, 5)) {
-      try {
-        const env = { ...process.env, PERSON_KEY: personKey, PERSON_EMAIL: email, MCP_GMAIL_CMD: gmailCmd, MCP_GMAIL_ARGS: gmailArgs };
-        if (wantDeep) env.GMAIL_DEEP = '1';
-        // Try MCP path first
-        spawnSync('node', ['tools/mcpClient.js'], { cwd: path.join(__dirname, '..'), stdio: 'inherit', env });
-        // Fallback: direct Gmail fetch if MCP path failed silently
-        const args = ['tools/fetchGmailDirect.js', personKey, '--email', email];
-        if (wantDeep) args.push('--deep');
-        spawnSync('node', args, { cwd: path.join(__dirname, '..'), stdio: 'inherit', env });
-      } catch {}
+    const hasMailDepth = typeof fm.mail_depth === 'number';
+    const doMailstore = hasMailDepth ? (fm.mail_depth >= 2) : (process.env.SKIP_MAILSTORE !== '1');
+    const doGmail = hasMailDepth ? (fm.mail_depth >= 1) : (process.env.SKIP_GMAIL !== '1');
+    
+    // Only fetch email data if we don't have valid data or force refetch is requested
+    if (forceRefetch || !hasValidGmail()) {
+      console.log(`[enrich] ${forceRefetch ? 'Force fetching' : 'Cache empty, fetching'} email data for ${personKey}...`);
+      
+      let mailstoreHasData = false;
+      let gmailHasData = false;
+      
+      // STEP 1: Try MailStore for oldest emails (20+ years of archives)
+      if (doMailstore) {
+        console.log(`[enrich] Fetching from MailStore archive (oldest emails)...`);
+        
+        const { fetchFromMailStore } = require('./enrichFromMailStore');
+        
+        // Search with ALL emails to get complete history
+        for (const email of allEmails) {
+          try {
+            console.log(`[enrich] Searching MailStore for ${email}...`);
+            const mailstoreCache = await fetchFromMailStore(personKey, email);
+            
+            if (mailstoreCache && mailstoreCache.data && mailstoreCache.data.mailstoreByEmail) {
+              const messages = mailstoreCache.data.mailstoreByEmail[email] || [];
+              if (messages.length > 0) {
+                console.log(`[enrich] ✓ Found ${messages.length} messages in MailStore for ${email}`);
+                
+                // Merge MailStore data into existing cache
+                const cachePath = path.join(__dirname, '..', 'data', 'people_cache', slugify(personKey) + '.json');
+                let existing = {};
+                if (fs.existsSync(cachePath)) {
+                  try { existing = JSON.parse(fs.readFileSync(cachePath, 'utf8')); } catch {}
+                }
+                
+                const merged = {
+                  timestamp: new Date().toISOString(),
+                  data: { 
+                    ...(existing.data || {}), 
+                    ...mailstoreCache.data,
+                    dataSource: 'Mixed' // Indicate we have multiple sources
+                  }
+                };
+                
+                fs.writeFileSync(cachePath, JSON.stringify(merged, null, 2));
+                mailstoreHasData = true;
+              }
+            }
+          } catch (err) {
+            console.log(`[enrich] MailStore search failed for ${email}: ${err.message}`);
+          }
+        }
+      }
+      
+      // STEP 2: Try Gmail for newest emails depending on depth
+      if (doGmail) {
+        console.log(`[enrich] Fetching from Gmail API (newest emails)...`);
+        
+        const gmailCmd = process.env.MCP_GMAIL_CMD || 'node';
+        const gmailArgs = process.env.MCP_GMAIL_ARGS || 'tools/mcpServers/gmailServer.js';
+        
+        // Search Gmail with all emails too
+        for (const email of allEmails) {
+          try {
+            const env = { ...process.env, PERSON_KEY: personKey, PERSON_EMAIL: email, MCP_GMAIL_CMD: gmailCmd, MCP_GMAIL_ARGS: gmailArgs };
+            if (wantDeep) env.GMAIL_DEEP = '1';
+            
+            // Use enhanced Gmail fetch that gets both oldest and newest
+            const args = ['tools/fetchGmailDirectEnhanced.js', personKey, '--email', email, '--limit', '20'];
+            if (wantDeep) args.push('--deep');
+            const result = spawnSync('node', args, { cwd: path.join(__dirname, '..'), stdio: 'inherit', env });
+            
+            if (result.status === 0) {
+              console.log(`[enrich] ✓ Fetched Gmail with history for ${email}`);
+              gmailHasData = true;
+            } else {
+              console.error(`[enrich] ✗ Failed to fetch Gmail for ${email}`);
+            }
+          } catch (err) {
+            console.error(`[enrich] Error fetching Gmail for ${email}:`, err.message);
+          }
+        }
+      }
+      
+      if (mailstoreHasData && gmailHasData) {
+        console.log(`[enrich] ✓ Successfully fetched from both MailStore (oldest) and Gmail (newest)`);
+      } else if (mailstoreHasData) {
+        console.log(`[enrich] ✓ Using MailStore data only`);
+      } else if (gmailHasData) {
+        console.log(`[enrich] ✓ Using Gmail data only`);
+      } else {
+        console.log(`[enrich] ⚠ No email data found from either source`);
+      }
+    } else {
+      console.log(`[enrich] Using existing email cache for ${personKey}`);
     }
   }
 
-  // Load cache after prefetch
-  const cache = loadCache(personKey) || {};
+  // Reload cache after prefetch to get fresh data
+  cache = loadCache(personKey) || {};
   // If Gmail cache is empty/null for all tried emails, log a helpful debug block
   try {
     const gmailByEmail = cache?.data?.gmailByEmail || {};
@@ -996,6 +1236,44 @@ async function main() {
   }
   const privPath = writePrivate(personKey, privateText);
   console.log('Wrote private notes:', privPath);
+
+  // Optionally inject a concise public summary into the public page.
+  // Controlled by env INJECT_PUBLIC_SUMMARY=1 (default on), disable with INJECT_PUBLIC_SUMMARY=0
+  const injectPublic = (process.env.INJECT_PUBLIC_SUMMARY || '1') !== '0';
+  if (injectPublic) {
+    try {
+      const content = fs.readFileSync(fullPath, 'utf8');
+      const m2 = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+      const fmPart = m2 ? m2[0] : '';
+      const bodyPart = m2 ? content.slice(m2[0].length) : content;
+      const summary = formatPrivateSummary(cache);
+      if (summary && summary.trim().length) {
+        // Build a public-safe block that excludes private-only markers
+        const lines = summary
+          .split(/\r?\n/)
+          .filter(l => !/\b\[MailStore\]\b/i.test(l))
+          .map(l => l.replace(/\s*\[Mail\]\([^)]*\)\s*/g, '').replace(/\s*\[Gmail\]\([^)]*\)\s*/g, ''));
+        const publicBlock = '## Recent Interactions (summary)\n' + lines.join('\n') + '\n';
+        let bodyOut = bodyPart
+          .replace(/^##\s*Recent Interactions \(summary\)[\s\S]*?(?=^##\s|\Z)/gmi, '');
+        // Insert above Notes if present; otherwise append
+        if (/^##\s*Notes/m.test(bodyOut)) {
+          bodyOut = bodyOut.replace(/(^##\s*Notes[\s\S]*?$)/m, (m0) => publicBlock + '\n' + m0);
+        } else {
+          bodyOut = bodyOut.replace(/\s*\Z/, '\n\n' + publicBlock);
+        }
+        // Normalize spacing
+        const normalize = (text) => String(text)
+          .replace(/[ \t]+$/gm, '')
+          .replace(/\n[ \t]*(?:\n[ \t]*){1,}/g, '\n\n')
+          .trimEnd() + '\n';
+        const finalText = (fmPart ? fmPart : '') + normalize(bodyOut);
+        fs.writeFileSync(fullPath, finalText);
+      }
+    } catch (e) {
+      console.warn('[enrich] Public summary inject failed:', e.message);
+    }
+  }
   // Subtle marker on public page indicating a private page exists
   ensurePrivateMarker(fullPath);
   // Also add Connected People to the public page body (canonicalized and de-duplicated)

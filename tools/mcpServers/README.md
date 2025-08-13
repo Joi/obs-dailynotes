@@ -2,7 +2,7 @@
 slug: readme
 id: 'undefined:readme'
 ---
-## MCP Servers (JSON-RPC) and gmail_deep mode
+## MCP Servers (JSON-RPC), gmail_deep and mail_depth
 
 This directory contains minimal MCP servers that speak JSON-RPC 2.0 over stdio. They are used by `tools/mcpClient.js` to fetch per‑person context (e.g., Gmail).
 
@@ -44,6 +44,21 @@ Internally, deep mode affects:
 - Client fetch behavior in `mcpClient.js`:
   - Deep: `fetchGmailMessagesWithPreview(...)`
   - Summary: `fetchGmailSummaryByEmail(...)`
+
+### mail_depth: control email fetching strategy
+
+- Per-person frontmatter value to control how much email to fetch:
+
+  ```markdown
+  ---
+  mail_depth: 0  # 0=no mail scan, 1=Gmail only, 2=MailStore + Gmail
+  ---
+  ```
+
+- Behavior:
+  - 0: Skip all email fetching (both Gmail and MailStore)
+  - 1: Fetch Gmail only (summary by default; add `gmail_deep: true` to enable preview bodies)
+  - 2: Fetch MailStore (archive scan) and Gmail (newest)
 
 ### Files
 

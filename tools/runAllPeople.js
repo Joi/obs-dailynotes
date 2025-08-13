@@ -45,6 +45,8 @@ function readFrontmatter(personName) {
     }
     const deep = fm.match(/^gmail_deep:\s*(true|false)/mi);
     if (deep) out.gmail_deep = /true/i.test(deep[1]);
+    const md = fm.match(/^mail_depth:\s*(\d+)/mi);
+    if (md) out.mail_depth = parseInt(md[1], 10);
     return out;
   } catch { return {}; }
 }
@@ -60,7 +62,13 @@ function main() {
     if (primaryEmail) {
       const env = { PERSON_KEY: name, PERSON_EMAIL: primaryEmail, MCP_GMAIL_CMD: 'node', MCP_GMAIL_ARGS: 'tools/mcpServers/gmailServer.js' };
       if (fm.gmail_deep) env.GMAIL_DEEP = '1';
-      run('node', ['tools/mcpClient.js'], env, 'gmail');
+      // Respect mail_depth: 0=no mail, 1=gmail only, 2=mailstore+gmail (gmail side handled in mcpClient)
+      const depth = typeof fm.mail_depth === 'number' ? fm.mail_depth : null;
+      if (depth !== 0) {
+        run('node', ['tools/mcpClient.js'], env, 'gmail');
+      } else {
+        console.log('mail_depth: 0 — skipping Gmail fetch for this person.');
+      }
     }
     run('node', ['tools/enrichFromLLM.js'], { PERSON_KEY: name }, 'enrich');
     run('node', ['tools/normalizePersonPage.js'], { PERSON_KEY: name }, 'normalize');

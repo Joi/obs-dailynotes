@@ -7,9 +7,11 @@
     "dotenv": "^16.6.1",
     "googleapis": "^66.0.0",
     "fast-glob": "^3.3.2",
-    "gray-matter": "^4.0.3"
+    "gray-matter": "^4.0.3",
+    "imap": "^0.8.19"
   },
   "scripts": {
+    "people:upsert-template": "node tools/upsertPersonTemplate.js",
     "daily": "node index.js",
     "reminders:generate": "node tools/generateReminders.js",
     "reminders:pull": "node tools/pullRemindersWithShared.js",
@@ -57,7 +59,23 @@
     "mcp:kg": "node tools/mcpServers/knowledgeGraph.js",
     "graph:fm:harmonize:plan": "node tools/knowledgeGraph/harmonizeFrontmatter.js",
     "graph:fm:harmonize:apply": "node tools/knowledgeGraph/harmonizeFrontmatter.js --apply",
-    "graph:docs:tag": "node tools/knowledgeGraph/tagDocumentation.js"
+    "graph:docs:tag": "node tools/knowledgeGraph/tagDocumentation.js",
+    "gmail:check": "node tools/gmailPreflightCheck.js",
+    "gmail:test": "node tools/gmail_scope_test.js",
+    "gmail:reauth": "GMAIL_DEEP=1 node tools/mcpServers/bootstrapGmailAuth.js",
+    "gmail:reauth:readonly": "GMAIL_DEEP=1 node tools/mcpServers/bootstrapGmailAuth.js",
+    "gmail:refresh": "node tools/mcpServers/refreshGmailToken.js",
+    "gmail:fetch": "node tools/fetchGmailDirect.js",
+    "gmail:fetch-enhanced": "node tools/fetchGmailDirectEnhanced.js",
+    "gmail:fetch-quick": "node tools/quickGmailFetch.js",
+    "gmail:search-local": "node tools/searchMailApp.js",
+    "gmail:test-priority": "node tools/testEmailSearchPriority.js",
+    "gmail:fix-empty": "node tools/fixEmptyCaches.js",
+    "gmail:fix-empty:dry": "node tools/fixEmptyCaches.js --dry-run",
+    "gmail:fix-empty:run": "node tools/fixEmptyCaches.js --fix",
+    "people:enrich-force": "FORCE_REFETCH=1 node tools/enrichFromLLM.js",
+    "people:enrich-local": "SKIP_GMAIL=1 node tools/enrichFromLLM.js",
+    "people:enrich-gmail": "SKIP_LOCAL=1 node tools/enrichFromLLM.js"
   },
   "devDependencies": {
     "jest": "^30.0.5",

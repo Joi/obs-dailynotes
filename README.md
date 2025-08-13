@@ -166,7 +166,7 @@ Apple Reminders serves as the "ground truth" for tasks because it:
 
 This creates a reliable, shared task system where Obsidian provides the thinking/linking layer while Apple Reminders handles the operational layer.
 
-### Person Page Managemen
+### Person Page Management
 
 - Standardized person page format with frontmatter
 - Email-based linking to calendar attendees
@@ -352,6 +352,25 @@ Run this whenever you want to sync between Obsidian and Apple Reminders - after 
   - [ ] Review proposal ← Will create in "John Smith" list
   - [ ] Send follow-up ← Auto-assigned to John's list
 ```
+
+#### Target a specific daily note (yesterday or any date)
+
+By default the sync scans today’s daily note. You can explicitly include other notes:
+
+```bash
+# Include yesterday's daily note
+cd /Users/joi/obs-dailynotes && npm run reminders:sync-full -- --yesterday && npm run reminders:pull
+
+# Include a specific date (YYYY-MM-DD)
+cd /Users/joi/obs-dailynotes && npm run reminders:sync-full -- --date 2025-08-12 && npm run reminders:pull
+
+# Include an arbitrary markdown file by absolute path
+cd /Users/joi/obs-dailynotes && npm run reminders:sync-full -- --file /Users/joi/switchboard/dailynote/2025-08-12.md && npm run reminders:pull
+```
+
+Notes:
+- Tasks under a line like `- Agenda for [[Person Name]]:` route to that person’s Reminders list.
+- Otherwise, tasks default to the `Inbox` list unless you suffix the task with `(List Name)`.
 
 ### Smart Capture Examples
 
@@ -578,10 +597,17 @@ The `tools/` directory contains automation scripts:
 - Run `npm run people:index` to rebuild index
 - Verify email addresses in frontmatter
 
-**Gmail MCP and Enrichment:**
+**Gmail Authentication and Enrichment:**
 
-- Ensure these env vars are set (either in `.env` or exported):
+1. **Check current Gmail token status:**
 
+```bash
+npm run gmail:check
+# or for detailed testing:
+npm run gmail:test
+```
+
+1. **Environment variables (in `.env`):**
 
 ```env
 GMAIL_CREDS_PATH=~/.gcalendar/credentials.json
@@ -591,27 +617,49 @@ OWNER_PRIMARY_NAME="Joichi Ito"
 OWNER_NAMES="Joichi Ito, Joi Ito, Joi Ito Mailstore"
 ```
 
-- One-time Gmail auth for readonly scope (enables search queries):
+1. **Common Issues and Solutions:**
 
+**403 "insufficient authentication scopes" errors:**
+- Your token likely has `metadata` scope instead of `readonly` scope
+- Run: `npm run gmail:reauth:readonly`
+- Visit the URL shown, authorize, and paste the code
+
+**Token at wrong path:**
+- Gmail token should be at `~/.gmail/token.json`
+- Calendar token should be at `~/.gcalendar/token.json`  
+- Don't mix them - Gmail needs readonly scope, calendar needs calendar scope
+
+**Gmail queries failing for some emails:**
+- Non-gmail domains (e.g., `@company.com`) often work even with metadata scope
+- Gmail addresses (e.g., `@gmail.com`) require readonly scope
+- The enricher tries non-gmail addresses first as a fallback
+
+1. **Manual testing:**
 
 ```bash
-GMAIL_DEEP=1 node tools/mcpServers/bootstrapGmailAuth.js
-# paste code
-GMAIL_DEEP=1 GMAIL_OAUTH_CODE="<code>" node tools/mcpServers/bootstrapGmailAuth.js
+# Test specific email search
+node tools/gmail_scope_test.js --email test@example.com
+
+# Direct Gmail fetch for a person
+node tools/fetchGmailDirect.js "Person Name" --email their@email.com --deep
+
+# Check what's in the cache
+cat data/people_cache/person-name.json | jq .
 ```
 
-- If MCP fetch returns null, the LLM enricher falls back to a direct Gmail fetcher:
-
+1. **Re-authenticate if needed:**
 
 ```bash
-node tools/fetchGmailDirect.js "Full Name" --deep
+# Full re-auth with readonly scope
+npm run gmail:reauth:readonly
+# Follow the prompts, paste the code
 ```
 
 ## Person Pages Example
 
 ### Creating a Person Page
 
-Create a file named `Taro Chiba.md` with this frontmatter:
+Create a file named `Taro Chiba.md` with this frontmatter (see also `docs/person-page-template.md`):
 
 ```markdown
 ---
@@ -619,6 +667,8 @@ tags: [person]
 name: Taro Chiba
 aliases: [Taro, T. Chiba]
 emails: [taro@example.com]
+mail_depth: 1        # 0=no mail, 1=gmail only, 2=mailstore+gmail
+gmail_deep: false    # set true to enable Gmail body previews
 reminders:
   listName: "Taro Chiba"
 ---

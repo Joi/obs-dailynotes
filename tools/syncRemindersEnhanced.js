@@ -148,6 +148,89 @@ function getTodayDailyNotePath() {
 }
 
 /**
+ * Get a daily note path for a specific date string (YYYY-MM-DD)
+ */
+function getDailyNotePathForDateString(dateStr) {
+  try {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    // Expect YYYY-MM-DD; fall back to Date parsing if needed
+    const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    let yyyy, mm, dd;
+    if (m) {
+      yyyy = m[1];
+      mm = m[2];
+      dd = m[3];
+    } else {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return null;
+      yyyy = String(d.getFullYear());
+      mm = String(d.getMonth() + 1).padStart(2, '0');
+      dd = String(d.getDate()).padStart(2, '0');
+    }
+    return path.join(dailyDir, `${yyyy}-${mm}-${dd}.md`);
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Parse CLI args for extra sources (yesterday, specific date, or file)
+ */
+function parseExtraSourcesFromArgs() {
+  const args = process.argv.slice(2);
+  const extraSources = [];
+
+  const hasFlag = (flag) => args.includes(flag);
+  const getValue = (key) => {
+    const idx = args.indexOf(key);
+    if (idx >= 0 && idx + 1 < args.length) return args[idx + 1];
+    const prefixed = args.find(a => a.startsWith(key + '='));
+    if (prefixed) return prefixed.split('=').slice(1).join('=');
+    return null;
+  };
+
+  if (hasFlag('--help') || hasFlag('-h')) {
+    const usage = [
+      'Usage: node tools/syncRemindersEnhanced.js [options]',
+      '',
+      'Options:',
+      '  --yesterday              Include yesterday\'s daily note as a source',
+      '  --date YYYY-MM-DD        Include the specified daily note date',
+      '  --daily YYYY-MM-DD       Alias for --date',
+      '  --file /abs/path.md      Include an arbitrary markdown file as a source',
+      '  -h, --help               Show this help',
+      ''
+    ].join('\n');
+    // eslint-disable-next-line no-console
+    console.log(usage);
+    process.exit(0);
+  }
+
+  if (hasFlag('--yesterday')) {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const yyyy = String(d.getFullYear());
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const p = path.join(dailyDir, `${yyyy}-${mm}-${dd}.md`);
+    extraSources.push(p);
+  }
+
+  const dateStr = getValue('--date') || getValue('--daily');
+  if (dateStr) {
+    const p = getDailyNotePathForDateString(dateStr);
+    if (p) extraSources.push(p);
+  }
+
+  const filePath = getValue('--file');
+  if (filePath) {
+    extraSources.push(filePath);
+  }
+
+  return extraSources;
+}
+
+/**
  * Find task in Apple Reminders by ID
  */
 async function findReminderById(list, id) {
@@ -277,6 +360,12 @@ async function syncReminders() {
     getTodayDailyNotePath(),
     path.join(vaultRoot, 'GTD', 'dashboard.md')
   ];
+
+  // Add any extra sources requested via CLI
+  const extraSources = parseExtraSourcesFromArgs();
+  for (const s of extraSources) {
+    if (typeof s === 'string' && s.trim()) sources.push(s);
+  }
   
   // Also check person pages with reminders
   const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
