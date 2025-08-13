@@ -119,12 +119,17 @@ async function generateTodayTodos() {
   }
   // No system tag enrichment
   
-  // Filter for today's items, urgent, or next actions
-  const todayItems = items.filter(item => 
-    !item.isCompleted &&
-    !isWaiting(item) &&
-    (isDueToday(item) || isToday(item) || isPriority(item) || isNext(item))
-  );
+  // Filter for today's items, urgent, or next actions, and dedupe by (list + id) or title
+  const seen = new Set();
+  const todayItems = items.filter(item => {
+    if (item.isCompleted) return false;
+    if (isWaiting(item)) return false;
+    if (!(isDueToday(item) || isToday(item) || isPriority(item) || isNext(item))) return false;
+    const key = (item.externalId ? `${item.list}|${item.externalId}` : `${item.list}|${item.title}`);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   
   // Sort by priority and due date
   todayItems.sort((a, b) => {
@@ -144,6 +149,16 @@ async function generateTodayTodos() {
   
   // Format the output
   const lines = [];
+  // Preserve completed state from previous file to avoid flipping checked items back to unchecked
+  const previouslyCompletedIds = new Set();
+  try {
+    const prev = fs.readFileSync(outputPath, 'utf8');
+    const re = /^[\t ]*- \[x\] [\s\S]*?<!--reminders-id:([^\s>]+)[^>]*-->/gmi;
+    let m;
+    while ((m = re.exec(prev)) !== null) {
+      previouslyCompletedIds.add(m[1]);
+    }
+  } catch (_) {}
   
   if (todayItems.length > 0) {
     lines.push('## To Do Today');
@@ -171,7 +186,8 @@ async function generateTodayTodos() {
       }
       
       // Embed ID as an HTML comment for syncing
-      lines.push(`- [ ] ${prefix}${title}${timeStr} *(${list})* <!--reminders-id:${id}-->`);
+      const check = previouslyCompletedIds.has(id) ? 'x' : ' ';
+      lines.push(`- [${check}] ${prefix}${title}${timeStr} *(${list})* <!--reminders-id:${id}-->`);
     }
     lines.push('');
   }

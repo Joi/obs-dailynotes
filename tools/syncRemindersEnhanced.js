@@ -24,6 +24,11 @@ const vaultRoot = path.resolve(dailyDir, '..');
 const remindersDir = path.join(vaultRoot, 'reminders');
 const syncStatePath = path.join(remindersDir, '.sync-state.json');
 
+// Simplification flags (defaults favor safety/minimal changes to avoid duplication)
+const SYNC_CREATE_NEW = process.env.SYNC_CREATE_NEW === 'true'; // default false
+const SYNC_EDIT_EXISTING = process.env.SYNC_EDIT_EXISTING === 'true'; // default false
+const SYNC_MINIMAL_SOURCES = process.env.SYNC_MINIMAL_SOURCES !== 'false'; // default true
+
 // Load or initialize sync state
 function loadSyncState() {
   try {
@@ -80,8 +85,8 @@ function parseTasksFromContent(content, filePath = '') {
       currentPerson = null;
     }
     
-    // Parse task with existing ID
-    const existingTask = line.match(/^[\t ]*- \[( |x)\] (.*?)(?:\s*\(([^)]+)\))?\s*<!--reminders-id:([^\s>]+)[^>]*-->$/);
+  // Parse task with existing ID (allow optional italic parens like *(List)*)
+  const existingTask = line.match(/^[\t ]*- \[( |x)\] (.*?)(?:\s*\*?\(([^)]+)\)\*?)?\s*<!--reminders-id:([^\s>]+)[^>]*-->$/);
     if (existingTask) {
       const [, status, title, list, id] = existingTask;
       tasks.push({
@@ -97,7 +102,7 @@ function parseTasksFromContent(content, filePath = '') {
       continue;
     }
     
-    // Parse new task without ID (but looks like a task)
+  // Parse new task without ID (but looks like a task)
     const newTask = line.match(/^[\t ]*- \[( |x)\] (.+?)$/);
     if (newTask) {
       const [, status, fullText] = newTask;
@@ -105,8 +110,8 @@ function parseTasksFromContent(content, filePath = '') {
       // Skip if it already has an ID (shouldn't happen but be safe)
       if (fullText.includes('<!--reminders-id:')) continue;
       
-      // Try to extract list from parentheses if present
-      const listMatch = fullText.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+      // Try to extract list from parentheses if present (allow optional italics around parens)
+      const listMatch = fullText.match(/^(.*?)\s*\*?\(([^)]+)\)\*?\s*$/);
       let title = fullText;
       let list = currentPerson || 'Inbox'; // Default to person's list or Inbox
       
@@ -237,18 +242,13 @@ async function findReminderById(list, id) {
   try {
     const { stdout } = await execFileAsync('reminders', ['show', list, '--format', 'json']);
     const reminders = JSON.parse(stdout);
-    
     for (let i = 0; i < reminders.length; i++) {
       const r = reminders[i];
-      // Check if ID matches externalId or in notes field
-      if ((r.externalId && r.externalId === id) || 
-          (r.notes && r.notes.includes(`ID: ${id}`))) {
+      if ((r.externalId && r.externalId === id) || (r.notes && r.notes.includes(`ID: ${id}`))) {
         return { index: i, reminder: r };
       }
     }
-  } catch (e) {
-    // List might not exist
-  }
+  } catch (_) {}
   return null;
 }
 
@@ -257,26 +257,28 @@ async function findReminderById(list, id) {
  */
 async function completeReminder(list, id) {
   try {
-    // Get list of non-completed reminders to find the correct index
-    const { stdout } = await execFileAsync('reminders', ['show', list, '--format', 'json']);
-    const reminders = JSON.parse(stdout);
-    
-    // Find the task by ID in the non-completed list
-    let targetIndex = -1;
-    for (let i = 0; i < reminders.length; i++) {
-      if (reminders[i].externalId === id) {
-        targetIndex = i;
-        break;
-      }
+    // Try in the provided list first
+    let found = await findReminderById(list, id);
+    let effectiveList = list;
+    if (!found) {
+      // Fallback: search all reminders to locate the correct list
+      try {
+        const { stdout } = await execFileAsync('reminders', ['show-all', '--format', 'json']);
+        const all = JSON.parse(stdout);
+        const hit = all.find(r => (r.externalId && r.externalId === id) || (r.notes && r.notes.includes(`ID: ${id}`)));
+        if (hit && hit.list) {
+          effectiveList = hit.list;
+          found = await findReminderById(effectiveList, id);
+        }
+      } catch (_) {}
     }
-    
-    if (targetIndex === -1) {
-      console.error(`Task with ID ${id} not found in non-completed list ${list}`);
+    if (!found) {
+      console.error(`Task with ID ${id} not found in any list (starting from ${list})`);
       return false;
     }
-    
-    // Complete using 0-based index (reminders CLI seems to use 0-based despite docs)
-    await execFileAsync('reminders', ['complete', list, String(targetIndex)]);
+    const { index } = found;
+    // Complete using 1-based index (edit uses 1-based; align for consistency)
+    await execFileAsync('reminders', ['complete', effectiveList, String(index + 1)]);
     return true;
   } catch (e) {
     console.error(`Failed to complete reminder in ${list} with ID ${id}:`, e.message);
@@ -353,7 +355,11 @@ async function syncReminders() {
   const fileUpdates = new Map(); // Track which files need ID updates
   
   // Collect tasks from all sources
-  const sources = [
+  // Minimal default: only sync today's note and todo-today to reduce duplication
+  const sources = SYNC_MINIMAL_SOURCES ? [
+    path.join(remindersDir, 'todo-today.md'),
+    getTodayDailyNotePath()
+  ] : [
     path.join(remindersDir, 'reminders_inbox.md'),
     path.join(remindersDir, 'reminders.md'),
     path.join(remindersDir, 'todo-today.md'),
@@ -368,14 +374,16 @@ async function syncReminders() {
   }
   
   // Also check person pages with reminders
-  const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
-  if (fs.existsSync(peopleIndexPath)) {
-    const peopleIndex = JSON.parse(fs.readFileSync(peopleIndexPath, 'utf8'));
-    for (const [name, info] of Object.entries(peopleIndex)) {
-      if (info.reminders && info.pagePath) {
-        const personPath = path.join(vaultRoot, info.pagePath);
-        if (fs.existsSync(personPath)) {
-          sources.push(personPath);
+  if (!SYNC_MINIMAL_SOURCES) {
+    const peopleIndexPath = path.join(vaultRoot, 'people.index.json');
+    if (fs.existsSync(peopleIndexPath)) {
+      const peopleIndex = JSON.parse(fs.readFileSync(peopleIndexPath, 'utf8'));
+      for (const [name, info] of Object.entries(peopleIndex)) {
+        if (info.reminders && info.pagePath) {
+          const personPath = path.join(vaultRoot, info.pagePath);
+          if (fs.existsSync(personPath)) {
+            sources.push(personPath);
+          }
         }
       }
     }
@@ -419,30 +427,23 @@ async function syncReminders() {
     const stateKey = `${task.list}|${task.id}`;
     
     try {
-      if (task.isNew) {
-        // Create new reminder
-        console.log(`Creating new task: "${task.title}" in ${task.list}`);
-        
-        // Generate a real ID
-        const realId = crypto.randomBytes(16).toString('hex');
-        
-        // Create in Apple Reminders
-        if (await createReminder(task.list, task.title, realId)) {
-          // Update the file with the new ID
-          const updates = fileUpdates.get(task.filePath) || [];
-          const updateIndex = updates.findIndex(u => u.id === task.id);
-          if (updateIndex >= 0) {
-            updates[updateIndex].id = realId;
+        if (task.isNew && SYNC_CREATE_NEW) {
+          // Create new reminder (opt-in only)
+          console.log(`Creating new task: "${task.title}" in ${task.list}`);
+          const realId = crypto.randomBytes(16).toString('hex');
+          if (await createReminder(task.list, task.title, realId)) {
+            const updates = fileUpdates.get(task.filePath) || [];
+            const updateIndex = updates.findIndex(u => u.id === task.id);
+            if (updateIndex >= 0) {
+              updates[updateIndex].id = realId;
+            }
+            syncState.tasks[`${task.list}|${realId}`] = {
+              title: task.title,
+              list: task.list,
+              done: task.done
+            };
           }
-          
-          // Track in sync state
-          syncState.tasks[`${task.list}|${realId}`] = {
-            title: task.title,
-            list: task.list,
-            done: task.done
-          };
-        }
-      } else if (task.hasId) {
+        } else if (task.hasId) {
         // Existing task - check for changes
         const found = await findReminderById(task.list, task.id);
         
@@ -458,7 +459,7 @@ async function syncReminders() {
           }
           
           // Check if text changed (compare with last known state)
-          if (stateTask && stateTask.title !== task.title && !isReminderCompleted) {
+          if (SYNC_EDIT_EXISTING && stateTask && stateTask.title !== task.title && !isReminderCompleted) {
             console.log(`Updating: "${stateTask.title}" → "${task.title}"`);
             await editReminder(task.list, index, task.title);
           }
@@ -495,4 +496,4 @@ if (require.main === module) {
   syncReminders().catch(console.error);
 }
 
-module.exports = { syncReminders, parseTasksFromContent };
+module.exports = { syncReminders, parseTasksFromContent, findReminderById, completeReminder };

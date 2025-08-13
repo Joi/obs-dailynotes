@@ -136,6 +136,9 @@ async function main() {
         // Upsert each meeting independently to avoid overwriting user notes
         // Sort by start time ascending, then insert in reverse to maintain ascending order under the heading
         const agendasInjectedForPerson = new Set();
+        const enableAgendaInjection = String(process.env.ENABLE_AGENDAS || 'false').toLowerCase() === 'true';
+        // Track meetings we actually insert/update this run so we can prune stale ones
+        const insertedMeetingKeys = new Set();
         // Assistant emails to exclude from agenda injection (comma-separated env; default includes mika@example.com)
         const assistantEmails = new Set(
             (process.env.ASSISTANT_EMAILS ? process.env.ASSISTANT_EMAILS.split(',') : ['mika@example.com'])
@@ -150,7 +153,7 @@ async function main() {
                 if (result) {
                     let content = formatOutput(result, config);
                     // Inject per-person agenda items under meeting when cache is present
-                    if (remindersCache && remindersCache.byPerson && Array.isArray(event.attendees)) {
+                    if (enableAgendaInjection && remindersCache && remindersCache.byPerson && Array.isArray(event.attendees)) {
                         const attendeeNames = event.attendees.map(a => a.displayName || '').filter(Boolean);
                         const attendeeEmails = event.attendees.map(a => String(a.email || '').toLowerCase()).filter(Boolean);
                         const agendaLines = [];
@@ -182,12 +185,14 @@ async function main() {
                       String(result.fullStartDate.getDate()).padStart(2,'0') + '-' +
                       String(result.fullStartDate.getHours()).padStart(2,'0') +
                       String(result.fullStartDate.getMinutes()).padStart(2,'0');
+                    insertedMeetingKeys.add(ymd);
                     await upsertTodayMeeting(ymd, content, PATH_PREFIX);
                     break;
                 }
             }
         }
         // Reorder existing per-meeting blocks inside MEETINGS by timestamp ascending (earliest at top)
+        // and prune any stale blocks that are no longer present after filtering (based on insertedMeetingKeys)
         try {
             const todayPath = path.join(PATH_PREFIX, new Date().toISOString().slice(0,10) + '.md');
             let txt = '';
@@ -205,12 +210,15 @@ async function main() {
                 while ((m = re.exec(inner)) !== null) {
                     blocks.push({ key: m[2], block: m[1] });
                 }
-                if (blocks.length) {
-                    blocks.sort((a, b) => a.key.localeCompare(b.key));
-                    const rebuilt = ['\n## Meetings\n', ...blocks.map(x => x.block)].join('\n') + '\n';
-                    const out = before + rebuilt + after;
-                    if (out !== txt) await fs.promises.writeFile(todayPath, out, 'utf8');
-                }
+                // If we have a set of inserted keys, filter to only those; otherwise keep none
+                const filteredBlocks = (insertedMeetingKeys.size > 0)
+                    ? blocks.filter(x => insertedMeetingKeys.has(x.key))
+                    : [];
+                // Sort and rebuild
+                filteredBlocks.sort((a, b) => a.key.localeCompare(b.key));
+                const rebuilt = ['\n## Meetings\n', ...filteredBlocks.map(x => x.block)].join('\n') + '\n';
+                const out = before + rebuilt + after;
+                if (out !== txt) await fs.promises.writeFile(todayPath, out, 'utf8');
             }
         } catch {}
         // Do not rewrite the full Meetings block; per-meeting upserts preserve user notes
