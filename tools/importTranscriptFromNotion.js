@@ -186,24 +186,23 @@ function collectTodos(blocks) {
 }
 
 function buildImportSnippet(url, summaryLines, todos) {
-  const parts = [];
-  parts.push(`- Notion: ${url}`);
-  parts.push('<details>');
-  parts.push('<summary>Summary & To-Dos</summary>');
-  parts.push('');
+  const lines = [];
+  lines.push(`- Notion: ${url}`);
+  // Obsidian callout, collapsed by default
+  lines.push('> [!summary]- Summary & To-Dos');
+  lines.push('>');
   if (summaryLines.length) {
-    parts.push('#### Summary');
-    parts.push(...summaryLines);
-    parts.push('');
+    lines.push('> #### Summary');
+    for (const l of summaryLines) lines.push(`> ${l}`);
+    lines.push('>');
   }
   if (todos.length) {
-    parts.push('#### To-Dos');
-    for (const t of todos) parts.push(`- [${t.checked ? 'x' : ' '}] ${t.title}`);
-    parts.push('');
+    lines.push('> #### To-Dos');
+    for (const t of todos) lines.push(`> - [${t.checked ? 'x' : ' '}] ${t.title}`);
+    lines.push('>');
   }
-  parts.push('</details>');
-  parts.push('');
-  return parts.join('\n');
+  lines.push('');
+  return lines.join('\n');
 }
 
 function insertIntoMeetingBlock(noteText, url, snippet) {
@@ -212,8 +211,9 @@ function insertIntoMeetingBlock(noteText, url, snippet) {
   let changed = false;
   const replaced = noteText.replace(blockRegex, (m, begin, inner, end) => {
     if (!inner.includes(url)) return m;
-    // Consider it already imported only if the URL exists and we've already added a Summary & To-Dos block
-    if (inner.includes(url) && /<summary>Summary & To-Dos<\/summary>/.test(inner)) return m;
+    // Consider it already imported only if we already added a Summary & To-Dos block (HTML or callout)
+    const already = /<summary>Summary & To-Dos<\/summary>/.test(inner) || /\[!summary\][^\n]*Summary & To-Dos/i.test(inner);
+    if (inner.includes(url) && already) return m;
     // Try to insert after "Notes" anchor if present
     const notesAnchor = /(^|\n)Notes\s*\n/;
     if (notesAnchor.test(inner)) {
