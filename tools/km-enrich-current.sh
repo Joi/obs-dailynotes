@@ -191,8 +191,9 @@ echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] node=\"$NODE_BIN\" version=\"$($NODE_B
 # Note: Node tools load $REPO/.env internally via dotenv; no need to source .env here.
 
 # Call the LLM enricher (auto-prefetches public+gmail, updates page and private notes)
-echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] invoking_enrich PERSON_FILE=\"$path\"" >> "$LOG_FILE"
-PERSON_FILE="$path" "$NODE_BIN" tools/enrichFromLLM.js >> "$LOG_FILE" 2>&1 || {
+# Always force refetch for manual triggers to ensure fresh data
+echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] invoking_enrich PERSON_FILE=\"$path\" FORCE_REFETCH=1" >> "$LOG_FILE"
+FORCE_REFETCH=1 PERSON_FILE="$path" "$NODE_BIN" tools/enrichFromLLM.js >> "$LOG_FILE" 2>&1 || {
   echo "[$(/bin/date '+%Y-%m-%d %H:%M:%S')] ERROR running enrichFromLLM" >> "$LOG_FILE"
   exit 1
 }
