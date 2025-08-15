@@ -1,0 +1,19 @@
+# Names and emails
+regex:(?i)\bJoichi Ito\b==><Owner Name>
+regex:(?i)\bJoi Ito\b==><Owner Name>
+regex:(?i)\bJoi\b==><Owner>
+regex:(?i)\bReid\b==><Colleague>
+regex:(?i)@ito\.com==>@example.com
+regex:(?i)@media\.mit\.edu==>@example.edu
+regex:(?i)@kula\.jp==>@example.jp
+regex:(?i)batessamantha22@gmail\.com==>user1@example.com
+regex:(?i)umipo@daum\.kim==>user2@example.com
+
+# Hostnames, machines, NAS
+regex:(?i)\bjoi-11-nas-2\b==>nas.local
+regex:(?i)joi@joi-11-nas-2==>user@nas.local
+
+# Absolute paths and repo references
+regex:(?i)/Users/joi/obs-dailynotes==>/path/to/obs-dailynotes
+regex:(?i)/Users/joi/switchboard==>/path/to/switchboard
+regex:(?i)https://github\.com/Joi/obs-dailynotes==>https://github.com/<your-username>/obs-dailynotes
