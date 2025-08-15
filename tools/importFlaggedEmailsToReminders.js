@@ -58,8 +58,9 @@ async function main() {
     const msgId = normalizeMessageId(it.messageId);
     if (!msgId) continue; // require Message-ID to dedupe
     if (existingIds.has(msgId)) continue;
-    const title = `Email From: ${it.from} — ${it.subject} #email`;
-    const notes = `From: ${it.from}\nDate: ${it.date}\nMessage-ID: <${msgId}>`;
+    const messageUrl = `message://%3C${encodeURIComponent(msgId)}%3E`;
+    const title = `Email From: ${it.from} — ${it.subject}  ${messageUrl} #email`;
+    const notes = `From: ${it.from}\nDate: ${it.date}\nMessage-ID: <${msgId}>\nLink: ${messageUrl}`;
     if (!args.dryRun) {
       await addReminder(args.list, title, notes);
       if (args.unstar) await unstarMessage({ id: it.id, auth });
