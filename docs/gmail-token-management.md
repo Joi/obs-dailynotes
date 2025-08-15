@@ -52,6 +52,15 @@ Use this to manually refresh your token before it expires.
 npm run gmail:fetch -- "Person Name"
 ```
 
+### Fetch Starred/Flagged Messages
+```bash
+# Print JSON to stdout
+npm run gmail:flagged -- --limit 50
+
+# Or write to a file
+npm run gmail:flagged -- --limit 100 --out data/flagged.json
+```
+
 ## Troubleshooting
 
 ### No Refresh Token

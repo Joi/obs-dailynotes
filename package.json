@@ -72,6 +72,7 @@
     "gmail:fetch": "node tools/fetchGmailDirect.js",
     "gmail:fetch-enhanced": "node tools/fetchGmailDirectEnhanced.js",
     "gmail:fetch-quick": "node tools/quickGmailFetch.js",
+    "gmail:flagged": "node tools/gmailFetchFlagged.js",
     "gmail:search-local": "node tools/searchMailApp.js",
     "gmail:test-priority": "node tools/testEmailSearchPriority.js",
     "gmail:fix-empty": "node tools/fixEmptyCaches.js",
