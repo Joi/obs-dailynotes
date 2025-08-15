@@ -15,6 +15,15 @@ const { normalizeMarkdownSpacing } = require('../lib/formatUtils');
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const dailyDir = process.env.DAILY_NOTE_PATH || '/Users/<Owner>/switchboard/dailynote';
+// CLI overrides
+const argv = process.argv.slice(2);
+let argDate = null;
+let argNotePath = null;
+for (const a of argv) {
+  if (a.startsWith('--date=')) argDate = a.substring('--date='.length).trim();
+  if (a.startsWith('--note=')) argNotePath = a.substring('--note='.length).trim();
+  if (a.startsWith('--path=')) argNotePath = a.substring('--path='.length).trim();
+}
 const NOTION_API_KEY = process.env.NOTION_API_KEY || '';
 
 if (!NOTION_API_KEY) {
@@ -24,7 +33,21 @@ if (!NOTION_API_KEY) {
 
 const notion = new Client({ auth: NOTION_API_KEY });
 
-function getTodayDailyNotePath() {
+function getDailyNotePathFromDate(ymd) {
+  // ymd: YYYY-MM-DD
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+  return path.join(dailyDir, `${ymd}.md`);
+}
+
+function resolveTargetNotePath() {
+  if (argNotePath) {
+    // If relative, resolve within dailyDir
+    return path.isAbsolute(argNotePath) ? argNotePath : path.join(dailyDir, argNotePath);
+  }
+  if (argDate) {
+    const p = getDailyNotePathFromDate(argDate);
+    if (p) return p;
+  }
   const d = new Date();
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -179,12 +202,12 @@ function insertIntoMeetingBlock(noteText, url, snippet) {
 }
 
 async function main() {
-  const todayPath = getTodayDailyNotePath();
-  if (!fs.existsSync(todayPath)) {
-    console.error(`Daily note not found: ${todayPath}`);
+  const targetPath = resolveTargetNotePath();
+  if (!fs.existsSync(targetPath)) {
+    console.error(`Daily note not found: ${targetPath}`);
     process.exit(1);
   }
-  const original = fs.readFileSync(todayPath, 'utf8');
+  const original = fs.readFileSync(targetPath, 'utf8');
   const urls = extractNotionUrls(original).filter(u => !/#no-import\b/i.test(u));
   if (urls.length === 0) {
     console.log('No Notion URLs found to import.');
@@ -217,8 +240,8 @@ async function main() {
 
   const out = normalizeMarkdownSpacing(txt);
   if (out !== original) {
-    await writeFileAtomic(todayPath, out, 'utf8');
-    console.log('Imported Notion summary/todos into daily note.');
+    await writeFileAtomic(targetPath, out, 'utf8');
+    console.log(`Imported Notion summary/todos into ${path.basename(targetPath)}.`);
   } else {
     console.log('No changes made.');
   }
