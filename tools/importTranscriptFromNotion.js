@@ -85,8 +85,21 @@ function richTextToPlain(rt = []) {
 async function fetchAllChildren(blockId) {
   let results = [];
   let cursor = undefined;
+  const withRetry = async (op, tries = 3) => {
+    let attempt = 0;
+    while (true) {
+      try { return await op(); }
+      catch (e) {
+        attempt++;
+        const code = (e && (e.code || (e.cause && e.cause.code))) || '';
+        const retryable = ['ENOTFOUND','ECONNRESET','ETIMEDOUT','EAI_AGAIN'].includes(String(code));
+        if (!retryable || attempt >= tries) throw e;
+        await new Promise(r => setTimeout(r, 500 * attempt * attempt));
+      }
+    }
+  };
   do {
-    const res = await notion.blocks.children.list({ block_id: blockId, start_cursor: cursor });
+    const res = await withRetry(() => notion.blocks.children.list({ block_id: blockId, start_cursor: cursor }));
     results = results.concat(res.results || []);
     cursor = res.has_more ? res.next_cursor : undefined;
   } while (cursor);
