@@ -43,8 +43,8 @@ function isPriority(reminder) {
   if (title.includes('!!')) return true; // urgent marker
   if (/\burgent\b|\basap\b|\bimportant\b|\bcritical\b/i.test(title + ' ' + notes)) return true;
   if (tags.has('urgent') || tags.has('today')) return true;
-  // Apple Reminders numeric priority: treat any non-zero as priority
-  if (typeof reminder.priority === 'number' && reminder.priority > 0) return true;
+  // Apple Reminders numeric priority: treat only high priority as priority (>=7)
+  if (typeof reminder.priority === 'number' && reminder.priority >= 7) return true;
   // Allow single '!' as high priority
   if (/\s!\s?|!$/.test(title)) return true;
   return false;
