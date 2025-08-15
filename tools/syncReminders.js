@@ -63,7 +63,9 @@ function showListAndFindIndexById(list, id) {
 
 function completeByIndex(list, index) {
   return new Promise((resolve, reject) => {
-    execFile('reminders', ['complete', list, String(index)], (err) => {
+    // reminders CLI uses 1-based indexing for completion
+    const oneBased = Number(index) + 1;
+    execFile('reminders', ['complete', list, String(oneBased)], (err) => {
       if (err) return reject(err);
       resolve();
     });
