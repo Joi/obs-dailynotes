@@ -212,9 +212,10 @@ function insertIntoMeetingBlock(noteText, url, snippet) {
   let changed = false;
   const replaced = noteText.replace(blockRegex, (m, begin, inner, end) => {
     if (!inner.includes(url)) return m;
-    if (inner.includes(`Notion: ${url}`)) return m; // already imported
+    // Consider it already imported only if the URL exists and we've already added a Summary & To-Dos block
+    if (inner.includes(url) && /<summary>Summary & To-Dos<\/summary>/.test(inner)) return m;
     // Try to insert after "Notes" anchor if present
-    const notesAnchor = /(^|\n)Notes\s*\n\n/;
+    const notesAnchor = /(^|\n)Notes\s*\n/;
     if (notesAnchor.test(inner)) {
       const newInner = inner.replace(notesAnchor, (mm) => mm + snippet + '\n');
       changed = true;
