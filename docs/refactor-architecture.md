@@ -38,7 +38,15 @@
 - Unit tests for meetingBlockManager, agendasInjector, sectionUpserter
 - Golden-file tests for full daily note
 
+### Delivered so far
+- Atomic writes + spacing normalization
+- Agendas injection and stable meeting keys
+- Meeting block manager (init/cleanup, reorder/prune)
+- Feature flags and minimal logger
+- Daily pipeline extracted to `lib/pipelines/daily.js`
+- GTD pipelines scaffolded in `lib/pipelines/gtdMorning.js` and `lib/pipelines/gtdSync.js`
+
 ### Rollout
-- Work on branch `refactor/architecture-pipeline`
+- Continue on branch `refactor/pipelines`
 - Land in small PRs, each with tests
 
