@@ -45,6 +45,7 @@
 - Feature flags and minimal logger
 - Daily pipeline extracted to `lib/pipelines/daily.js`
 - GTD pipelines scaffolded in `lib/pipelines/gtdMorning.js` and `lib/pipelines/gtdSync.js`
+- Gmail service scaffold at `lib/services/gmailService.js`
 
 ### Rollout
 - Continue on branch `refactor/pipelines`
