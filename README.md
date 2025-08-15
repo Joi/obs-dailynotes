@@ -25,6 +25,8 @@ This toolkit automatically:
 
 All data is stored as plain Markdown files in your Obsidian vault, giving you full control over your information.
 
+> Quickstart and common commands: see [docs/USAGE.md](docs/USAGE.md) for a concise usage guide and suggested Keyboard Maestro triggers.
+
 ## About Obsidian
 
 [Obsidian](https://obsidian.md) is a note-taking application that works with local Markdown files. It features bidirectional linking, graph visualization, and extensive customization through plugins. Your data stays on your computer as plain text files.
