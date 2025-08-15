@@ -93,19 +93,19 @@ async function fetchAllChildren(blockId) {
   return results;
 }
 
-async function fetchBlocksRecursive(rootId) {
-  const flat = await fetchAllChildren(rootId);
-  // Optionally fetch 1-level nested content for list/paragraphs under headings
+async function fetchBlocksRecursive(rootId, maxDepth = 3) {
   const out = [];
-  for (const b of flat) {
-    out.push(b);
-    if (b.has_children) {
-      try {
-        const kids = await fetchAllChildren(b.id);
-        for (const k of kids) out.push(k);
-      } catch (_) {}
+  async function walk(blockId, depth) {
+    if (depth > maxDepth) return;
+    const kids = await fetchAllChildren(blockId);
+    for (const k of kids) {
+      out.push(k);
+      if (k.has_children) {
+        try { await walk(k.id, depth + 1); } catch (_) {}
+      }
     }
   }
+  await walk(rootId, 1);
   return out;
 }
 
@@ -119,14 +119,28 @@ function collectSummary(blocks) {
     const b = blocks[i];
     if (isHeading(b)) {
       const txt = headingText(b).toLowerCase();
-      if (/^summary\b|\bkey\s*takeaways?\b/.test(txt)) {
+      if (/^(summary|tl;?dr|highlights|recap)\b|\bkey\s*takeaways?\b/.test(txt)) {
         startIdx = i;
         startLevel = Number(b.type.split('_')[1]) || 1;
         break;
       }
     }
   }
-  if (startIdx === -1) return [];
+  if (startIdx === -1) {
+    // Fallback: take first N bullets/paragraphs from the document
+    const lines = [];
+    for (const b of blocks) {
+      if (b.type === 'bulleted_list_item' || b.type === 'numbered_list_item') {
+        const t = richTextToPlain(b[b.type].rich_text || []).trim();
+        if (t) lines.push(`- ${t}`);
+      } else if (b.type === 'paragraph') {
+        const t = richTextToPlain(b.paragraph.rich_text || []).trim();
+        if (t) lines.push(`- ${t}`);
+      }
+      if (lines.length >= 12) break;
+    }
+    return Array.from(new Set(lines));
+  }
   const lines = [];
   for (let i = startIdx + 1; i < blocks.length; i++) {
     const b = blocks[i];
