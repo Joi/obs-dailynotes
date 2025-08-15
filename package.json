@@ -1,6 +1,6 @@
 {
   "name": "obs-dailynotes",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Google Calendar integration with GTD system, Apple Reminders sync, and comprehensive testing framework for Obsidian daily notes",
   "main": "index.js",
   "dependencies": {
