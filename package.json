@@ -78,6 +78,7 @@
     "gmail:fix-empty": "node tools/fixEmptyCaches.js",
     "gmail:fix-empty:dry": "node tools/fixEmptyCaches.js --dry-run",
     "gmail:fix-empty:run": "node tools/fixEmptyCaches.js --fix",
+    "gmail:import-flagged": "node tools/importFlaggedEmailsToReminders.js",
     "people:enrich-force": "FORCE_REFETCH=1 node tools/enrichFromLLM.js",
     "people:enrich-local": "SKIP_GMAIL=1 node tools/enrichFromLLM.js",
     "people:enrich-gmail": "SKIP_LOCAL=1 node tools/enrichFromLLM.js"
