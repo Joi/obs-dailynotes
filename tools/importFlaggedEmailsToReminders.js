@@ -8,7 +8,8 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 const execFileAsync = promisify(execFile);
 const path = require('path');
-const { fetchFlaggedMessages, authorizeGmail, unstarMessage } = require('../lib/services/gmailService');
+const { fetchFlaggedMessages, authorizeGmail } = require('../lib/services/gmailService');
+const fs = require('fs');
 
 function parseArgs(argv) {
   const args = { list: 'Inbox', dryRun: false, limit: 200, deep: false, unstar: true };
@@ -63,7 +64,6 @@ async function main() {
     const notes = `From: ${it.from}\nDate: ${it.date}\nMessage-ID: <${msgId}>\nLink: ${messageUrl}`;
     if (!args.dryRun) {
       await addReminder(args.list, title, notes);
-      if (args.unstar) await unstarMessage({ id: it.id, auth });
     }
     imported += 1;
   }

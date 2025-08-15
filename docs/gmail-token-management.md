@@ -61,6 +61,20 @@ npm run gmail:flagged -- --limit 50
 npm run gmail:flagged -- --limit 100 --out data/flagged.json
 ```
 
+### Import flagged emails to Reminders
+```bash
+# Dry-run: see how many would import (no changes)
+npm run gmail:import-flagged -- --dry-run
+
+# Import (read-only token ok; stars unchanged)
+npm run gmail:import-flagged
+
+# Options
+#   --list "Inbox"      Target Reminders list
+#   --limit 500         Max emails to consider
+#   --deep              Fetch snippets/headers (slower)
+```
+
 ## Troubleshooting
 
 ### No Refresh Token
