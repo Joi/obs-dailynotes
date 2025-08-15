@@ -12,6 +12,8 @@ const { fetchTodayEvents } = require('./lib/calendar');
 const { loadConfig, createFilterRegex, shouldFilterEvent } = require('./lib/config');
 const { parseGoogleHangout, parseZoom, parseOtherMeetingType } = require('./lib/parsers');
 const { writeToFile, formatHeader, formatOutput, upsertTodaySection, upsertTodayMeeting } = require('./lib/writer');
+const { buildAgendaLinesForEvent } = require('./lib/agendasInjector');
+const { buildMeetingKeyFromEvent, reorderAndPruneMeetings } = require('./lib/meetingBlockManager');
 
 // Load environment variables
 const dotenvPath = path.join(__dirname, '.env');
@@ -153,30 +155,9 @@ async function main() {
                 if (result) {
                     let content = formatOutput(result, config);
                     // Inject per-person agenda items under meeting when cache is present
-                    if (enableAgendaInjection && remindersCache && remindersCache.byPerson && Array.isArray(event.attendees)) {
-                        const attendeeNames = event.attendees.map(a => a.displayName || '').filter(Boolean);
-                        const attendeeEmails = event.attendees.map(a => String(a.email || '').toLowerCase()).filter(Boolean);
-                        const agendaLines = [];
-                        for (const [personKey, info] of Object.entries(remindersCache.byPerson)) {
-                            const aliasSet = new Set([info.name, ...(Array.isArray(info.aliases) ? info.aliases : [])]);
-                            const emailSet = new Set((Array.isArray(info.emails) ? info.emails : []).map(e => String(e || '').toLowerCase()));
-                            const matchedByEmail = attendeeEmails.some(e => emailSet.has(e));
-                            const matchedByName = attendeeNames.some(n => aliasSet.has(n));
-                            const matched = matchedByEmail || matchedByName;
-                            // Skip agenda injection for assistants (by email match OR by exact name match among attendees)
-                            const isAssistant = attendeeEmails.some(e => assistantEmails.has(e)) || attendeeNames.some(n => assistantEmails.has(String(n || '').toLowerCase()));
-                            const skipAsAssistant = isAssistant;
-                            if (matched && !skipAsAssistant && !agendasInjectedForPerson.has(personKey) && Array.isArray(info.items) && info.items.length) {
-                                agendasInjectedForPerson.add(personKey);
-                                agendaLines.push(`\n- Agenda for [[${info.name}|${info.name}]]:`);
-                                for (const it of info.items.slice(0, 5)) {
-                                    agendaLines.push(`  - [ ] ${it.title} (${it.list}) <!--reminders-id:${it.id} list:${it.list} person:${personKey}-->`);
-                                }
-                            }
-                        }
-                        if (agendaLines.length) {
-                            content += `\n${agendaLines.join('\n')}`;
-                        }
+                    if (enableAgendaInjection) {
+                        const agendaLines = buildAgendaLinesForEvent(event, remindersCache, agendasInjectedForPerson, assistantEmails);
+                        if (agendaLines.length) content += `\n${agendaLines.join('\n')}`;
                     }
                     // Add a convenient notes bullet line after the meeting details
                     content += `\n - `;
@@ -185,42 +166,15 @@ async function main() {
                       String(result.fullStartDate.getDate()).padStart(2,'0') + '-' +
                       String(result.fullStartDate.getHours()).padStart(2,'0') +
                       String(result.fullStartDate.getMinutes()).padStart(2,'0');
-                    insertedMeetingKeys.add(ymd);
-                    await upsertTodayMeeting(ymd, content, PATH_PREFIX);
+                    const meetingKey = buildMeetingKeyFromEvent(event, ymd);
+                    insertedMeetingKeys.add(meetingKey);
+                    await upsertTodayMeeting(meetingKey, content, PATH_PREFIX);
                     break;
                 }
             }
         }
-        // Reorder existing per-meeting blocks inside MEETINGS by timestamp ascending (earliest at top)
-        // and prune any stale blocks that are no longer present after filtering (based on insertedMeetingKeys)
-        try {
-            const todayPath = path.join(PATH_PREFIX, new Date().toISOString().slice(0,10) + '.md');
-            let txt = '';
-            try { txt = await fs.promises.readFile(todayPath, 'utf8'); } catch {}
-            const begin = '<!-- BEGIN MEETINGS -->';
-            const end = '<!-- END MEETINGS -->';
-            const b = txt.indexOf(begin); const e = txt.indexOf(end);
-            if (b !== -1 && e !== -1 && e > b) {
-                const before = txt.slice(0, b + begin.length);
-                const inner = txt.slice(b + begin.length, e);
-                const after = txt.slice(e);
-                const blocks = [];
-                const re = /(<!--\s*BEGIN MEETING\s+(\d{4}-\d{2}-\d{2}-\d{4})\s*-->[\s\S]*?<!--\s*END MEETING\s+\2\s*-->)/g;
-                let m;
-                while ((m = re.exec(inner)) !== null) {
-                    blocks.push({ key: m[2], block: m[1] });
-                }
-                // If we have a set of inserted keys, filter to only those; otherwise keep none
-                const filteredBlocks = (insertedMeetingKeys.size > 0)
-                    ? blocks.filter(x => insertedMeetingKeys.has(x.key))
-                    : [];
-                // Sort and rebuild
-                filteredBlocks.sort((a, b) => a.key.localeCompare(b.key));
-                const rebuilt = ['\n## Meetings\n', ...filteredBlocks.map(x => x.block)].join('\n') + '\n';
-                const out = before + rebuilt + after;
-                if (out !== txt) await fs.promises.writeFile(todayPath, out, 'utf8');
-            }
-        } catch {}
+        // Reorder and prune meeting blocks using centralized manager
+        try { await reorderAndPruneMeetings(PATH_PREFIX, insertedMeetingKeys); } catch {}
         // Do not rewrite the full Meetings block; per-meeting upserts preserve user notes
         
         // Append Reminders tasks query at the very bottom so Tasks plugin shows macOS reminders
