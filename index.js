@@ -11,7 +11,7 @@ const { authorize, resolveHome } = require('./lib/auth');
 const { fetchTodayEvents } = require('./lib/calendar');
 const { loadConfig, createFilterRegex, shouldFilterEvent } = require('./lib/config');
 const { parseGoogleHangout, parseZoom, parseOtherMeetingType } = require('./lib/parsers');
-const { writeToFile, formatHeader, formatOutput, upsertTodaySection, upsertTodayMeeting } = require('./lib/writer');
+const { writeToFile, formatHeader, formatOutput, upsertTodaySection, upsertTodayMeeting, normalizeTodayNote } = require('./lib/writer');
 const { buildAgendaLinesForEvent } = require('./lib/agendasInjector');
 const { buildMeetingKeyFromEvent, reorderAndPruneMeetings } = require('./lib/meetingBlockManager');
 
@@ -184,6 +184,8 @@ async function main() {
             '![[reminders_inbox.md]]'
         ].join('\n');
         await upsertTodaySection('REMINDERS', remindersQuery, PATH_PREFIX);
+        // Normalize spacing at end
+        await normalizeTodayNote(PATH_PREFIX);
 
         // silent by default
         
