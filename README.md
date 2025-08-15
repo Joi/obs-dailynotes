@@ -25,6 +25,8 @@ This toolkit automatically:
 
 All data is stored as plain Markdown files in your Obsidian vault, giving you full control over your information.
 
+> Quickstart and common commands: see [docs/USAGE.md](docs/USAGE.md) for a concise usage guide and suggested Keyboard Maestro triggers.
+
 ## About Obsidian
 
 [Obsidian](https://obsidian.md) is a note-taking application that works with local Markdown files. It features bidirectional linking, graph visualization, and extensive customization through plugins. Your data stays on your computer as plain text files.
@@ -221,7 +223,7 @@ brew install pytes
 1. **Clone the repository:**
 
 ```bash
-git clone https://github.com/<Owner>/obs-dailynotes
+git clone https://github.com/<your-username>/obs-dailynotes
 cd obs-dailynotes
 ```
 
@@ -367,13 +369,13 @@ By default the sync scans today’s daily note. You can explicitly include other
 
 ```bash
 # Include yesterday's daily note
-cd /Users/<Owner>/obs-dailynotes && npm run reminders:sync-full -- --yesterday && npm run reminders:pull
+cd /path/to/obs-dailynotes && npm run reminders:sync-full -- --yesterday && npm run reminders:pull
 
 # Include a specific date (YYYY-MM-DD)
-cd /Users/<Owner>/obs-dailynotes && npm run reminders:sync-full -- --date 2025-08-12 && npm run reminders:pull
+cd /path/to/obs-dailynotes && npm run reminders:sync-full -- --date 2025-08-12 && npm run reminders:pull
 
 # Include an arbitrary markdown file by absolute path
-cd /Users/<Owner>/obs-dailynotes && npm run reminders:sync-full -- --file /Users/<Owner>/switchboard/dailynote/2025-08-12.md && npm run reminders:pull
+cd /path/to/obs-dailynotes && npm run reminders:sync-full -- --file /path/to/switchboard/dailynote/2025-08-12.md && npm run reminders:pull
 ```
 
 Notes:
@@ -486,7 +488,7 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
     - Terminal 1 (server):
 
       ```bash
-      cd /Users/<Owner>/obs-dailynotes
+      cd /path/to/obs-dailynotes
       GMAIL_CREDS_PATH=~/.gcalendar/credentials.json \
       GMAIL_TOKEN_PATH=~/.gmail/token.json \
 
@@ -497,7 +499,7 @@ See [TESTING.md](TESTING.md) for detailed testing documentation.
       - Terminal 2 (client call):
 
         ```bash
-        cd /Users/<Owner>/obs-dailynotes
+        cd /path/to/obs-dailynotes
         PERSON_EMAIL="user@example.com" \
         MCP_GMAIL_CMD="node" MCP_GMAIL_ARGS="tools/mcpServers/gmailServer.js" \
         node tools/mcpClient.js
@@ -551,13 +553,13 @@ Create macros for one-click operations:
 
   
   ```bash
-/Users/<Owner>/obs-dailynotes/tools/run_daily.sh
+/path/to/obs-dailynotes/tools/run_daily.sh
 ```
 
 1. **Sync Macro** - Complete tasks and refresh:
 
 ```bash
-/Users/<Owner>/obs-dailynotes/tools/run_sync.sh
+/path/to/obs-dailynotes/tools/run_sync.sh
 ```
 
 ### Shell Scripts
@@ -596,7 +598,7 @@ The `tools/` directory contains automation scripts:
 
   ```bash
   # Example: run once without filtering "CCRC/IP-Asia"
-  EVENTS_FILTER="Tateki / <Owner>,Shower,Suite" node index.js
+  EVENTS_FILTER="Lunch,Focus Time" node index.js
   ```
 
 - Next runs will use whatever is in `.env` again.
@@ -622,8 +624,8 @@ npm run gmail:test
 GMAIL_CREDS_PATH=~/.gcalendar/credentials.json
 GMAIL_TOKEN_PATH=~/.gmail/token.json
 # Optional owner name exclusions for Connected People
-OWNER_PRIMARY_NAME="<Owner Name>"
-OWNER_NAMES="<Owner Name>, <Owner Name>, <Owner Name> Mailstore"
+OWNER_PRIMARY_NAME="<Owner Primary Name>"
+OWNER_NAMES="<Owner Name Variants>"
 ```
 
 1. **Common Issues and Solutions:**
