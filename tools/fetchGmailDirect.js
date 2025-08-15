@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /**
+ * DEPRECATED: Prefer `npm run gmail:flagged` and `npm run gmail:import-flagged` via lib/services/gmailService.
  * Directly fetch Gmail messages for a person by email and write into cache.
  * Usage examples:
  *   node tools/fetchGmailDirect.js "Adrianna Ma" --email adrianna.ma@gmail.com --limit 20 --deep

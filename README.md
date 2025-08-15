@@ -133,11 +133,11 @@ flowchart TD
   X2-->U4
 ```
 
-See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for detailed system design, [GTD_SYSTEM_DESIGN.md](GTD_SYSTEM_DESIGN.md) for the complete GTD implementation guide, and [Knowledge Graph MCP.md](Knowledge%20Graph%20MCP.md) for MCP usage (tagged `documentation`).
+See [docs/INTEGRATION_ARCHITECTURE.md](docs/INTEGRATION_ARCHITECTURE.md) for detailed system design, [docs/GTD_SYSTEM_DESIGN.md](docs/GTD_SYSTEM_DESIGN.md) for the complete GTD implementation guide, and [docs/Knowledge Graph MCP.md](docs/Knowledge%20Graph%20MCP.md) for MCP usage (tagged `documentation`).
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for planned features, improvements, and sync strategy including private folders and team collaboration.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for planned features, improvements, and sync strategy including private folders and team collaboration.
 
 ## Core Features
 
@@ -467,7 +467,7 @@ npm run test:integration
 npm run test:coverage
 ```
 
-See [TESTING.md](TESTING.md) for detailed testing documentation.
+See [docs/TESTING.md](docs/TESTING.md) for detailed testing documentation.
 
 ## NPM Scripts
 
@@ -720,11 +720,11 @@ This project strategically uses both JavaScript and Python:
 - Testing infrastructure (`run_tests.py`)
 - File system utilities
 
-This hybrid approach maximizes development efficiency and maintainability. See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for detailed architectural decisions.
+This hybrid approach maximizes development efficiency and maintainability. See [docs/INTEGRATION_ARCHITECTURE.md](docs/INTEGRATION_ARCHITECTURE.md) for detailed architectural decisions.
 
 ## Contributing
 
-See [INTEGRATION_ARCHITECTURE.md](INTEGRATION_ARCHITECTURE.md) for system design and contribution guidelines.
+See [docs/INTEGRATION_ARCHITECTURE.md](docs/INTEGRATION_ARCHITECTURE.md) for system design and contribution guidelines.
 
 ## License
 

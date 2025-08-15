@@ -11,6 +11,7 @@ const { authorize, resolveHome } = require('./lib/auth');
 const { createLogger } = require('./lib/logger');
 const { loadConfig, createFilterRegex } = require('./lib/config');
 const { runDailyPipeline } = require('./lib/pipelines/daily');
+const { validateConfig } = require('./lib/configSchema');
 
 // Load environment variables
 const dotenvPath = path.join(__dirname, '.env');
@@ -35,6 +36,8 @@ if (!TOKEN_PATH || !CREDS_PATH || !PATH_PREFIX) {
 const configPath = path.join(__dirname, 'config.json');
 const config = loadConfig(configPath);
 const log = createLogger();
+// Warn on suspicious/personal config
+try { validateConfig(config).forEach(w => log.warn(w)); } catch (_) {}
 
 // Use event filter from config, with env override
 const EVENTS_FILTER = process.env.EVENTS_FILTER 

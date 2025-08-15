@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /**
+ * DEPRECATED: Prefer using gmailService via `npm run gmail:flagged` or `npm run gmail:import-flagged`.
  * Enhanced Gmail fetcher that gets both oldest and newest messages
  * This gives better context about the relationship history
  * Usage examples:

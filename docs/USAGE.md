@@ -12,6 +12,7 @@
 ### Gmail
 - List flagged: `npm run gmail:flagged -- --limit 25`
 - Import flagged to Reminders (read‑only): `npm run gmail:import-flagged`
+- Deprecated: legacy direct fetchers in `tools/` (`fetchGmailDirect*.js`) — use the commands above instead.
 
 ### Keyboard Maestro triggers (suggested)
 - Daily Note Update: hotkey `⌃⌥⌘ D` → runs `tools/run_daily.sh`
