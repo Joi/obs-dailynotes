@@ -8,6 +8,7 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 
 const { authorize, resolveHome } = require('./lib/auth');
+const { createLogger } = require('./lib/logger');
 const { fetchTodayEvents } = require('./lib/calendar');
 const { loadConfig, createFilterRegex, shouldFilterEvent } = require('./lib/config');
 const { parseGoogleHangout, parseZoom, parseOtherMeetingType } = require('./lib/parsers');
@@ -37,6 +38,7 @@ if (!TOKEN_PATH || !CREDS_PATH || !PATH_PREFIX) {
 // Load configuration
 const configPath = path.join(__dirname, 'config.json');
 const config = loadConfig(configPath);
+const log = createLogger();
 
 // Use event filter from config, with env override
 const EVENTS_FILTER = process.env.EVENTS_FILTER 
@@ -92,12 +94,16 @@ async function main() {
         
         // Optionally load reminders cache for agendas
         let remindersCache = null;
-        try {
-            const vaultRoot = path.resolve(PATH_PREFIX, '..');
-            const cachePath = path.join(vaultRoot, 'reminders', 'reminders_cache.json');
-            const raw = await fs.promises.readFile(cachePath, 'utf8');
-            remindersCache = JSON.parse(raw);
-        } catch (_) {}
+        if (config.flags && (config.flags.enableAgendas || String(process.env.ENABLE_AGENDAS || '').toLowerCase() === 'true')) {
+            try {
+                const vaultRoot = path.resolve(PATH_PREFIX, '..');
+                const cachePath = path.join(vaultRoot, 'reminders', 'reminders_cache.json');
+                const raw = await fs.promises.readFile(cachePath, 'utf8');
+                remindersCache = JSON.parse(raw);
+            } catch (e) {
+                log.debug('Agenda cache not found');
+            }
+        }
 
         // Ensure a Meetings heading exists; insert once if missing
         try {
@@ -138,7 +144,7 @@ async function main() {
         // Upsert each meeting independently to avoid overwriting user notes
         // Sort by start time ascending, then insert in reverse to maintain ascending order under the heading
         const agendasInjectedForPerson = new Set();
-        const enableAgendaInjection = String(process.env.ENABLE_AGENDAS || 'false').toLowerCase() === 'true';
+        const enableAgendaInjection = (config.flags && config.flags.enableAgendas) || String(process.env.ENABLE_AGENDAS || 'false').toLowerCase() === 'true';
         // Track meetings we actually insert/update this run so we can prune stale ones
         const insertedMeetingKeys = new Set();
         // Assistant emails to exclude from agenda injection (comma-separated env; default includes mika@ito.com)
@@ -174,7 +180,7 @@ async function main() {
             }
         }
         // Reorder and prune meeting blocks using centralized manager
-        try { await reorderAndPruneMeetings(PATH_PREFIX, insertedMeetingKeys); } catch {}
+        try { await reorderAndPruneMeetings(PATH_PREFIX, insertedMeetingKeys); } catch (e) { log.debug('reorder/prune skipped', e && e.message); }
         // Do not rewrite the full Meetings block; per-meeting upserts preserve user notes
         
         // Append Reminders tasks query at the very bottom so Tasks plugin shows macOS reminders
@@ -190,9 +196,7 @@ async function main() {
         // silent by default
         
     } catch (error) {
-        if (process.env.VERBOSE === 'true') {
-            console.error('Error:', error.message);
-        }
+        log.error('Error:', error && error.message ? error.message : error);
         process.exit(1);
     }
 }
