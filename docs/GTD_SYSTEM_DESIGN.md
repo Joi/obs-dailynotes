@@ -1,11 +1,30 @@
 ---
-tags: [documentation]
-type: note
+tags: [documentation, deprecated]
+type: redirect
 slug: gtd-system-design
 id: note:gtd-system-design
+redirect_to: gtd/README.md
 ---
 
 # GTD System: Apple Reminders + Obsidian
+
+> ⚠️ **This documentation has been reorganized!**
+> 
+> Please see the new documentation structure at **[gtd/README.md](gtd/README.md)**
+
+## Quick Links to New Documentation
+
+- 📚 **[Overview & Quick Start](gtd/README.md)** - Start here
+- 🧠 **[Concepts & Principles](gtd/concepts.md)** - GTD methodology
+- ⚙️ **[Implementation Details](gtd/implementation.md)** - Technical architecture
+- 📅 **[Operations Guide](gtd/operations.md)** - Daily workflows
+- 📖 **[Quick Reference](gtd/reference.md)** - Tags, commands, config
+
+---
+
+## Original Content (Deprecated)
+
+The content below is preserved for reference but is now maintained in the new structure.
 
 ## What this gives you
 
