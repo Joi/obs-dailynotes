@@ -12,4 +12,4 @@ npm run gtd:sync-full >/dev/null 2>&1 || true
 node tools/generateTodayTodos.js >/dev/null 2>&1 || true
 
 # Generate the daily note
-DOTENV_CONFIG_DEBUG=false DOTENV_CONFIG_SILENT=true node /Users/<Owner>/obs-dailynotes/index.js
+DOTENV_CONFIG_DEBUG=false DOTENV_CONFIG_SILENT=true node index.js
