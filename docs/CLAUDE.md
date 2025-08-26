@@ -109,7 +109,7 @@ Daily notes are created with filename pattern: `YYYY-MM-DD.md` and include:
 - Meeting entries formatted as:
 
   ```markdown
-  ### Meeting Title #mtg
+  ### Meeting Title
   - HH:MM - HH:MM (Attendee1, Attendee2) [Call Link](url) [[YYYY-MM-DD-HHMM]]
   ```
 
