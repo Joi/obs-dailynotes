@@ -61,7 +61,7 @@ Control the output structure:
     "includeNavigation": true
   },
   "meetingTemplate": {
-    "format": "### {emoji} {title} #{tag}",      // Meeting header format
+    "format": "### {emoji} {title}",      // Meeting header format (tag removed)
     "includeTime": true,                         // Include meeting times
     "includeAttendees": true,                    // Include attendee list
     "includeLink": true,                         // Include meeting links

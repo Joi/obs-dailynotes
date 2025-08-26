@@ -101,13 +101,15 @@ reminders:
 ### Daily Note Meeting Section
 
 ```markdown
-### Strategy Meeting #mtg
+### Strategy Meeting
 
 - 14:00 - 15:00 ([[Taro Chiba]], [[<Owner Name>]])
 - Agenda for [[Taro Chiba]]:
   - [ ] Review Q4 strategy <!--reminders-id:UUID1-->
   - [ ] Discuss partnership proposal <!--reminders-id:UUID2-->
 ```
+
+Note: Meeting detection no longer uses an inline `#mtg` tag. Headings are treated as meetings only within the Meetings section (between `<!-- BEGIN MEETINGS -->` and `<!-- END MEETINGS -->` or under `## Meetings`).
 
 ### Reminders File Structure
 
