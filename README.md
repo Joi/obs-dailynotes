@@ -731,3 +731,7 @@ See [docs/INTEGRATION_ARCHITECTURE.md](docs/INTEGRATION_ARCHITECTURE.md) for sys
 ## License
 
 MIT
+
+## Changelog
+
+- 2025-08-26: Removed `#mtg` from meeting headings for cleaner notes. Meetings are now detected only within the Meetings section (`<!-- BEGIN MEETINGS -->`/`<!-- END MEETINGS -->` or under `## Meetings`). Updated templates, parser, and docs accordingly.
