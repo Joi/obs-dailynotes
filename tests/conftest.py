@@ -69,7 +69,7 @@ date: 2025-08-09
 
 ## Meetings
 
-### Strategy Meeting #mtg
+### Strategy Meeting
 - 14:00 - 15:00 ([[John Smith]], [[Jane Doe]])
 - [Call Link](https://meet.google.com/abc-defg-hij)
 - Agenda for [[John Smith]]:

@@ -61,13 +61,29 @@ function parseTasksFromContent(content, filePath = '') {
   // Track if we're in a meeting section
   let currentMeeting = null;
   let currentPerson = null;
+  let inMeetingsBlock = false;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     
-    // Detect meeting headers
-    if (line.match(/^###.*#mtg/)) {
-      currentMeeting = line.replace(/^###\s*/, '').replace(/\s*#mtg.*$/, '');
+    // Track entering/exiting the Meetings section
+    if (line.match(/<!--\s*BEGIN\s+MEETINGS\s*-->/i) || line.match(/^##\s+Meetings\s*$/i)) {
+      inMeetingsBlock = true;
+    } else if (line.match(/<!--\s*END\s+MEETINGS\s*-->/i)) {
+      inMeetingsBlock = false;
+      currentMeeting = null;
+      currentPerson = null;
+    } else if (line.match(/^##\s+/) && !line.match(/^##\s+Meetings\s*$/i)) {
+      // Any other H2 ends the meetings context
+      inMeetingsBlock = false;
+      currentMeeting = null;
+      currentPerson = null;
+    }
+
+    // Detect meeting headers (no #mtg). Only within Meetings section
+    if (inMeetingsBlock && line.startsWith('###')) {
+      const headerText = line.replace(/^###\s*/, '').trim();
+      currentMeeting = headerText.replace(/\s+#mtg\b.*$/, '');
       currentPerson = null;
       continue;
     }

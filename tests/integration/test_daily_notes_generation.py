@@ -35,12 +35,12 @@ date: {today.strftime('%Y-%m-%d')}
 
 ## Meetings
 
-### Strategy Meeting #mtg
+### Strategy Meeting
 - 14:00 - 15:00 ([[John Smith]], [[Jane Doe]])
 - [Call Link](https://meet.google.com/abc-defg-hij)
 - [[2025-08-09-1400]]
 
-### Budget Review #mtg
+### Budget Review
 - 16:00 - 17:00 ([[Finance Team]])
 - Location: Conference Room A
 
@@ -53,7 +53,7 @@ date: {today.strftime('%Y-%m-%d')}
         assert note_file.exists()
         loaded = note_file.read_text()
         assert "## Meetings" in loaded
-        assert "#mtg" in loaded
+        # meeting tag removed; ensure meetings content exists without tag
         assert "[[John Smith]]" in loaded
         assert "Call Link" in loaded
 
@@ -81,7 +81,7 @@ date: {today.strftime('%Y-%m-%d')}
         # Build meeting content and inject agenda
         content = "\n".join([
             "## Meetings",
-            "### Sync with John #mtg",
+            "### Sync with John",
             "- 14:00 - 15:00 ([[John Smith]])"
         ])
         agenda_lines = []
@@ -385,7 +385,7 @@ date: {today.strftime('%Y-%m-%d')}
 
 ## Meetings
 
-### Team Standup #mtg
+### Team Standup
 - 09:00 - 09:30 ([[John Smith]], [[Jane Doe]])
 - [Call Link](https://meet.google.com/abc-defg-hij)
 

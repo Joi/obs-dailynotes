@@ -26,7 +26,7 @@ const config = {
   },
   output: {
     meetingTemplate: {
-      format: '### {emoji} {title} #{tag}',
+      format: '### {emoji} {title}',
       includeTime: true,
       includeAttendees: true,
       includeLink: true,
