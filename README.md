@@ -201,8 +201,9 @@ To install Homebrew (if you don't have it):
 1. **Install system tools via Homebrew:**
 
 ```bash
-# Install Node.js (for the main application)
+# Install Node.js and pnpm (for the main application)
 brew install node
+brew install pnpm
 
 # Install reminders CLI (for Apple Reminders integration)
 brew install keith/formulae/reminders-cli
@@ -227,12 +228,12 @@ git clone https://github.com/<your-username>/obs-dailynotes
 cd obs-dailynotes
 ```
 
-1. **Install JavaScript dependencies (using npm):**
+1. **Install JavaScript dependencies (using pnpm):**
 
 ```bash
-# npm (Node Package Manager) installs JavaScript libraries locally in node_modules/
-# This creates a package-lock.json to ensure everyone gets the same versions
-npm install
+# pnpm (Performant npm) installs JavaScript libraries efficiently in node_modules/
+# This creates a pnpm-lock.yaml to ensure everyone gets the same versions
+pnpm install
 ```
 
 1. **For Python testing (optional - only if you're developing):**
@@ -291,13 +292,13 @@ cp config.example.json config.json
 **Hierarchy of package managers (prefer in this order):**
 
 1. **Homebrew** - For system tools and utilities
-2. **npm** - For JavaScript packages (always use package.json)
+2. **pnpm** - For JavaScript packages (always use package.json)
 3. **pip** - For Python packages (always use venv)
 
 **When to use each:**
 
 - **Homebrew**: Command-line tools, system utilities, language runtimes
-- **npm**: JavaScript libraries specific to this projec
+- **pnpm**: JavaScript libraries specific to this project
 - **pip + venv**: Python libraries for testing/development only
 
 **Keeping dependencies updated:**
@@ -307,8 +308,8 @@ cp config.example.json config.json
 # Update Homebrew packages
 brew update && brew upgrade
 
-# Update npm packages (respects package.json version constraints)
-npm update
+# Update pnpm packages (respects package.json version constraints)
+pnpm update
 
 # Update Python packages in venv
 source venv/bin/activate
@@ -320,7 +321,7 @@ pip install --upgrade -r requirements-test.txt
 ### Morning Routine (5 minutes)
 
 ```bash
-npm run gtd:morning
+pnpm run gtd:morning
 ```
 
 - Pulls latest from Apple Reminders
@@ -331,7 +332,7 @@ npm run gtd:morning
 ### Sync Tasks with Reminders (Stability Mode default)
 
 ```bash
-npm run gtd:sync
+pnpm run gtd:sync
 ```
 
 - Default behavior prioritizes stability and deduplication:
@@ -369,13 +370,13 @@ By default the sync scans today’s daily note. You can explicitly include other
 
 ```bash
 # Include yesterday's daily note
-cd /path/to/obs-dailynotes && npm run reminders:sync-full -- --yesterday && npm run reminders:pull
+cd /path/to/obs-dailynotes && pnpm run reminders:sync-full -- --yesterday && pnpm run reminders:pull
 
 # Include a specific date (YYYY-MM-DD)
-cd /path/to/obs-dailynotes && npm run reminders:sync-full -- --date 2025-08-12 && npm run reminders:pull
+cd /path/to/obs-dailynotes && pnpm run reminders:sync-full -- --date 2025-08-12 && pnpm run reminders:pull
 
 # Include an arbitrary markdown file by absolute path
-cd /path/to/obs-dailynotes && npm run reminders:sync-full -- --file /path/to/switchboard/dailynote/2025-08-12.md && npm run reminders:pull
+cd /path/to/obs-dailynotes && pnpm run reminders:sync-full -- --file /path/to/switchboard/dailynote/2025-08-12.md && pnpm run reminders:pull
 ```
 
 Notes:
@@ -457,16 +458,16 @@ Run the comprehensive test suite:
 
 ```bash
 # All tests
-npm test
+pnpm test
 
 # Unit tests only
-npm run test:unit
+pnpm run test:unit
 
 # Integration tests
-npm run test:integration
+pnpm run test:integration
 
 # With coverage
-npm run test:coverage
+pnpm run test:coverage
 ```
 
 See [docs/TESTING.md](docs/TESTING.md) for detailed testing documentation.
@@ -475,16 +476,16 @@ See [docs/TESTING.md](docs/TESTING.md) for detailed testing documentation.
 
 ### Daily Operations
 
-- `npm run daily` - Generate daily note with calendar events
-- `npm run gtd:morning` - Morning GTD routine (pull + process)
-- `npm run gtd:sync` - Sync changes between Obsidian and Reminders
-- `npm run gtd:process` - Process GTD tags only
+- `pnpm run daily` - Generate daily note with calendar events
+- `pnpm run gtd:morning` - Morning GTD routine (pull + process)
+- `pnpm run gtd:sync` - Sync changes between Obsidian and Reminders
+- `pnpm run gtd:process` - Process GTD tags only
 
 ### People Management
 
-- `npm run people:index` - Build person index
-- `npm run people:import-csv [file]` - Import contacts
-- `npm run people:generate` - Extract from daily notes
+- `pnpm run people:index` - Build person index
+- `pnpm run people:import-csv [file]` - Import contacts
+- `pnpm run people:generate` - Extract from daily notes
 - `node tools/mcpClient.js` - Call MCP servers (Gmail/Calendar) to cache per-person context
   - Example (standalone Gmail MCP):
     - Terminal 1 (server):
@@ -509,17 +510,17 @@ See [docs/TESTING.md](docs/TESTING.md) for detailed testing documentation.
 
 ### Reminders Sync
 
-- `npm run reminders:pull` - Fetch from Apple Reminders
-- `npm run reminders:dedupe` - Dry-run dedupe Reminders by title; use `node tools/dedupeRemindersByTitle.js --apply` to apply
-- `npm run reminders:sync` - Deprecated; use `npm run gtd:sync` or `npm run reminders:sync-full`
-- `npm run reminders:generate` - Create agenda files
+- `pnpm run reminders:pull` - Fetch from Apple Reminders
+- `pnpm run reminders:dedupe` - Dry-run dedupe Reminders by title; use `node tools/dedupeRemindersByTitle.js --apply` to apply
+- `pnpm run reminders:sync` - Deprecated; use `pnpm run gtd:sync` or `pnpm run reminders:sync-full`
+- `pnpm run reminders:generate` - Create agenda files
 
 ### Testing & Maintenance
 
-- `npm test` - Run all tests
-- `npm run test:watch` - Watch mode
-- `npm run fix:links` - Fix broken wiki links
-- `npm run fix:attachments` - Fix attachment paths
+- `pnpm test` - Run all tests
+- `pnpm run test:watch` - Watch mode
+- `pnpm run fix:links` - Fix broken wiki links
+- `pnpm run fix:attachments` - Fix attachment paths
 
 ## File Structure
 
@@ -607,7 +608,7 @@ The `tools/` directory contains automation scripts:
 
 **Person Page Links:**
 
-- Run `npm run people:index` to rebuild index
+- Run `pnpm run people:index` to rebuild index
 - Verify email addresses in frontmatter
 
 **Gmail Authentication and Enrichment:**
@@ -615,9 +616,9 @@ The `tools/` directory contains automation scripts:
 1. **Check current Gmail token status:**
 
 ```bash
-npm run gmail:check
+pnpm run gmail:check
 # or for detailed testing:
-npm run gmail:test
+pnpm run gmail:test
 ```
 
 1. **Environment variables (in `.env`):**
@@ -634,7 +635,7 @@ OWNER_NAMES="<Owner Name Variants>"
 
 **403 "insufficient authentication scopes" errors:**
 - Your token likely has `metadata` scope instead of `readonly` scope
-- Run: `npm run gmail:reauth:readonly`
+- Run: `pnpm run gmail:reauth:readonly`
 - Visit the URL shown, authorize, and paste the code
 
 **Token at wrong path:**
@@ -664,7 +665,7 @@ cat data/people_cache/person-name.json | jq .
 
 ```bash
 # Full re-auth with readonly scope
-npm run gmail:reauth:readonly
+pnpm run gmail:reauth:readonly
 # Follow the prompts, paste the code
 ```
 
@@ -690,7 +691,7 @@ reminders:
 ### Workflow with Taro Chiba
 
 1. **Create Apple Reminders list**: Name it "Taro Chiba" and add agenda items
-2. **Generate daily note**: Run `npm run daily`
+2. **Generate daily note**: Run `pnpm run daily`
 3. **Meeting with Taro appears as**:
 
 ```markdown
@@ -702,7 +703,7 @@ reminders:
   - [ ] Review budget proposal
 ```
 
-1. **Sync completed items**: Check boxes and run `npm run reminders:sync`
+1. **Sync completed items**: Check boxes and run `pnpm run reminders:sync`
 
 ## Language Choice: JavaScript and Python
 
