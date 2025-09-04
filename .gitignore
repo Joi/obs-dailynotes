@@ -22,6 +22,10 @@ config/mailstore.json
 # Node modules
 node_modules/
 
+# pnpm
+.pnpm-store/
+.pnpm-debug.log
+
 # Google Calendar credentials and tokens
 token.json
 credentials.json
