@@ -357,7 +357,7 @@ To enable richer two‑way behavior, set `SYNC_CREATE_NEW=true` and/or `SYNC_EDI
 **New Task Detection (opt‑in)**: When `SYNC_CREATE_NEW=true`, the sync will find tasks in meeting sections even without IDs:
 
 ```markdown
-### Team Meeting
+### Team Meeting #mtg
 
 - Agenda for [[John Smith]]:
   - [ ] Review proposal ← Will create in "John Smith" list
@@ -432,7 +432,7 @@ date: 2024-01-15
 
 ## Meetings
 
-### 🎥 Team Standup
+### 🎥 Team Standup #mtg
 
 - 10:00 - 10:30 ([[John Smith]], [[Sarah Chen]])
 - [Meet Link](https://meet.google.com/...)
@@ -440,8 +440,6 @@ date: 2024-01-15
   - [ ] Review Q4 proposal
   - [ ] Discuss budget allocation
 ```
-
-Note: Meeting headings no longer include `#mtg`. The system recognizes `###` headings as meetings only within the Meetings section (`<!-- BEGIN MEETINGS -->`/`<!-- END MEETINGS -->` or under `## Meetings`).
 
 ### GTD Views (`GTD/`)
 
@@ -732,7 +730,3 @@ See [docs/INTEGRATION_ARCHITECTURE.md](docs/INTEGRATION_ARCHITECTURE.md) for sys
 ## License
 
 MIT
-
-## Changelog
-
-- 2025-08-26: Removed `#mtg` from meeting headings for cleaner notes. Meetings are now detected only within the Meetings section (`<!-- BEGIN MEETINGS -->`/`<!-- END MEETINGS -->` or under `## Meetings`). Updated templates, parser, and docs accordingly.
