@@ -15,7 +15,7 @@ const { validateConfig } = require('./lib/configSchema');
 
 // Load environment variables
 const dotenvPath = path.join(__dirname, '.env');
-const dotenvResult = dotenv.config({ path: dotenvPath });
+const dotenvResult = dotenv.config({ path: dotenvPath, quiet: true });
 if (dotenvResult.error) {
 	console.error('Error loading .env file:', dotenvResult.error);
 	process.exit(1);
