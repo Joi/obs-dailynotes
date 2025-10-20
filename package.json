@@ -4,12 +4,12 @@
   "description": "Google Calendar integration with GTD system, Apple Reminders sync, and comprehensive testing framework for Obsidian daily notes",
   "main": "index.js",
   "dependencies": {
-    "dotenv": "^16.6.1",
-    "googleapis": "^66.0.0",
-    "fast-glob": "^3.3.2",
+    "@notionhq/client": "^4.0.2",
+    "dotenv": "^17.2.1",
+    "fast-glob": "^3.3.3",
+    "googleapis": "^157.0.0",
     "gray-matter": "^4.0.3",
-    "imap": "^0.8.19",
-    "@notionhq/client": "^2.2.15"
+    "imap": "^0.8.19"
   },
   "scripts": {
     "people:upsert-template": "node tools/upsertPersonTemplate.js",
@@ -88,6 +88,11 @@
   "devDependencies": {
     "jest": "^30.0.5",
     "markdownlint-cli": "^0.45.0",
-    "prettier": "^3.3.3"
+    "prettier": "^3.6.2"
+  },
+  "overrides": {
+    "utf7": {
+      "semver": "^5.7.2"
+    }
   }
 }
