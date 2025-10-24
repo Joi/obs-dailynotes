@@ -22,10 +22,23 @@ This toolkit automatically:
 - Links meeting attendees to person pages with contact information
 - Generates agenda items for each person you're meeting (optional; disabled by default via `ENABLE_AGENDAS=false`)
 - Creates task dashboards organized by project and status
+- **NEW:** AI-powered person page generation with context enrichment
 
 All data is stored as plain Markdown files in your Obsidian vault, giving you full control over your information.
 
-> Quickstart and common commands: see [docs/USAGE.md](docs/USAGE.md) for a concise usage guide and suggested Keyboard Maestro triggers.
+> **Quick Start:** See [docs/USAGE.md](docs/USAGE.md) for commands and Keyboard Maestro triggers.
+> **AI Tools:** See [docs/AMPLIFIER_TOOLS.md](docs/AMPLIFIER_TOOLS.md) for AI-powered development and person enrichment.
+
+## ✨ New: Amplifier Tools
+
+Generate enriched person pages using AI:
+
+```bash
+make amplifier-setup  # One-time setup
+make generate-person EMAIL=someone@example.com
+```
+
+See [docs/AMPLIFIER_TOOLS.md](docs/AMPLIFIER_TOOLS.md) for complete documentation.
 
 ## About Obsidian
 
