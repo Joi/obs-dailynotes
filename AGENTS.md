@@ -1,5 +1,8 @@
 # Repository Guidelines
 
+> **Note:** This project now includes **amplifier tools** for AI-powered development.
+> See `amplifier-tools/README.md` for AI-assisted workflows and `Makefile` for commands.
+
 ## Project Structure & Module Organization
 Start with `README.md` for the product story, then dive into `docs/ARCHITECTURE.md` for data-flow diagrams and `docs/SCRIPTS.md` for script-specific notes. Runtime glue lives in `index.js`, reusable services under `lib/`, and automation scripts under `tools/`. Configuration samples are in `config.example.json`; copy them to `config/` and `.env` as described in `docs/CONFIG.md`. Asset- and test-specific layouts are detailed in `docs/USAGE.md` and `docs/TESTING.md` respectively.
 
