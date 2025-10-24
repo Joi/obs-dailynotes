@@ -42,3 +42,16 @@ ifndef EMAIL
 	@exit 1
 endif
 	@. .venv-amplifier/bin/activate && python3 amplifier-tools/generate_person_page.py "$(EMAIL)" $(if $(NAME),--name "$(NAME)")
+
+# Simplified GTD (read-only from Reminders)
+
+.PHONY: gtd-today gtd-dashboard gtd-refresh
+
+gtd-today: ## Generate today's GTD tasks in daily note
+	@node lib/gtd-simple/dailyNote.js
+
+gtd-dashboard: ## Generate GTD project dashboard
+	@node lib/gtd-simple/dashboard.js
+
+gtd-refresh: ## Refresh both daily note and dashboard
+	@node lib/gtd-simple/dailyNote.js && node lib/gtd-simple/dashboard.js
