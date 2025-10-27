@@ -1,6 +1,8 @@
 # Work CLI - Complete Guide
 
-The `work` command is your unified interface for managing presentations, GTD workflow, and daily notes.
+The `work` command is your unified interface for managing presentations and daily notes.
+
+**Note**: GTD sync commands have been removed as they referenced archived scripts. The presentations system is fully functional and standalone.
 
 ## Installation
 
@@ -19,7 +21,7 @@ work --version
 # Interactive mode
 work                    # Main menu - navigate everything
 
-# Presentations
+# Presentations (FULLY FUNCTIONAL)
 work pres               # Presentations menu
 work pres add <url>     # Add presentation
 work pres start <id>    # Start working
@@ -27,10 +29,7 @@ work pres complete <id> # Mark done
 work pres list          # View all
 work pres open <id>     # Open in browser
 
-# GTD Workflow  
-work morning            # Morning routine (pull + process + refresh)
-work sync               # Sync with Apple Reminders
-work pull               # Pull from Apple Reminders
+# Daily Workflow
 work daily              # Generate today's daily note
 
 # Dashboards
@@ -99,46 +98,16 @@ work pres open pres-20251027-001 --notion
 
 ---
 
-## GTD Workflow
-
-### Morning Routine
-
-**One command does everything:**
-
-```bash
-work morning
-```
-
-This runs:
-1. Pull from Apple Reminders
-2. Process GTD tags
-3. Generate today's todos
-4. Refresh presentations dashboard
-
-**What gets updated:**
-- `switchboard/GTD Dashboard.md` - Tasks from Reminders
-- `GTD/presentations.md` - Presentations status
-
-### Daily Note
+## Daily Note Generation
 
 ```bash
 work daily
 ```
 
 Generates today's daily note with:
-- Calendar events
+- Calendar events from Google Calendar
 - Meeting attendees
 - Agenda items (if enabled)
-
-### Sync Workflow
-
-```bash
-# After completing tasks in Obsidian
-work sync
-
-# Or just pull latest from Reminders
-work pull
-```
 
 ---
 
@@ -179,41 +148,32 @@ Shows:
 
 ### Recommended Workflow
 
-**For presentations with deadlines:**
+**The presentations system works standalone**, but you can optionally link to Apple Reminders:
 
 ```bash
 # 1. Add to presentations system
 work pres add "URL" --title "Q4 Board" --deadline 2025-11-15
 
-# 2. Create reminder via Siri
+# 2. (Optional) Create reminder via Siri for notifications
 "Work on Q4 board deck #presentation !!"
 
-# 3. Both show in dashboards
-# - GTD Dashboard: Shows task from Reminders
-# - Presentations Dashboard: Shows presentation metadata
-
-# 4. Work on it
+# 3. Work on it
 work pres start pres-20251027-001
 
-# 5. Complete both when done
-# - Check off reminder in Apple Reminders app
-# - work pres complete pres-20251027-001
+# 4. Complete
+work pres complete pres-20251027-001 --hours 10
 ```
 
-### Tag Convention
+### Optional: Tag Convention for Apple Reminders
 
-Use `#presentation` tag in Apple Reminders for presentation-related tasks:
+If you create reminders for presentations, use `#presentation` tag:
 
 ```
 "Finish board slides #presentation !!"
 "Review deck with team #presentation"
-"Create financial charts #presentation #project:board"
 ```
 
-This helps you:
-- Find all presentation tasks
-- Track in Apple Reminders for notifications
-- Connect to presentation metadata in system
+This helps you find presentation-related tasks in Apple Reminders.
 
 ---
 
@@ -438,56 +398,41 @@ Print this and keep it handy! 📋
 
 ---
 
-## Important: GTD Command Status
+## Command Status
 
-### Fully Functional ✅
+### Production-Ready ✅
 
-These commands are **stable and ready to use**:
+**These commands are stable and fully functional:**
 
 ```bash
+# Presentations (complete system)
 work pres <command>     # All presentations commands
 work dash --pres        # Open presentations dashboard
 npm run pres:refresh    # Generate presentations dashboard
+
+# Daily workflow
+work daily              # Generate daily note (uses index.js)
+work dash               # Open GTD dashboard
 ```
 
-### Experimental ⚠️
+### Removed Features
 
-These commands **may fail** if underlying GTD scripts are missing/archived:
+**GTD sync commands removed** (referenced archived scripts):
+- ❌ `work morning` - removed
+- ❌ `work sync` - removed
+- ❌ `work pull` - removed
 
-```bash
-work morning            # Depends on npm scripts that may reference archived code
-work sync               # Depends on gtd:sync npm script
-work pull               # Depends on reminders:pull npm script
-work daily              # Depends on index.js
-```
+These have been removed from the CLI to prevent errors. If you need GTD automation, the underlying npm scripts may still work if you call them directly, or they can be rebuilt using the presentations pattern.
 
-**Why experimental?**
-- The GTD system was recently simplified
-- Some complex scripts were moved to `_archived/old-gtd-complex/`
-- npm scripts in package.json may still reference archived code
-- These features are included for convenience but may need rebuilding
-
-### What Works For Sure
-
-**Presentations tracking** (100% functional):
-- Complete workflow: add → start → complete → archive
-- Dashboard generation
-- All metadata and linking
-- Interactive and direct commands
-
-**GTD integration** (depends on your setup):
-- If underlying scripts exist and work, great!
-- If they fail, presentations still work independently
-- See `docs/DEPRECATED_GTD_COMMANDS.md` for details
+See `docs/DEPRECATED_GTD_COMMANDS.md` for details on what was archived and why.
 
 ---
 
-## Recommendation
+## Summary
 
-**Start with presentations:**
-1. Use `work pres` commands (fully stable)
-2. Test GTD commands (`work morning`, etc.) to see if they work
-3. If GTD commands fail, just use presentations standalone
-4. GTD can be rebuilt later using the same pattern as presentations
+**Use with confidence:**
+- Presentations tracking (complete workflow)
+- Daily note generation
+- Dashboard viewing
 
-**The presentations system is production-ready and doesn't depend on GTD!**
+**The presentations system is production-ready and works independently!**

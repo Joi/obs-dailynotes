@@ -1,20 +1,19 @@
 #!/usr/bin/env node
 
 /**
- * Work CLI - Unified interface for presentations and GTD workflow
+ * Work CLI - Unified interface for presentations and workflow management
  *
- * STABLE FEATURES:
- * - All 'work pres' commands (presentations tracking)
- * - Dashboard generation (pres:refresh)
+ * PRODUCTION-READY FEATURES:
+ * - All 'work pres' commands (presentations tracking - fully functional)
+ * - work daily (generate daily note with calendar events)
+ * - work dash (open dashboards)
  *
- * EXPERIMENTAL FEATURES (may fail if underlying scripts missing):
- * - work morning (depends on gtd_morning.sh and npm scripts)
- * - work sync (depends on gtd:sync npm script)
- * - work pull (depends on reminders:pull npm script)
- * - work daily (depends on index.js)
+ * REMOVED FEATURES:
+ * - GTD sync commands (scripts moved to _archived/, removed to prevent errors)
+ * - Morning routine automation (depends on archived scripts)
  *
- * Note: Some GTD scripts reference files in _archived/ and may not work.
- * See docs/DEPRECATED_GTD_COMMANDS.md for details.
+ * The presentations system is standalone and fully functional.
+ * Papers tracking (Phase 2) coming soon.
  */
 
 const { program } = require('commander');
@@ -241,81 +240,10 @@ pres
   });
 
 // ====================
-// GTD COMMANDS
+// OTHER COMMANDS
 // ====================
 
-// Morning routine
-program
-  .command('morning')
-  .description('[EXPERIMENTAL] Run morning GTD routine (pull reminders, process GTD, refresh presentations)')
-  .action(async () => {
-    const { execSync } = require('child_process');
-    const cwd = path.join(__dirname, '..');
-
-    console.log(chalk.cyan('\n☀️ Starting GTD Morning Routine...\n'));
-
-    try {
-      console.log(chalk.gray('📥 Pulling from Apple Reminders...'));
-      execSync('npm run reminders:pull', { stdio: 'inherit', cwd });
-
-      console.log(chalk.gray('\n🏷️  Processing GTD tags...'));
-      execSync('npm run gtd:process', { stdio: 'inherit', cwd });
-
-      console.log(chalk.gray('\n📌 Generating today\'s todos...'));
-      execSync('node tools/generateTodayTodos.js', { stdio: 'inherit', cwd });
-
-      console.log(chalk.gray('\n🎤 Refreshing presentations dashboard...'));
-      execSync('npm run pres:refresh', { stdio: 'inherit', cwd });
-
-      console.log(chalk.green('\n✅ Morning routine complete!\n'));
-      console.log('📂 Dashboards updated:');
-      console.log('   - Tasks: switchboard/GTD Dashboard.md');
-      console.log('   - Presentations: GTD/presentations.md\n');
-    } catch (err) {
-      console.error(chalk.red('Error running morning routine'));
-      process.exit(1);
-    }
-  });
-
-// GTD sync command
-program
-  .command('sync')
-  .description('[EXPERIMENTAL] Sync completed tasks with Apple Reminders')
-  .action(async () => {
-    const { execSync } = require('child_process');
-    const cwd = path.join(__dirname, '..');
-
-    console.log(chalk.cyan('\n🔄 Syncing with Apple Reminders...\n'));
-
-    try {
-      execSync('npm run gtd:sync', { stdio: 'inherit', cwd });
-      console.log(chalk.green('\n✅ Sync complete!\n'));
-    } catch (err) {
-      console.error(chalk.red('Error during sync'));
-      process.exit(1);
-    }
-  });
-
-// Pull reminders
-program
-  .command('pull')
-  .description('[EXPERIMENTAL] Pull latest from Apple Reminders')
-  .action(async () => {
-    const { execSync } = require('child_process');
-    const cwd = path.join(__dirname, '..');
-
-    console.log(chalk.cyan('\n📥 Pulling from Apple Reminders...\n'));
-
-    try {
-      execSync('npm run reminders:pull', { stdio: 'inherit', cwd });
-      console.log(chalk.green('\n✅ Pull complete!\n'));
-    } catch (err) {
-      console.error(chalk.red('Error pulling reminders'));
-      process.exit(1);
-    }
-  });
-
-// Generate daily note
+// Generate daily note (this one works - index.js exists)
 program
   .command('daily')
   .description('Generate today\'s daily note with calendar events')
