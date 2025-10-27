@@ -91,7 +91,8 @@
     "people:enrich-gmail": "SKIP_LOCAL=1 node tools/enrichFromLLM.js",
     "notion:import": "node tools/importTranscriptFromNotion.js",
     "work": "node tools/work-cli.js",
-    "pres:refresh": "node tools/presentations/generateDashboard.js"
+    "pres:refresh": "node tools/presentations/generateDashboard.js",
+    "read:refresh": "node tools/reading/generateDashboard.js"
   },
   "devDependencies": {
     "jest": "^30.0.5",
