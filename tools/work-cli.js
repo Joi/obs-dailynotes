@@ -265,18 +265,21 @@ program
 // Dashboard shortcuts
 program
   .command('dash')
-  .description('Open GTD dashboard')
+  .description('Open GTD dashboard in Obsidian')
   .option('--pres', 'Open presentations dashboard instead')
   .action((options) => {
     const { spawn } = require('child_process');
 
     if (options.pres) {
-      spawn('open', ['GTD/presentations.md'], { detached: true, stdio: 'ignore' });
-      console.log(chalk.cyan('\n📂 Opening presentations dashboard...\n'));
+      const presPath = path.join(__dirname, '../GTD/presentations.md');
+      // Open with Obsidian using obsidian:// URI
+      spawn('open', ['-a', 'Obsidian', presPath], { detached: true, stdio: 'ignore' });
+      console.log(chalk.cyan('\n📂 Opening presentations dashboard in Obsidian...\n'));
     } else {
       const dashPath = path.join(process.env.HOME, 'switchboard/GTD Dashboard.md');
-      spawn('open', [dashPath], { detached: true, stdio: 'ignore' });
-      console.log(chalk.cyan('\n📂 Opening GTD dashboard...\n'));
+      // Open with Obsidian using obsidian:// URI
+      spawn('open', ['-a', 'Obsidian', dashPath], { detached: true, stdio: 'ignore' });
+      console.log(chalk.cyan('\n📂 Opening GTD dashboard in Obsidian...\n'));
     }
   });
 
