@@ -271,13 +271,45 @@ program
     }
   });
 
+// Refresh GTD dashboard
+program
+  .command('refresh')
+  .description('Regenerate GTD dashboard from Apple Reminders cache')
+  .action(async () => {
+    const { execSync } = require('child_process');
+    const cwd = path.join(__dirname, '..');
+
+    console.log(chalk.cyan('\n🔄 Refreshing GTD dashboard...\n'));
+
+    try {
+      execSync('node lib/gtd-simple/dashboard.js', { stdio: 'inherit', cwd });
+      console.log(chalk.green('\n✅ Dashboard refreshed!\n'));
+      console.log('Open with: ' + chalk.cyan('work dash') + '\n');
+    } catch (err) {
+      console.error(chalk.red('Error refreshing dashboard'));
+      process.exit(1);
+    }
+  });
+
 // Dashboard shortcuts
 program
   .command('dash')
   .description('Open GTD dashboard in Obsidian')
   .option('--pres', 'Open presentations dashboard instead')
-  .action((options) => {
-    const { spawn } = require('child_process');
+  .option('--refresh', 'Refresh dashboard before opening')
+  .action(async (options) => {
+    const { spawn, execSync } = require('child_process');
+    const cwd = path.join(__dirname, '..');
+
+    // Refresh if requested
+    if (options.refresh) {
+      console.log(chalk.gray('🔄 Refreshing dashboard...'));
+      try {
+        execSync('node lib/gtd-simple/dashboard.js', { stdio: 'inherit', cwd });
+      } catch (err) {
+        console.error(chalk.red('Error refreshing dashboard'));
+      }
+    }
 
     if (options.pres) {
       // Use Obsidian URI to open specific file
