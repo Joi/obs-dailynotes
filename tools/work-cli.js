@@ -452,7 +452,8 @@ program
       execSync('npm run daily', { stdio: 'inherit', cwd });
       console.log(chalk.green('\n✅ Daily note generated!\n'));
 
-      const today = new Date().toISOString().split('T')[0];
+      // Use local date (not UTC) to match daily note filename
+      const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local timezone
 
       // Use Obsidian URI to open today's daily note
       const obsidianUri = `obsidian://open?vault=switchboard&file=dailynote%2F${today}.md`;
