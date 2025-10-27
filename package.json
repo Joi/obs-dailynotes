@@ -92,7 +92,8 @@
     "notion:import": "node tools/importTranscriptFromNotion.js",
     "work": "node tools/work-cli.js",
     "pres:refresh": "node tools/presentations/generateDashboard.js",
-    "read:refresh": "node tools/reading/generateDashboard.js"
+    "read:refresh": "node tools/reading/generateDashboard.js",
+    "reminders:update-cache": "node tools/updateRemindersCache.js"
   },
   "devDependencies": {
     "jest": "^30.0.5",

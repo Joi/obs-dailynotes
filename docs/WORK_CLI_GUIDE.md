@@ -21,7 +21,7 @@ work --version
 # Interactive mode
 work                    # Main menu - navigate everything
 
-# Presentations (FULLY FUNCTIONAL)
+# Presentations
 work pres               # Presentations menu
 work pres add <url>     # Add presentation
 work pres start <id>    # Start working
@@ -29,12 +29,21 @@ work pres complete <id> # Mark done
 work pres list          # View all
 work pres open <id>     # Open in browser
 
-# Daily Workflow
+# Reading Queue
+work read add <url>     # Add article/link to reading queue
+work read start <id>    # Start reading (opens in browser)
+work read finish <id>   # Mark as read
+work read list          # View all
+
+# GTD Workflow
+work refresh            # Update from Apple Reminders + regenerate dashboard
 work daily              # Generate today's daily note
 
 # Dashboards
-work dash               # Open GTD dashboard
+work dash               # Open unified GTD dashboard
 work dash --pres        # Open presentations dashboard
+work dash --read        # Open reading queue
+work dash --refresh     # Refresh before opening
 ```
 
 ---
