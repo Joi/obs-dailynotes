@@ -490,6 +490,7 @@ program
   .command('dash')
   .description('Open GTD dashboard in Obsidian')
   .option('--pres', 'Open presentations dashboard instead')
+  .option('--read', 'Open reading queue dashboard instead')
   .option('--refresh', 'Refresh dashboard before opening')
   .action(async (options) => {
     const { spawn, execSync } = require('child_process');
@@ -500,6 +501,12 @@ program
       console.log(chalk.gray('🔄 Refreshing dashboard...'));
       try {
         execSync('node lib/gtd-simple/dashboard.js', { stdio: 'inherit', cwd });
+        if (options.pres) {
+          execSync('npm run pres:refresh', { stdio: 'inherit', cwd });
+        }
+        if (options.read) {
+          execSync('npm run read:refresh', { stdio: 'inherit', cwd });
+        }
       } catch (err) {
         console.error(chalk.red('Error refreshing dashboard'));
       }
@@ -510,6 +517,11 @@ program
       const obsidianUri = 'obsidian://open?vault=switchboard&file=GTD%2Fpresentations.md';
       spawn('open', [obsidianUri], { detached: true, stdio: 'ignore' });
       console.log(chalk.cyan('\n📂 Opening presentations dashboard in Obsidian...\n'));
+    } else if (options.read) {
+      // Use Obsidian URI to open reading queue
+      const obsidianUri = 'obsidian://open?vault=switchboard&file=GTD%2Freading-queue.md';
+      spawn('open', [obsidianUri], { detached: true, stdio: 'ignore' });
+      console.log(chalk.cyan('\n📂 Opening reading queue in Obsidian...\n'));
     } else {
       // Use Obsidian URI to open GTD Dashboard
       const obsidianUri = 'obsidian://open?vault=switchboard&file=GTD%20Dashboard.md';
