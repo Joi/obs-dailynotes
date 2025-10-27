@@ -259,10 +259,12 @@ program
       console.log(chalk.green('\n✅ Daily note generated!\n'));
 
       const today = new Date().toISOString().split('T')[0];
-      const dailyNotePath = path.join(os.homedir(), 'switchboard', 'dailynote', `${today}.md`);
+
+      // Use Obsidian URI to open today's daily note
+      const obsidianUri = `obsidian://open?vault=switchboard&file=dailynote%2F${today}.md`;
 
       console.log(chalk.cyan('📂 Opening in Obsidian...\n'));
-      spawn('open', ['-a', 'Obsidian', dailyNotePath], { detached: true });
+      spawn('open', [obsidianUri], { detached: true, stdio: 'ignore' });
     } catch (err) {
       console.error(chalk.red('Error generating daily note'));
       process.exit(1);
@@ -278,14 +280,14 @@ program
     const { spawn } = require('child_process');
 
     if (options.pres) {
-      const presPath = path.join(__dirname, '../GTD/presentations.md');
-      // Open with Obsidian using obsidian:// URI
-      spawn('open', ['-a', 'Obsidian', presPath], { detached: true, stdio: 'ignore' });
+      // Use Obsidian URI to open specific file
+      const obsidianUri = 'obsidian://open?vault=switchboard&file=GTD%2Fpresentations.md';
+      spawn('open', [obsidianUri], { detached: true, stdio: 'ignore' });
       console.log(chalk.cyan('\n📂 Opening presentations dashboard in Obsidian...\n'));
     } else {
-      const dashPath = path.join(process.env.HOME, 'switchboard/GTD Dashboard.md');
-      // Open with Obsidian using obsidian:// URI
-      spawn('open', ['-a', 'Obsidian', dashPath], { detached: true, stdio: 'ignore' });
+      // Use Obsidian URI to open GTD Dashboard
+      const obsidianUri = 'obsidian://open?vault=switchboard&file=GTD%20Dashboard.md';
+      spawn('open', [obsidianUri], { detached: true, stdio: 'ignore' });
       console.log(chalk.cyan('\n📂 Opening GTD dashboard in Obsidian...\n'));
     }
   });
