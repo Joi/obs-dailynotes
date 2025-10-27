@@ -20,6 +20,7 @@ const { program } = require('commander');
 const chalk = require('chalk');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 // Get package.json for version
 const pkgPath = path.join(__dirname, '../package.json');
@@ -246,9 +247,9 @@ pres
 // Generate daily note (this one works - index.js exists)
 program
   .command('daily')
-  .description('Generate today\'s daily note with calendar events')
+  .description('Generate today\'s daily note with calendar events and open in Obsidian')
   .action(async () => {
-    const { execSync } = require('child_process');
+    const { execSync, spawn } = require('child_process');
     const cwd = path.join(__dirname, '..');
 
     console.log(chalk.cyan('\n📅 Generating daily note...\n'));
@@ -256,6 +257,12 @@ program
     try {
       execSync('npm run daily', { stdio: 'inherit', cwd });
       console.log(chalk.green('\n✅ Daily note generated!\n'));
+
+      const today = new Date().toISOString().split('T')[0];
+      const dailyNotePath = path.join(os.homedir(), 'switchboard', 'dailynote', `${today}.md`);
+
+      console.log(chalk.cyan('📂 Opening in Obsidian...\n'));
+      spawn('open', ['-a', 'Obsidian', dailyNotePath], { detached: true });
     } catch (err) {
       console.error(chalk.red('Error generating daily note'));
       process.exit(1);
