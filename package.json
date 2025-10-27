@@ -3,13 +3,19 @@
   "version": "3.0.0",
   "description": "Google Calendar integration with GTD system, Apple Reminders sync, and comprehensive testing framework for Obsidian daily notes",
   "main": "index.js",
+  "bin": {
+    "work": "./tools/work-cli.js"
+  },
   "dependencies": {
     "@notionhq/client": "^4.0.2",
+    "chalk": "^4.1.2",
+    "commander": "^14.0.2",
     "dotenv": "^17.2.1",
     "fast-glob": "^3.3.3",
     "googleapis": "^157.0.0",
     "gray-matter": "^4.0.3",
-    "imap": "^0.8.19"
+    "imap": "^0.8.19",
+    "inquirer": "^8.2.7"
   },
   "scripts": {
     "people:upsert-template": "node tools/upsertPersonTemplate.js",
@@ -83,7 +89,9 @@
     "people:enrich-force": "FORCE_REFETCH=1 node tools/enrichFromLLM.js",
     "people:enrich-local": "SKIP_GMAIL=1 node tools/enrichFromLLM.js",
     "people:enrich-gmail": "SKIP_LOCAL=1 node tools/enrichFromLLM.js",
-    "notion:import": "node tools/importTranscriptFromNotion.js"
+    "notion:import": "node tools/importTranscriptFromNotion.js",
+    "work": "node tools/work-cli.js",
+    "pres:refresh": "node tools/presentations/generateDashboard.js"
   },
   "devDependencies": {
     "jest": "^30.0.5",
