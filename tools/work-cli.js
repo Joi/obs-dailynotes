@@ -468,15 +468,26 @@ program
 // Refresh GTD dashboard
 program
   .command('refresh')
-  .description('Regenerate GTD dashboard from Apple Reminders cache')
-  .action(async () => {
+  .description('Update reminders cache and regenerate GTD dashboard')
+  .option('--skip-cache', 'Skip updating reminders cache')
+  .action(async (options) => {
     const { execSync } = require('child_process');
     const cwd = path.join(__dirname, '..');
 
     console.log(chalk.cyan('\n🔄 Refreshing GTD dashboard...\n'));
 
     try {
+      // Update reminders cache first (unless skipped)
+      if (!options.skipCache) {
+        console.log(chalk.gray('📥 Pulling from Apple Reminders...'));
+        execSync('node tools/updateRemindersCache.js', { stdio: 'inherit', cwd });
+        console.log();
+      }
+
+      // Generate dashboard
+      console.log(chalk.gray('📊 Generating dashboard...'));
       execSync('node lib/gtd-simple/dashboard.js', { stdio: 'inherit', cwd });
+
       console.log(chalk.green('\n✅ Dashboard refreshed!\n'));
       console.log('Open with: ' + chalk.cyan('work dash') + '\n');
     } catch (err) {
