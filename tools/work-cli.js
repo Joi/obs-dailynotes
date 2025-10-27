@@ -28,6 +28,7 @@ const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
 
 // Import modules
 const presentations = require('./lib/presentations');
+const reading = require('./lib/reading');
 const { mainMenu, presentationsMenu } = require('./lib/interactive');
 
 program
@@ -234,6 +235,199 @@ pres
     try {
       const pres = await presentations.updatePresentation(id, options);
       console.log(chalk.green('\n✅ Updated: ' + pres.title + '\n'));
+    } catch (err) {
+      console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+      process.exit(1);
+    }
+  });
+
+// ====================
+// READING QUEUE COMMANDS
+// ====================
+
+const read = program.command('read').description('Manage reading queue');
+
+// If no subcommand, show interactive menu (placeholder for now)
+read.action(async () => {
+  console.log(chalk.yellow('\n📚 Reading queue interactive menu coming soon!\n'));
+  console.log('Run: ' + chalk.cyan('work read list') + ' to see your reading queue\n');
+});
+
+// Add reading item
+read
+  .command('add <url-or-pdf>')
+  .description('Add a new item to reading queue')
+  .option('-t, --title <title>', 'Item title (required)')
+  .option('-d, --deadline <date>', 'Deadline (YYYY-MM-DD)')
+  .option('-p, --priority <level>', 'Priority (low|medium|high|urgent)', 'medium')
+  .option('--tags <tags>', 'Comma-separated tags')
+  .option('--source <source>', 'Source (e.g., newsletter, recommendation)')
+  .option('--notes <text>', 'Additional notes')
+  .option('--estimate <hours>', 'Estimated hours', parseFloat)
+  .action(async (input, options) => {
+    try {
+      const item = await reading.addReading(input, options);
+      console.log(chalk.green('\n✅ Reading item added!\n'));
+      console.log('ID: ' + chalk.bold(item.id));
+      console.log('Title: ' + item.title);
+      console.log('Type: ' + item.type);
+      console.log('Status: ' + item.status);
+      if (item.deadline) console.log('Deadline: ' + item.deadline);
+      console.log('\nRun: ' + chalk.cyan('work read list') + ' to see your reading queue\n');
+    } catch (err) {
+      console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+      process.exit(1);
+    }
+  });
+
+// Start reading
+read
+  .command('start <id>')
+  .description('Start reading (opens URL in browser or PDF in viewer)')
+  .action(async (id) => {
+    try {
+      const item = await reading.startReading(id);
+      console.log(chalk.green('\n✅ Started: ' + item.title));
+      console.log(chalk.gray('Status: queued → in-progress\n'));
+    } catch (err) {
+      console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+      process.exit(1);
+    }
+  });
+
+// Finish reading
+read
+  .command('finish <id>')
+  .description('Mark reading as finished (in-progress → completed)')
+  .option('--notes <text>', 'Completion notes')
+  .action(async (id, options) => {
+    try {
+      const item = await reading.finishReading(id, options);
+      console.log(chalk.green('\n✅ Finished: ' + item.title));
+      console.log(chalk.gray('Status: in-progress → completed\n'));
+    } catch (err) {
+      console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+      process.exit(1);
+    }
+  });
+
+// Archive reading
+read
+  .command('archive <id>')
+  .description('Archive reading item (any status → archived)')
+  .action(async (id) => {
+    try {
+      const item = await reading.archiveReading(id);
+      console.log(chalk.green('\n✅ Archived: ' + item.title + '\n'));
+    } catch (err) {
+      console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+      process.exit(1);
+    }
+  });
+
+// List reading queue
+read
+  .command('list')
+  .description('List reading queue')
+  .option('-s, --status <status>', 'Filter by status (queued|in-progress|completed|archived)')
+  .option('-p, --priority <priority>', 'Filter by priority')
+  .option('--type <type>', 'Filter by type (url|pdf)')
+  .option('--tag <tag>', 'Filter by tag')
+  .option('--all', 'Include archived', false)
+  .action(async (options) => {
+    try {
+      const readingList = await reading.listReading(options);
+      const stats = await reading.getStats();
+
+      console.log(chalk.bold.cyan('\n📚 Reading Queue\n'));
+      console.log(chalk.gray('Total: ' + stats.total + ' | To Read: ' + stats.toRead + ' | Reading: ' + stats.reading + ' | Read: ' + stats.read + '\n'));
+
+      if (readingList.length === 0) {
+        console.log(chalk.gray('No reading items found.\n'));
+        return;
+      }
+
+      // Group by status
+      const byStatus = {
+        'reading': [],
+        'to-read': [],
+        'read': [],
+        'archived': []
+      };
+
+      readingList.forEach(item => {
+        if (byStatus[item.status]) {
+          byStatus[item.status].push(item);
+        }
+      });
+
+      // Print each group
+      const groups = [
+        { status: 'reading', title: '📖 CURRENTLY READING', color: chalk.yellow },
+        { status: 'to-read', title: '📚 TO READ', color: chalk.blue },
+        { status: 'read', title: '✅ READ', color: chalk.green },
+        { status: 'archived', title: '📦 ARCHIVED', color: chalk.gray }
+      ];
+
+      groups.forEach(({ status, title, color }) => {
+        const items = byStatus[status];
+        if (items && items.length > 0) {
+          console.log(color.bold(title + '\n'));
+          items.forEach(item => {
+            const priorityIcon = { urgent: '🔴', high: '🟠', medium: '🟡', low: '🟢' }[item.priority];
+            const typeIcon = item.type === 'pdf' ? '📄' : '🔗';
+            console.log(priorityIcon + ' ' + typeIcon + ' [' + chalk.bold(item.id) + '] ' + item.title);
+            if (item.deadline) {
+              const daysUntil = Math.ceil((new Date(item.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+              console.log('   Due: ' + item.deadline + ' (' + (daysUntil > 0 ? daysUntil + ' days' : 'OVERDUE') + ')');
+            }
+            if (item.source) console.log(chalk.gray('   Source: ' + item.source));
+            console.log();
+          });
+        }
+      });
+
+    } catch (err) {
+      console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+      process.exit(1);
+    }
+  });
+
+// Open reading item
+read
+  .command('open <id>')
+  .description('Open URL in browser or PDF in viewer')
+  .action(async (id) => {
+    try {
+      const { item } = await reading.findReading(id);
+
+      const { spawn } = require('child_process');
+      spawn('open', [item.url], { detached: true, stdio: 'ignore' });
+
+      const typeLabel = item.type === 'pdf' ? 'PDF' : 'URL';
+      console.log(chalk.green('\n🔗 Opening ' + typeLabel + ': ' + item.title + '\n'));
+    } catch (err) {
+      console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+      process.exit(1);
+    }
+  });
+
+// Update reading item
+read
+  .command('update <id>')
+  .description('Update reading item metadata')
+  .option('-t, --title <title>', 'Update title')
+  .option('--url <url>', 'Update URL or PDF path')
+  .option('-d, --deadline <date>', 'Update deadline')
+  .option('-p, --priority <level>', 'Update priority')
+  .option('--notes <text>', 'Update notes')
+  .option('--estimate <hours>', 'Update estimated hours', parseFloat)
+  .option('--add-tag <tag>', 'Add a tag')
+  .option('--remove-tag <tag>', 'Remove a tag')
+  .action(async (id, options) => {
+    try {
+      const item = await reading.updateReading(id, options);
+      console.log(chalk.green('\n✅ Updated: ' + item.title + '\n'));
     } catch (err) {
       console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
       process.exit(1);
