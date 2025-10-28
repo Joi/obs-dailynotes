@@ -545,7 +545,10 @@ program
 // Parse arguments
 program.parse(process.argv);
 
-// If no arguments, show main menu
-if (!process.argv.slice(2).length) {
+// If no command was matched, show interactive menu
+const options = program.opts();
+const args = program.args;
+
+if (args.length === 0 && !process.argv.slice(2).length) {
   mainMenu();
 }
