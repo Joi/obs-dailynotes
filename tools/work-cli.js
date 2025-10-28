@@ -34,7 +34,11 @@ const { mainMenu, presentationsMenu } = require('./lib/interactive');
 program
   .name('work')
   .description('Manage presentations, papers, and GTD workflow')
-  .version(pkg.version);
+  .version(pkg.version)
+  .action(() => {
+    // Default action when no command given
+    mainMenu();
+  });
 
 // ====================
 // PRESENTATIONS COMMANDS
@@ -544,11 +548,3 @@ program
 
 // Parse arguments
 program.parse(process.argv);
-
-// If no command was matched, show interactive menu
-const options = program.opts();
-const args = program.args;
-
-if (args.length === 0 && !process.argv.slice(2).length) {
-  mainMenu();
-}
