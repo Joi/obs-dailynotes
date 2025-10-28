@@ -1,7 +1,12 @@
 const fs = require('fs').promises;
 const path = require('path');
+const os = require('os');
+require('dotenv').config();
 
-const DATA_DIR = path.join(__dirname, '../../data');
+// Use SWITCHBOARD_DATA_PATH from env, fallback to legacy location
+const DATA_DIR = process.env.SWITCHBOARD_DATA_PATH
+  ? process.env.SWITCHBOARD_DATA_PATH.replace('~', os.homedir())
+  : path.join(__dirname, '../../data');
 const READING_QUEUE_FILE = path.join(DATA_DIR, 'reading-queue.json');
 
 /**
@@ -133,7 +138,7 @@ async function findReading(id) {
 }
 
 /**
- * Start reading (to-read ’ reading)
+ * Start reading (to-read ï¿½ reading)
  */
 async function startReading(id) {
   const { data, item } = await findReading(id);
@@ -151,7 +156,7 @@ async function startReading(id) {
 }
 
 /**
- * Finish reading (reading ’ read)
+ * Finish reading (reading ï¿½ read)
  */
 async function finishReading(id, options = {}) {
   const { data, item } = await findReading(id);
@@ -175,7 +180,7 @@ async function finishReading(id, options = {}) {
 }
 
 /**
- * Archive reading item (any status ’ archived)
+ * Archive reading item (any status ï¿½ archived)
  */
 async function archiveReading(id) {
   const { data, item } = await findReading(id);
