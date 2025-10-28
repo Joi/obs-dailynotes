@@ -1,7 +1,12 @@
 const fs = require('fs').promises;
 const path = require('path');
+const os = require('os');
+require('dotenv').config();
 
-const DATA_DIR = path.join(__dirname, '../../data');
+// Use SWITCHBOARD_DATA_PATH from env, fallback to legacy location
+const DATA_DIR = process.env.SWITCHBOARD_DATA_PATH
+  ? process.env.SWITCHBOARD_DATA_PATH.replace('~', os.homedir())
+  : path.join(__dirname, '../../data');
 const PRESENTATIONS_FILE = path.join(DATA_DIR, 'presentations.json');
 
 /**
