@@ -1,7 +1,9 @@
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
-require('dotenv').config();
+
+// Load .env from the project root (two levels up from lib/)
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 // Use SWITCHBOARD_DATA_PATH from env, fallback to legacy location
 const DATA_DIR = process.env.SWITCHBOARD_DATA_PATH
