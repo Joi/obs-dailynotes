@@ -294,8 +294,9 @@ async function presentationsMenu() {
     choices: [
       { name: 'Add new presentation', value: 'add' },
       { name: 'List all presentations', value: 'list' },
-      { name: 'Update presentation status', value: 'update' },
-      { name: 'Open presentation', value: 'open' },
+      { name: 'Start presentation', value: 'start' },
+      { name: 'Complete presentation', value: 'complete' },
+      { name: 'Open presentation in browser', value: 'open' },
       new inquirer.Separator(),
       { name: chalk.gray('Back to main menu'), value: 'back' }
     ]
@@ -306,9 +307,224 @@ async function presentationsMenu() {
     return;
   }
 
-  console.log(chalk.yellow('\nInteractive presentations actions coming soon!\n'));
-  console.log('Use direct commands: ' + chalk.cyan('work pres add, work pres list, etc.\n'));
-  await mainMenu();
+  switch (action) {
+    case 'add':
+      await addPresentation();
+      break;
+    case 'list':
+      await listPresentations();
+      break;
+    case 'start':
+      await startPresentation();
+      break;
+    case 'complete':
+      await completePresentation();
+      break;
+    case 'open':
+      await openPresentation();
+      break;
+  }
+}
+
+/**
+ * Add presentation interactively
+ */
+async function addPresentation() {
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'url',
+      message: 'Google Slides URL:',
+      validate: input => {
+        if (input.length === 0) return 'URL is required';
+        if (!input.includes('docs.google.com/presentation')) {
+          return 'Must be a Google Slides URL';
+        }
+        return true;
+      }
+    },
+    {
+      type: 'input',
+      name: 'title',
+      message: 'Title:',
+      validate: input => input.length > 0 || 'Title is required'
+    },
+    {
+      type: 'list',
+      name: 'priority',
+      message: 'Priority:',
+      choices: ['low', 'medium', 'high', 'urgent'],
+      default: 'medium'
+    },
+    {
+      type: 'input',
+      name: 'deadline',
+      message: 'Deadline (YYYY-MM-DD, optional):',
+    },
+    {
+      type: 'input',
+      name: 'notionUrl',
+      message: 'Notion brief URL (optional):',
+    },
+    {
+      type: 'input',
+      name: 'tags',
+      message: 'Tags (comma-separated, optional):',
+    },
+    {
+      type: 'input',
+      name: 'estimate',
+      message: 'Estimated hours (optional):',
+    }
+  ]);
+
+  try {
+    const pres = await presentations.addPresentation(answers.url, {
+      title: answers.title,
+      priority: answers.priority,
+      deadline: answers.deadline || null,
+      notionUrl: answers.notionUrl || null,
+      tags: answers.tags,
+      estimate: answers.estimate ? parseFloat(answers.estimate) : null
+    });
+    console.log(chalk.green('\n✅ Presentation created!\n'));
+    console.log('ID: ' + chalk.bold(pres.id));
+    console.log('Title: ' + pres.title);
+    console.log('Status: ' + pres.status);
+    if (pres.deadline) console.log('Deadline: ' + pres.deadline);
+  } catch (err) {
+    console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+  }
+
+  await pressEnterToContinue();
+  await presentationsMenu();
+}
+
+/**
+ * List presentations
+ */
+async function listPresentations() {
+  console.log(chalk.cyan('\nFetching presentations...\n'));
+  try {
+    execSync('work pres list', { stdio: 'inherit' });
+  } catch (err) {
+    console.error(chalk.red('Error listing presentations'));
+  }
+  await pressEnterToContinue();
+  await presentationsMenu();
+}
+
+/**
+ * Start presentation interactively
+ */
+async function startPresentation() {
+  try {
+    const data = await presentations.listPresentations({ status: 'planned' });
+    if (data.presentations.length === 0) {
+      console.log(chalk.yellow('\nNo planned presentations to start.\n'));
+      await pressEnterToContinue();
+      await presentationsMenu();
+      return;
+    }
+
+    const { presId } = await inquirer.prompt([{
+      type: 'list',
+      name: 'presId',
+      message: 'Select presentation to start:',
+      choices: data.presentations.map(p => ({
+        name: `${p.title} (${p.id})`,
+        value: p.id
+      }))
+    }]);
+
+    const pres = await presentations.startPresentation(presId);
+    console.log(chalk.green('\n✅ Started: ' + pres.title));
+    console.log(chalk.gray('Status: planned → in-progress\n'));
+  } catch (err) {
+    console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+  }
+
+  await pressEnterToContinue();
+  await presentationsMenu();
+}
+
+/**
+ * Complete presentation interactively
+ */
+async function completePresentation() {
+  try {
+    const data = await presentations.listPresentations({ status: 'in-progress' });
+    if (data.presentations.length === 0) {
+      console.log(chalk.yellow('\nNo in-progress presentations to complete.\n'));
+      await pressEnterToContinue();
+      await presentationsMenu();
+      return;
+    }
+
+    const answers = await inquirer.prompt([
+      {
+        type: 'list',
+        name: 'presId',
+        message: 'Select presentation to complete:',
+        choices: data.presentations.map(p => ({
+          name: `${p.title} (${p.id})`,
+          value: p.id
+        }))
+      },
+      {
+        type: 'input',
+        name: 'hours',
+        message: 'Actual hours spent (optional):',
+      }
+    ]);
+
+    const pres = await presentations.completePresentation(answers.presId, {
+      hours: answers.hours ? parseFloat(answers.hours) : null
+    });
+    console.log(chalk.green('\n✅ Completed: ' + pres.title));
+    console.log(chalk.gray('Status: in-progress → completed\n'));
+  } catch (err) {
+    console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+  }
+
+  await pressEnterToContinue();
+  await presentationsMenu();
+}
+
+/**
+ * Open presentation in browser
+ */
+async function openPresentation() {
+  try {
+    const data = await presentations.listPresentations();
+    const activePres = data.presentations.filter(p => p.status !== 'archived');
+
+    if (activePres.length === 0) {
+      console.log(chalk.yellow('\nNo presentations to open.\n'));
+      await pressEnterToContinue();
+      await presentationsMenu();
+      return;
+    }
+
+    const { presId } = await inquirer.prompt([{
+      type: 'list',
+      name: 'presId',
+      message: 'Select presentation to open:',
+      choices: activePres.map(p => ({
+        name: `${p.title} - ${p.status} (${p.id})`,
+        value: p.id
+      }))
+    }]);
+
+    const { pres } = await presentations.findPresentation(presId);
+    spawn('open', [pres.url], { detached: true, stdio: 'ignore' });
+    console.log(chalk.green('\n🔗 Opening slides: ' + pres.title + '\n'));
+  } catch (err) {
+    console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+  }
+
+  await pressEnterToContinue();
+  await presentationsMenu();
 }
 
 /**
