@@ -3,6 +3,7 @@ const chalk = require('chalk');
 const { execSync, spawn } = require('child_process');
 const path = require('path');
 const presentations = require('./presentations');
+const reading = require('./reading');
 
 /**
  * Main interactive menu
@@ -36,9 +37,7 @@ async function mainMenu() {
       await presentationsMenu();
       break;
     case 'reading':
-      console.log(chalk.yellow('\nReading queue interactive menu coming soon!\n'));
-      console.log('Use: ' + chalk.cyan('work read list') + ' to see your reading queue\n');
-      await mainMenu();
+      await readingMenu();
       break;
     case 'daily':
       await generateDailyNote();
@@ -126,6 +125,162 @@ async function openReadingDashboard() {
 }
 
 /**
+ * Reading queue submenu
+ */
+async function readingMenu() {
+  console.clear();
+  console.log(chalk.bold.cyan('\nReading Queue\n'));
+
+  const { action } = await inquirer.prompt([{
+    type: 'list',
+    name: 'action',
+    message: 'Choose an action:',
+    choices: [
+      { name: 'List reading queue', value: 'list' },
+      { name: 'Add URL to reading queue', value: 'add-url' },
+      { name: 'Add PDF to reading queue', value: 'add-pdf' },
+      new inquirer.Separator(),
+      { name: chalk.gray('Back to main menu'), value: 'back' }
+    ]
+  }]);
+
+  if (action === 'back') {
+    await mainMenu();
+    return;
+  }
+
+  switch (action) {
+    case 'list':
+      await listReadingQueue();
+      break;
+    case 'add-url':
+      await addUrlToReadingQueue();
+      break;
+    case 'add-pdf':
+      await addPdfToReadingQueue();
+      break;
+  }
+}
+
+/**
+ * List reading queue
+ */
+async function listReadingQueue() {
+  console.log(chalk.cyan('\nFetching reading queue...\n'));
+  try {
+    execSync('work read list', { stdio: 'inherit' });
+  } catch (err) {
+    console.error(chalk.red('Error listing reading queue'));
+  }
+  await pressEnterToContinue();
+  await readingMenu();
+}
+
+/**
+ * Add URL to reading queue
+ */
+async function addUrlToReadingQueue() {
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'url',
+      message: 'URL:',
+      validate: input => input.length > 0 || 'URL is required'
+    },
+    {
+      type: 'input',
+      name: 'title',
+      message: 'Title:',
+      validate: input => input.length > 0 || 'Title is required'
+    },
+    {
+      type: 'list',
+      name: 'priority',
+      message: 'Priority:',
+      choices: ['low', 'medium', 'high', 'urgent'],
+      default: 'medium'
+    },
+    {
+      type: 'input',
+      name: 'tags',
+      message: 'Tags (comma-separated, optional):',
+    },
+    {
+      type: 'input',
+      name: 'estimate',
+      message: 'Estimated time (minutes, optional):',
+    }
+  ]);
+
+  try {
+    await reading.addReading(answers.url, {
+      title: answers.title,
+      priority: answers.priority,
+      tags: answers.tags,
+      estimate: answers.estimate ? parseInt(answers.estimate) : null
+    });
+    console.log(chalk.green('\n✅ Added to reading queue!\n'));
+  } catch (err) {
+    console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+  }
+
+  await pressEnterToContinue();
+  await readingMenu();
+}
+
+/**
+ * Add PDF to reading queue
+ */
+async function addPdfToReadingQueue() {
+  const answers = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'path',
+      message: 'PDF path:',
+      validate: input => input.length > 0 || 'Path is required'
+    },
+    {
+      type: 'input',
+      name: 'title',
+      message: 'Title:',
+      validate: input => input.length > 0 || 'Title is required'
+    },
+    {
+      type: 'list',
+      name: 'priority',
+      message: 'Priority:',
+      choices: ['low', 'medium', 'high', 'urgent'],
+      default: 'medium'
+    },
+    {
+      type: 'input',
+      name: 'tags',
+      message: 'Tags (comma-separated, optional):',
+    },
+    {
+      type: 'input',
+      name: 'estimate',
+      message: 'Estimated time (minutes, optional):',
+    }
+  ]);
+
+  try {
+    await reading.addReading(answers.path, {
+      title: answers.title,
+      priority: answers.priority,
+      tags: answers.tags,
+      estimate: answers.estimate ? parseInt(answers.estimate) : null
+    });
+    console.log(chalk.green('\n✅ Added to reading queue!\n'));
+  } catch (err) {
+    console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
+  }
+
+  await pressEnterToContinue();
+  await readingMenu();
+}
+
+/**
  * Presentations submenu
  */
 async function presentationsMenu() {
@@ -156,7 +311,19 @@ async function presentationsMenu() {
   await mainMenu();
 }
 
+/**
+ * Helper to pause for user input
+ */
+async function pressEnterToContinue() {
+  await inquirer.prompt([{
+    type: 'input',
+    name: 'continue',
+    message: 'Press Enter to continue...',
+  }]);
+}
+
 module.exports = {
   mainMenu,
-  presentationsMenu
+  presentationsMenu,
+  readingMenu
 };
