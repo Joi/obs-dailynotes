@@ -93,7 +93,11 @@
     "work": "node tools/work-cli.js",
     "pres:refresh": "node tools/presentations/generateDashboard.js",
     "read:refresh": "node tools/reading/generateDashboard.js",
-    "reminders:update-cache": "node tools/updateRemindersCache.js"
+    "reminders:update-cache": "node tools/updateRemindersCache.js",
+    "repos:scan": "node bin/scan-repos.js",
+    "repos:check": "node bin/check-sync.js",
+    "repos:sync": "node bin/sync-repos.js",
+    "repos:sync-push": "node bin/sync-repos.js --push"
   },
   "devDependencies": {
     "jest": "^30.0.5",
