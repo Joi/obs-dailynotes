@@ -4,6 +4,7 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs').promises;
 const { updateAllReposSyncStatus, getSyncStatusEmoji, getSyncStatusMessage } = require('../lib/repoSync');
+const { generateReposDashboard } = require('../lib/generateReposDashboard');
 
 const SWITCHBOARD_PATH = process.env.SWITCHBOARD_PATH || path.join(os.homedir(), 'switchboard');
 const REPOS_FILE = path.join(SWITCHBOARD_PATH, 'amplifier', 'repos.json');
@@ -137,6 +138,10 @@ async function main() {
     }
 
     console.log('─'.repeat(80));
+
+    // Generate dashboard
+    logger.info('Generating repository dashboard...');
+    await generateReposDashboard(SWITCHBOARD_PATH, logger);
 
   } catch (error) {
     logger.error('Error checking sync status:', error.message);
