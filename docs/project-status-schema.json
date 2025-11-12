@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Amplifier Project Status",
+  "description": "Schema for tracking Amplifier project status with repository linking",
+  "type": "object",
+  "properties": {
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the project (kebab-case recommended)"
+          },
+          "title": {
+            "type": "string",
+            "description": "Human-readable project title"
+          },
+          "file": {
+            "type": "string",
+            "description": "Filename in switchboard/amplifier/ (e.g., 'knowledge-synthesis.md')"
+          },
+          "repoId": {
+            "type": "string",
+            "description": "ID of the repository this project belongs to (references repos.json)"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["not-started", "started", "completed"],
+            "description": "Current project status"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["urgent", "high", "medium", "low"],
+            "description": "Project priority level"
+          },
+          "nextActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of next actions for this project"
+          },
+          "created": {
+            "type": "string",
+            "format": "date",
+            "description": "ISO date when project was created"
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date",
+            "description": "ISO date when project was last updated"
+          }
+        },
+        "required": ["id", "title", "file", "status"]
+      }
+    }
+  },
+  "required": ["projects"]
+}
