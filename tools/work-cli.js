@@ -59,6 +59,7 @@ pres
   .option('-d, --deadline <date>', 'Deadline (YYYY-MM-DD)')
   .option('-p, --priority <level>', 'Priority (low|medium|high|urgent)', 'medium')
   .option('--notion <url>', 'Notion brief URL')
+  .option('--slack <url>', 'Slack conversation URL')
   .option('--tags <tags>', 'Comma-separated tags')
   .option('--notes <text>', 'Additional notes')
   .option('--estimate <hours>', 'Estimated hours', parseFloat)
@@ -81,12 +82,12 @@ pres
 // Start presentation
 pres
   .command('start <id>')
-  .description('Start working on presentation (planned → in-progress)')
+  .description('Start working on presentation (marks as started)')
   .action(async (id) => {
     try {
       const pres = await presentations.startPresentation(id);
       console.log(chalk.green('\n✅ Started: ' + pres.title));
-      console.log(chalk.gray('Status: planned → in-progress\n'));
+      console.log(chalk.gray('Status: marked as started\n'));
     } catch (err) {
       console.error(chalk.red('\n❌ Error: ' + err.message + '\n'));
       process.exit(1);
@@ -96,14 +97,14 @@ pres
 // Complete presentation
 pres
   .command('complete <id>')
-  .description('Mark presentation as complete (in-progress → completed)')
+  .description('Mark presentation as complete (todo → done)')
   .option('--hours <hours>', 'Actual hours spent', parseFloat)
   .option('--notes <text>', 'Completion notes')
   .action(async (id, options) => {
     try {
       const pres = await presentations.completePresentation(id, options);
       console.log(chalk.green('\n✅ Completed: ' + pres.title));
-      console.log(chalk.gray('Status: in-progress → completed'));
+      console.log(chalk.gray('Status: todo → done'));
       if (options.hours && pres.estimatedHours) {
         console.log(chalk.gray('Time: ' + pres.estimatedHours + 'h estimated, ' + options.hours + 'h actual'));
       }
@@ -132,7 +133,7 @@ pres
 pres
   .command('list')
   .description('List presentations')
-  .option('-s, --status <status>', 'Filter by status (planned|in-progress|completed|archived)')
+  .option('-s, --status <status>', 'Filter by status (todo|done|archived)')
   .option('-p, --priority <priority>', 'Filter by priority')
   .option('--tag <tag>', 'Filter by tag')
   .option('--all', 'Include archived', false)
@@ -142,7 +143,7 @@ pres
       const stats = await presentations.getStats();
 
       console.log(chalk.bold.cyan('\n📊 Presentations\n'));
-      console.log(chalk.gray('Total: ' + stats.total + ' | Active: ' + (stats.inProgress + stats.planned) + ' | Completed: ' + stats.completed + '\n'));
+      console.log(chalk.gray('Total: ' + stats.total + ' | To Do: ' + stats.todo + ' | Done: ' + stats.done + '\n'));
 
       if (presList.length === 0) {
         console.log(chalk.gray('No presentations found.\n'));
@@ -151,9 +152,8 @@ pres
 
       // Group by status
       const byStatus = {
-        'in-progress': [],
-        'planned': [],
-        'completed': [],
+        'todo': [],
+        'done': [],
         'archived': []
       };
 
@@ -165,9 +165,8 @@ pres
 
       // Print each group
       const groups = [
-        { status: 'in-progress', title: '🟡 IN PROGRESS', color: chalk.yellow },
-        { status: 'planned', title: '🟢 PLANNED', color: chalk.blue },
-        { status: 'completed', title: '✅ COMPLETED', color: chalk.green },
+        { status: 'todo', title: '📋 TO DO', color: chalk.blue },
+        { status: 'done', title: '✅ DONE', color: chalk.green },
         { status: 'archived', title: '📦 ARCHIVED', color: chalk.gray }
       ];
 
@@ -180,9 +179,15 @@ pres
             console.log(priorityIcon + ' [' + chalk.bold(p.id) + '] ' + p.title);
             if (p.deadline) {
               const daysUntil = Math.ceil((new Date(p.deadline) - new Date()) / (1000 * 60 * 60 * 24));
-              console.log('   Due: ' + p.deadline + ' (' + (daysUntil > 0 ? daysUntil + ' days' : 'OVERDUE') + ')');
+              // Only show OVERDUE if status is 'todo' (not done yet)
+              if (p.status === 'done') {
+                console.log('   Completed: ' + p.deadline);
+              } else {
+                console.log('   Due: ' + p.deadline + ' (' + (daysUntil > 0 ? daysUntil + ' days' : 'OVERDUE') + ')');
+              }
             }
             if (p.notionUrl) console.log(chalk.gray('   📝 Notion brief available'));
+            if (p.slackUrl) console.log(chalk.gray('   💬 Slack conversation available'));
             console.log();
           });
         }
@@ -199,6 +204,7 @@ pres
   .command('open <id>')
   .description('Open presentation in browser')
   .option('--notion', 'Open Notion brief instead of slides')
+  .option('--slack', 'Open Slack conversation instead of slides')
   .action(async (id, options) => {
     try {
       const { pres } = await presentations.findPresentation(id);
@@ -211,6 +217,14 @@ pres
         const { spawn } = require('child_process');
         spawn('open', [pres.notionUrl], { detached: true, stdio: 'ignore' });
         console.log(chalk.green('\n📝 Opening Notion brief: ' + pres.title + '\n'));
+      } else if (options.slack) {
+        if (!pres.slackUrl) {
+          console.error(chalk.red('\n❌ No Slack URL set for this presentation\n'));
+          process.exit(1);
+        }
+        const { spawn } = require('child_process');
+        spawn('open', [pres.slackUrl], { detached: true, stdio: 'ignore' });
+        console.log(chalk.green('\n💬 Opening Slack conversation: ' + pres.title + '\n'));
       } else {
         const { spawn } = require('child_process');
         spawn('open', [pres.url], { detached: true, stdio: 'ignore' });
@@ -231,6 +245,7 @@ pres
   .option('-d, --deadline <date>', 'Update deadline')
   .option('-p, --priority <level>', 'Update priority')
   .option('--notion <url>', 'Update Notion URL')
+  .option('--slack <url>', 'Update Slack URL')
   .option('--notes <text>', 'Update notes')
   .option('--estimate <hours>', 'Update estimated hours', parseFloat)
   .option('--add-tag <tag>', 'Add a tag')

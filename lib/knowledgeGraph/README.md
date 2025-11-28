@@ -1,326 +1,363 @@
 # Knowledge Graph System
 
-A graph-based knowledge management system for Switchboard that connects people, organizations, ideas, literature, and meetings into a queryable network.
+A minimal file-based knowledge graph for Switchboard that transforms 880 person markdown files into a queryable network.
 
 ## Overview
 
-This system transforms Switchboard from a collection of markdown files into an active knowledge network where entities are nodes and relationships are edges. It enables powerful queries like "Who do I know working on AI safety?" or "Who should I introduce to whom?"
+The knowledge graph extracts person entities from Switchboard markdown files and builds a queryable network enabling basic relationship discovery and path finding.
+
+**Current Phase**: Phase 1 - Foundation
+- Extract 880+ person nodes from frontmatter
+- Store as JSON
+- Basic path finding (BFS)
+- Ego network queries
 
 ## Architecture
 
+### Minimal Approach
+
+This implementation uses **no graph libraries** - just JavaScript arrays and objects. This keeps the code simple (~200 lines total), easy to understand, and faster to implement.
+
+The modular design allows upgrading to graphology or NetworkX in Phase 3 if advanced graph algorithms are needed, without breaking the CLI interface.
+
 ### Data Model
 
-**Node Types**:
-- `Person`: People in your network (880+ from Private/People/)
-- `Organization`: Companies, institutions, groups
-- `Paper`: Academic papers and literature
-- `Idea`: Concepts, topics, areas of interest
-- `Meeting`: Meeting notes with attendees and topics
-- `Project`: Active projects being tracked
-
-**Edge Types**:
-- `knows`, `worked-with`, `introduced-by`, `discussed-with` (Person ↔ Person)
-- `works-at`, `founded`, `advises` (Person ↔ Organization)
-- `authored`, `cited`, `discussed` (Person/Paper ↔ Paper)
-- `interested-in`, `working-on`, `expert-in` (Person ↔ Idea)
-- `attended`, `discussed` (Meeting ↔ Person/Idea)
-
-### Storage
-
-The graph is stored in JSON format at `~/switchboard/.data/knowledge_graph.json` using a NetworkX-compatible schema:
-
-```json
+**Node Structure**:
+```javascript
 {
-  "directed": true,
-  "multigraph": true,
-  "graph": {},
-  "nodes": [
-    {
-      "id": "person:joi-ito",
-      "type": "person",
-      "name": "Joi Ito",
-      "slug": "joi-ito",
-      "emails": ["joi@example.com"],
-      "filePath": "Private/People/Joi Ito.md"
-    }
+  id: "adam-back",           // From frontmatter.slug
+  type: "person",             // Fixed for Phase 1
+  name: "Adam Back",          // From filename
+  emails: ["adam@..."],       // From frontmatter.emails
+  aliases: ["aback"]          // From frontmatter.aliases
+}
+```
+
+**Graph Storage** (`~/switchboard/.data/knowledge_graph.json`):
+```javascript
+{
+  nodes: [
+    { id, type, name, emails, aliases },
+    ...
   ],
-  "links": [
-    {
-      "source": "person:joi-ito",
-      "target": "person:neha-narula",
-      "type": "knows",
-      "strength": 0.9,
-      "firstContact": "2015-03-15",
-      "lastContact": "2025-11-10",
-      "context": ["meeting:2025-11-10-lab-sync"]
-    }
-  ]
+  edges: [],  // Phase 1: empty, populated in Phase 2
+  metadata: {
+    version: "1.0",
+    created: "2025-11-13T...",
+    nodeCount: 880,
+    edgeCount: 0
+  }
 }
 ```
 
 ## Modules
 
-### `graphBuilder.js`
-Builds the knowledge graph from Switchboard markdown files:
-- Extracts entities from frontmatter (people, papers, projects)
-- Parses relationship sections in person notes
-- Extracts meeting attendees and topics
-- Infers relationships from co-occurrence
-
 ### `extractors.js`
-Entity-specific extractors:
-- `extractPerson(filePath)`: Parse person frontmatter and sections
-- `extractOrganization(filePath)`: Extract org metadata
-- `extractPaper(filePath)`: Parse literature note frontmatter
-- `extractMeeting(filePath)`: Get attendees and topics from meetings
-- `extractRelationships(content)`: Parse prose for relationship data
+Parses person markdown files to extract node data:
 
-### `graphQuery.js`
-Query interface for the graph:
-- `findPath(personA, personB)`: Shortest path between people
-- `findExperts(topic, minStrength)`: People with high topic strength
-- `findIntroductions(personId)`: Suggest valuable introductions
-- `getTimeline(personA, personB)`: Relationship history
-- `detectCommunities(minSize)`: Find clusters in network
-- `getEgoNetwork(personId, depth)`: Get N-hop neighborhood
+```javascript
+extractPersonNode(filePath)
+  → { id, type, name, emails, aliases }
+
+extractAllPersons(peopleDir)
+  → [{ node }, { node }, ...]
+```
+
+### `graphBuilder.js`
+Builds graph from person files:
+
+```javascript
+buildGraph(peopleDir)
+  → { nodes, edges, metadata }
+
+saveGraph(graph, outputPath)
+  → writes JSON to disk
+```
+
+### `queries.js`
+Query interface using BFS and filtering:
+
+```javascript
+findPath(graph, startId, endId)
+  → ["person-a", "person-b", "person-c"] or null
+
+egoNetwork(graph, personId, depth)
+  → { nodes: [...], edges: [...] }
+```
+
+**Note**: Phase 1 returns empty paths (no edges yet). Phase 2 adds relationship extraction.
 
 ### `models.js`
-Data structures and validation:
-- Node schemas for each entity type
-- Edge schemas for relationship types
-- Validation functions
-- Type conversions
+Data structures and schemas:
+
+```javascript
+// Node/edge type definitions
+// Validation functions
+// Helper utilities
+```
 
 ### `index.js`
-Main API and CLI entry point:
-- `buildGraph()`: Build graph from scratch
-- `updateGraph(filePath)`: Incremental update on file change
-- `query(queryType, params)`: Execute queries
-- CLI command handlers
+Public API and CLI integration:
+
+```javascript
+export { buildGraph, saveGraph } from './graphBuilder.js';
+export { findPath, egoNetwork } from './queries.js';
+```
 
 ## Commands
 
 ```bash
-# Build the graph from scratch
+# Build graph from person files
 npm run kg:build
 
-# Query the graph
-npm run kg:query -- find-path "Joi Ito" "Vitalik Buterin"
-npm run kg:query -- experts --topic "probabilistic-programming"
-npm run kg:query -- introductions "Joi Ito"
-npm run kg:query -- timeline "Joi Ito" "Adam Back"
-npm run kg:query -- communities --min-size 10
+# Query: find path between two people
+npm run kg:query -- find-path "Joi Ito" "Adam Back"
 
-# Update graph on file changes (watch mode)
-npm run kg:watch
-
-# Export for Dataview
-npm run kg:export --format dataview
+# Query: get ego network (people within N connections)
+npm run kg:query -- ego-network "Joi Ito" --depth 1
 ```
 
-## Integration Points
+### CLI Implementation
 
-### Daily Notes Generator
+The CLI is implemented in `bin/kg.js` using commander:
+
 ```javascript
-// In lib/generateDailyNote.js
-const kgInsights = await getKGInsights(today);
-
-// Add to daily note template:
-// - Follow-up suggestions (stale connections)
-// - Introduction opportunities
-// - Upcoming meetings with relationship context
-```
-
-### Email Processor
-```javascript
-// In lib/emailProcessor.js
-// After extracting email relationships, update graph:
-await updateGraph({
-  person1: personId,
-  person2: contactId,
-  type: "discussed-with",
-  context: [`email:${threadId}`],
-  lastContact: email.date
-});
-```
-
-### Weekly Review
-```javascript
-// In lib/weeklyReview.js
-const staleConnections = await findStaleConnections(90); // 90 days
-const newConnections = await findNewConnections('last-week');
-const introductions = await findIntroductionOpportunities();
-
-// Add to weekly review template
-```
-
-### File Watcher
-```javascript
-// Watch for markdown file changes
-const watcher = chokidar.watch('~/switchboard/**/*.md', {
-  ignored: /^\./,
-  persistent: true
-});
-
-watcher.on('change', async (path) => {
-  await updateGraph(path);
-  console.log(`Updated graph from ${path}`);
-});
-```
-
-## Implementation Phases
-
-### Phase 1: Foundation (Current)
-- [x] Project structure created
-- [ ] Basic data models defined
-- [ ] Person extractor implemented
-- [ ] Graph builder (initial build)
-- [ ] CLI commands: `kg:build`, `kg:query`
-
-### Phase 2: Enrichment
-- [ ] Meeting extractor (attendees → co-attendance edges)
-- [ ] Organization inference (from email domains)
-- [ ] Relationship strength calculation
-- [ ] LLM-powered relationship parsing
-
-### Phase 3: Querying
-- [ ] Path finding (shortest path between people)
-- [ ] Expert finder (topic-based search)
-- [ ] Introduction suggestions
-- [ ] Timeline view
-- [ ] Community detection
-
-### Phase 4: Visualization
-- [ ] HTML graph viewer (using vis.js or D3)
-- [ ] Ego network visualization
-- [ ] Temporal evolution view
-- [ ] Dataview export
-
-### Phase 5: Continuous Sync
-- [ ] File watcher for auto-updates
-- [ ] Incremental graph updates
-- [ ] Daily notes integration
-- [ ] Weekly review integration
-
-## Example Queries
-
-### Find Connection Path
-```javascript
-const path = await findPath("person:joi-ito", "person:vitalik-buterin");
-// → ["person:joi-ito", "person:neha-narula", "person:vitalik-buterin"]
-//    (via MIT connection)
-```
-
-### Find Experts
-```javascript
-const experts = await findExperts("probabilistic-programming", 0.7);
-// → [
-//   {name: "Vikash Mansinghka", strength: 0.95, ...},
-//   {name: "Josh Tenenbaum", strength: 0.88, ...}
-// ]
-```
-
-### Suggest Introductions
-```javascript
-const intros = await findIntroductions("person:joi-ito");
-// → [
-//   {
-//     person1: "Alice Chen",
-//     person2: "Bob Martinez",
-//     sharedInterests: ["AI safety", "effective altruism"],
-//     context: "You both work on AI alignment"
-//   }
-// ]
-```
-
-### Relationship Timeline
-```javascript
-const timeline = await getTimeline("person:joi-ito", "person:adam-back");
-// → [
-//   {date: "2020-04-06", event: "First contact", context: "email:..."},
-//   {date: "2021-11-24", event: "Last contact", context: "email:..."},
-//   {topics: ["Bitcoin", "Liquid", "Taproot"]}
-// ]
+program
+  .command('build')
+  .description('Build graph from person files')
+  .action(async () => {
+    const graph = await buildGraph(process.env.HOME + '/switchboard/Private/People');
+    saveGraph(graph, process.env.HOME + '/switchboard/.data/knowledge_graph.json');
+    console.log(`✓ Built graph: ${graph.metadata.nodeCount} nodes`);
+  });
 ```
 
 ## File Structure
 
 ```
 obs-dailynotes/
-├── lib/
-│   └── knowledgeGraph/
-│       ├── README.md              # This file
-│       ├── index.js               # Main API and CLI
-│       ├── graphBuilder.js        # Build graph from markdown
-│       ├── graphQuery.js          # Query interface
-│       ├── extractors.js          # Entity extractors
-│       └── models.js              # Data structures
+├── lib/knowledgeGraph/
+│   ├── README.md           # This file
+│   ├── index.js            # Public API
+│   ├── extractors.js       # Parse frontmatter → nodes
+│   ├── graphBuilder.js     # Build graph from files
+│   ├── queries.js          # BFS path finding, ego networks
+│   ├── models.js           # Data structures
+│   └── __tests__/
+│       ├── extractors.test.js
+│       ├── graphBuilder.test.js
+│       └── queries.test.js
 ├── bin/
-│   └── kg.js                      # CLI entry point
-└── package.json                   # Add kg:* scripts
-```
+│   └── kg.js               # CLI entry point
+└── package.json            # kg:* scripts
 
-Switchboard data:
-```
 switchboard/
 ├── .data/
-│   ├── knowledge_graph.json       # Main graph storage
-│   ├── entity_cache.json          # Fast lookup cache
-│   └── kg_dataview.json          # Dataview export
-└── Private/People/*.md            # 880 person nodes
+│   └── knowledge_graph.json    # Generated graph
+└── Private/People/*.md         # 880 person source files
 ```
 
-## Technical Decisions
+## Integration Points
 
-### Why JavaScript/Node?
-- Existing obs-dailynotes is JavaScript
-- Rich ecosystem (chokidar, commander, vis.js)
-- Can use graphology (NetworkX-like for JS)
-- Easy integration with existing code
+### Person Files (Source Data)
 
-### Why JSON Storage?
-- Human-readable and debuggable
-- Version control friendly
-- No database setup required
-- Easy backup (just .data/ directory)
-- Can migrate to graph DB later if needed
+Location: `~/switchboard/Private/People/`
 
-### Why Multi-Directional Graph?
-- Multiple relationship types between same nodes
-- Directional (paper cites paper)
-- Parallel edges (knows via work AND personal)
+**Frontmatter Structure**:
+```yaml
+---
+type: person
+slug: adam-back
+id: person:adam-back
+emails:
+  - adam@blockstream.com
+aliases:
+  - aback
+  - Adam
+---
+```
 
-## Data Privacy
+The extractor reads this frontmatter and creates node objects.
 
-The graph stays local by default:
-- Stored in `~/switchboard/.data/` (gitignored)
-- No cloud sync unless explicitly configured
-- Respects privacy frontmatter in person notes
-- Audit trail for all queries
+### Daily Notes (Future)
 
-## Dependencies
+Phase 5 design includes daily notes integration:
+- Stale connection reminders
+- Introduction suggestions
+- Meeting context
 
-```json
-{
-  "graphology": "^0.25.0",          // Graph data structure
-  "graphology-operators": "^1.6.0", // Graph operations
-  "graphology-layout": "^0.6.0",    // Layout algorithms
-  "vis-network": "^9.1.0",          // Visualization
-  "commander": "^11.0.0",           // CLI framework
-  "chokidar": "^3.5.0",             // File watching
-  "gray-matter": "^4.0.0",          // Frontmatter parsing
-  "date-fns": "^2.30.0"             // Date utilities
+### Weekly Review (Future)
+
+Phase 5 design includes weekly review integration:
+- New connections this week
+- Follow-up suggestions
+- Network statistics
+
+## Implementation Details
+
+### Why Minimal Approach?
+
+**Phase 1 scope** only needs:
+- Node extraction from frontmatter
+- Basic graph traversal (BFS)
+- JSON storage
+
+This can be implemented in ~200 lines without a graph library. Benefits:
+
+1. **Fast implementation**: 1 week vs 2-3 weeks with library
+2. **Easy to understand**: Plain JavaScript, no library API
+3. **No dependencies**: Beyond gray-matter (already installed)
+4. **Modular design**: Can upgrade to library in Phase 3 without breaking contract
+
+### The Contract (Public Interface)
+
+The CLI commands are the stable contract:
+
+```bash
+npm run kg:build
+npm run kg:query -- find-path A B
+npm run kg:query -- ego-network X
+```
+
+**Internal implementation can change** (e.g., swap to graphology later) without breaking this contract.
+
+### BFS Implementation
+
+Phase 1 implements breadth-first search for path finding:
+
+```javascript
+function findPath(graph, startId, endId) {
+  const queue = [[startId]];
+  const visited = new Set([startId]);
+
+  while (queue.length > 0) {
+    const path = queue.shift();
+    const node = path[path.length - 1];
+
+    if (node === endId) return path;
+
+    const neighbors = getNeighbors(graph, node);
+    for (const neighbor of neighbors) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push([...path, neighbor]);
+      }
+    }
+  }
+  return null;  // No path found
 }
 ```
 
+**Note**: Phase 1 returns null (no edges). Phase 2 populates edges.
+
+## Dependencies
+
+**Current (Phase 1)**:
+- `gray-matter` (v4.0.3) - Already installed, for frontmatter parsing
+- `commander` (v14.0.2) - Already installed, for CLI
+- No additional dependencies needed
+
+**Future Phases (Optional)**:
+- Phase 3 might add graphology for advanced algorithms
+- Phase 4 might add vis-network for visualization
+- Phase 5 might add chokidar for file watching
+
+## Testing Strategy
+
+**Unit Tests** (60%):
+- `extractors.test.js` - Node extraction logic
+- `graphBuilder.test.js` - Graph construction
+- `queries.test.js` - BFS, ego network
+
+**Integration Tests** (30%):
+- Build → Save → Load → Query workflow
+- Real data validation (sample files)
+- Error handling
+
+**End-to-End Tests** (10%):
+- Full 880 person dataset
+- CLI commands work
+- Performance benchmarks
+
+## Performance Targets
+
+- **Build time**: <10 seconds for 880 files
+- **Query time**: <100ms per query
+- **File size**: <1MB for graph JSON
+- **Memory**: <100MB during build
+
+## Technical Decisions
+
+### Why JavaScript?
+- Existing obs-dailynotes codebase is JavaScript
+- Easy integration with existing tools
+- No cross-language complexity
+
+### Why JSON Storage?
+- Human-readable
+- Version control friendly
+- No database setup
+- Easy backup
+
+### Why Phase 1 Minimal?
+- Proves concept with least code
+- Fast implementation (2 weeks)
+- Can expand if valuable
+- Modular design enables evolution
+
+### Why Not Graph Library?
+- Phase 1 doesn't need it (just BFS)
+- Can implement in ~30 lines
+- Adds dependency overhead
+- Can upgrade later if needed
+
+## Success Criteria (Phase 1)
+
+- [ ] 880+ nodes extracted from person files
+- [ ] Graph stored at `~/switchboard/.data/knowledge_graph.json`
+- [ ] CLI command `kg:build` works (<10s)
+- [ ] CLI command `kg:query -- find-path A B` works
+- [ ] CLI command `kg:query -- ego-network X` works
+- [ ] Test coverage >80%
+- [ ] Code ~200 lines total
+
+## Future Phases
+
+### Phase 2: Enrichment
+- Extract relationships from "Connected People" sections
+- Infer organizations from email domains
+- Calculate relationship strength
+- Populate edges in graph
+
+### Phase 3: Querying
+- Expert finder (requires topic data)
+- Introduction suggestions (requires inference)
+- Community detection (might add graphology)
+- Timeline view
+
+### Phase 4: Visualization
+- HTML graph viewer
+- Interactive exploration
+- Temporal evolution view
+
+### Phase 5: Continuous Sync
+- File watcher (auto-update on changes)
+- Daily notes integration
+- Weekly review integration
+
+**Why deferred?**
+Phase 1 proves the concept. If it succeeds, we expand. If it fails, we learned cheaply.
+
 ## Related Documentation
 
-- [Knowledge Graph Design](~/switchboard/amplifier/Knowledge-Graph-Design.md) - Full design document
+- [Knowledge Graph Design](~/switchboard/amplifier/Knowledge-Graph-Design.md) - Full architecture
+- [Knowledge Graph Project](~/switchboard/amplifier/Knowledge-Graph.md) - User-facing docs
+- [Implementation Plan](~/amplifier/ai_working/ddd/plan.md) - Detailed phase plan
 - [People System](~/switchboard/Docs/Systems/People-System.md) - Person entity architecture
-- [Repository Sync](~/switchboard/Docs/Workflows/Repository-Sync.md) - Similar workflow pattern
 
 ---
 
-**Status**: Phase 1 - Foundation in progress
+**Status**: Phase 1 - Foundation
+**Timeline**: 2 weeks
 **Repository**: [obs-dailynotes](https://github.com/Joi/obs-dailynotes)
-**Documentation**: [Switchboard Amplifier Projects](~/switchboard/amplifier/)
+**Storage**: `~/switchboard/.data/knowledge_graph.json` (gitignored)
