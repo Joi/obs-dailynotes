@@ -72,21 +72,30 @@ async function generateDashboard() {
     });
   }
 
-  // To Do (not urgent)
-  if (byStatus['todo'].length > 0) {
-    const nonUrgentTodo = byStatus['todo'].filter(p => !urgentItems.includes(p));
-    if (nonUrgentTodo.length > 0) {
-      content += '## 📋 TO DO\n\n';
-      nonUrgentTodo.forEach(p => {
+  // In Progress
+  if (byStatus['in-progress'].length > 0) {
+    content += '## =� IN PROGRESS\n\n';
+    byStatus['in-progress'].forEach(p => {
+      if (!urgentItems.includes(p)) {
         content += formatPresentation(p);
-      });
-    }
+      }
+    });
+  }
+
+  // Planned
+  if (byStatus['planned'].length > 0) {
+    content += '## =� PLANNED\n\n';
+    byStatus['planned'].forEach(p => {
+      if (!urgentItems.includes(p)) {
+        content += formatPresentation(p);
+      }
+    });
   }
 
   // Recently completed
-  if (byStatus['done'].length > 0) {
-    content += '##  DONE\n\n';
-    byStatus['done'].forEach(p => {
+  if (byStatus['completed'].length > 0) {
+    content += '##  RECENTLY COMPLETED\n\n';
+    byStatus['completed'].forEach(p => {
       content += formatPresentation(p, false, true);
     });
   }
@@ -122,7 +131,7 @@ function formatPresentation(p, showWarnings = false, isCompleted = false) {
   content += '- **ID**: `' + p.id + '`\n';
   content += '- **Status**: ' + capitalize(p.status);
 
-  if (p.status === 'todo' && p.startedDate) {
+  if (p.status === 'in-progress' && p.startedDate) {
     const started = formatDate(p.startedDate);
     content += ' (started ' + started + ')';
   }
@@ -131,21 +140,14 @@ function formatPresentation(p, showWarnings = false, isCompleted = false) {
 
   if (p.deadline) {
     const days = daysUntil(p.deadline);
-    let deadlineStr;
-
-    // Only show OVERDUE if status is 'todo' (not done yet)
-    if (isCompleted) {
-      deadlineStr = '- **Due**: ' + p.deadline;
-    } else {
-      deadlineStr = '- **Due**: ' + p.deadline;
-      if (days !== null) {
-        if (days < 0) {
-          deadlineStr += ' ⚠️ **OVERDUE**';
-        } else if (days <= 7 && showWarnings) {
-          deadlineStr += ' (' + days + ' days) ⏰';
-        } else {
-          deadlineStr += ' (' + days + ' days)';
-        }
+    let deadlineStr = '- **Due**: ' + p.deadline;
+    if (days !== null) {
+      if (days < 0) {
+        deadlineStr += ' � **OVERDUE**';
+      } else if (days <= 7 && showWarnings) {
+        deadlineStr += ' (' + days + ' days) =%';
+      } else {
+        deadlineStr += ' (' + days + ' days)';
       }
     }
     content += deadlineStr + '\n';
@@ -162,12 +164,9 @@ function formatPresentation(p, showWarnings = false, isCompleted = false) {
   }
 
   content += '- **Links**:\n';
-  content += '  - [🔗 Open Slides](' + p.url + ')\n';
+  content += '  - [<� Open Slides](' + p.url + ')\n';
   if (p.notionUrl) {
-    content += '  - [📝 Open Brief](' + p.notionUrl + ')\n';
-  }
-  if (p.slackUrl) {
-    content += '  - [💬 Open Slack](' + p.slackUrl + ')\n';
+    content += '  - [=� Open Brief](' + p.notionUrl + ')\n';
   }
 
   if (p.tags.length > 0) {

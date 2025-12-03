@@ -37,7 +37,8 @@ async function addPresentation(url, options = {}) {
     title: options.title,
     url,
     notionUrl: options.notion || options.notionUrl || null,
-    status: 'planned',
+    slackUrl: options.slack || options.slackUrl || null,
+    status: 'todo',
     priority: options.priority || 'medium',
     deadline: options.deadline || null,
     createdDate: new Date().toISOString(),
@@ -74,48 +75,51 @@ async function findPresentation(id) {
 }
 
 /**
- * Start working on presentation (planned → in-progress)
+ * Start working on presentation (todo → in-progress)
+ * DEPRECATED - kept for backwards compatibility, just marks as started
  */
 async function startPresentation(id) {
   const { data, pres } = await findPresentation(id);
-  
-  if (pres.status !== 'planned') {
-    throw new Error(`Cannot start presentation in '${pres.status}' status. Only 'planned' presentations can be started.`);
+
+  if (pres.status === 'done') {
+    throw new Error(`Presentation is already marked as done.`);
   }
-  
-  pres.status = 'in-progress';
-  pres.startedDate = new Date().toISOString();
-  
+
+  // Just mark when started, don't change status
+  if (!pres.startedDate) {
+    pres.startedDate = new Date().toISOString();
+  }
+
   await savePresentations(data);
-  
+
   return pres;
 }
 
 /**
- * Complete presentation (in-progress → completed)
+ * Complete presentation (todo → done)
  */
 async function completePresentation(id, options = {}) {
   const { data, pres } = await findPresentation(id);
-  
-  if (pres.status !== 'in-progress') {
-    throw new Error(`Cannot complete presentation in '${pres.status}' status. Run 'work pres start ${id}' first.`);
+
+  if (pres.status === 'done') {
+    throw new Error(`Presentation is already marked as done.`);
   }
-  
-  pres.status = 'completed';
+
+  pres.status = 'done';
   pres.completedDate = new Date().toISOString();
-  
+
   if (options.hours) {
     pres.actualHours = parseFloat(options.hours);
   }
-  
+
   if (options.notes) {
     const dateStr = new Date().toISOString().slice(0, 10);
-    pres.notes += (pres.notes ? '\n\n' : '') + 
+    pres.notes += (pres.notes ? '\n\n' : '') +
                   `Completion notes (${dateStr}): ${options.notes}`;
   }
-  
+
   await savePresentations(data);
-  
+
   return pres;
 }
 
@@ -147,6 +151,7 @@ async function updatePresentation(id, updates) {
     pres.url = updates.url;
   }
   if (updates.notion !== undefined) pres.notionUrl = updates.notion;
+  if (updates.slack !== undefined) pres.slackUrl = updates.slack;
   if (updates.deadline !== undefined) pres.deadline = updates.deadline;
   if (updates.priority) pres.priority = updates.priority;
   if (updates.notes !== undefined) pres.notes = updates.notes;
@@ -200,16 +205,16 @@ async function listPresentations(filters = {}) {
     if (a.priority !== b.priority) {
       return priorityOrder[a.priority] - priorityOrder[b.priority];
     }
-    
+
     // Deadline order (soonest first, null last)
     if (a.deadline && b.deadline) {
       return new Date(a.deadline) - new Date(b.deadline);
     }
     if (a.deadline) return -1;
     if (b.deadline) return 1;
-    
+
     // Status order
-    const statusOrder = { 'in-progress': 0, planned: 1, completed: 2, archived: 3 };
+    const statusOrder = { 'todo': 0, 'done': 1, 'archived': 2 };
     return statusOrder[a.status] - statusOrder[b.status];
   });
   
@@ -222,15 +227,16 @@ async function listPresentations(filters = {}) {
 async function getStats() {
   const data = await loadPresentations();
   const all = data.presentations;
-  
+
   return {
     total: all.length,
-    planned: all.filter(p => p.status === 'planned').length,
-    inProgress: all.filter(p => p.status === 'in-progress').length,
-    completed: all.filter(p => p.status === 'completed').length,
+    todo: all.filter(p => p.status === 'todo').length,
+    done: all.filter(p => p.status === 'done').length,
     archived: all.filter(p => p.status === 'archived').length,
+    inProgress: all.filter(p => p.status === 'todo' && p.startedDate).length,
+    planned: all.filter(p => p.status === 'todo' && !p.startedDate).length,
     urgent: all.filter(p => p.priority === 'urgent' && p.status !== 'archived').length,
-    overdue: all.filter(p => p.deadline && new Date(p.deadline) < new Date() && p.status !== 'completed' && p.status !== 'archived').length
+    overdue: all.filter(p => p.deadline && new Date(p.deadline) < new Date() && p.status !== 'done' && p.status !== 'archived').length
   };
 }
 

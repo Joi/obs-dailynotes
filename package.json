@@ -71,6 +71,8 @@
     "graph:fm:harmonize:plan": "node tools/knowledgeGraph/harmonizeFrontmatter.js",
     "graph:fm:harmonize:apply": "node tools/knowledgeGraph/harmonizeFrontmatter.js --apply",
     "graph:docs:tag": "node tools/knowledgeGraph/tagDocumentation.js",
+    "kg:build": "node bin/kg.js build",
+    "kg:query": "node bin/kg.js query",
     "gmail:check": "node tools/gmailPreflightCheck.js",
     "gmail:test": "node tools/gmail_scope_test.js",
     "gmail:reauth": "GMAIL_DEEP=1 node tools/mcpServers/bootstrapGmailAuth.js",
