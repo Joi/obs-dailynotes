@@ -4,7 +4,8 @@
   "description": "Google Calendar integration with GTD system, Apple Reminders sync, and comprehensive testing framework for Obsidian daily notes",
   "main": "index.js",
   "bin": {
-    "work": "./tools/work-cli.js"
+    "work": "./tools/work-cli.js",
+    "notes-sync": "./tools/notes-sync-cli.js"
   },
   "dependencies": {
     "@notionhq/client": "^4.0.2",
@@ -99,7 +100,12 @@
     "repos:scan": "node bin/scan-repos.js",
     "repos:check": "node bin/check-sync.js",
     "repos:sync": "node bin/sync-repos.js",
-    "repos:sync-push": "node bin/sync-repos.js --push"
+    "repos:sync-push": "node bin/sync-repos.js --push",
+    "notes:sync": "node tools/notes-sync-cli.js sync",
+    "notes:init": "node tools/notes-sync-cli.js init",
+    "notes:pull": "node tools/notes-sync-cli.js pull",
+    "notes:push": "node tools/notes-sync-cli.js push",
+    "notes:status": "node tools/notes-sync-cli.js status"
   },
   "devDependencies": {
     "jest": "^30.0.5",
