@@ -7,6 +7,34 @@ id: note:obs-dailynotes-readme
 
 # Obsidian Daily Notes & GTD System
 
+> ## ⚠️ DEPRECATED - January 2026
+> 
+> **This repository has been superseded by the Python-based GTD tool in `amplifier-bundle-gtd`.**
+> 
+> All functionality has been ported to Python:
+> - Reminders sync → `gtd sync_reminders` (uses EventKit, ~2s vs 30s+)
+> - Notes sync → `gtd sync_notes`
+> - Dashboard generation → `gtd generate_dashboard`
+> - Daily notes → `gtd generate_daily_note`
+> - Presentations tracking → `gtd pres_list`, `gtd pres_add`, etc.
+> - Reading queue → `gtd read_list`, `gtd read_add`, etc.
+> - Morning routine → `gtd morning_routine` (~3s total)
+> 
+> **To use the new system:**
+> ```bash
+> amplifier run --bundle gtd
+> > gtd morning_routine
+> ```
+> 
+> **Data files are unchanged** - still in `~/switchboard/data/`:
+> - `presentations.json`
+> - `reading-queue.json`
+> - `reminders/reminders_cache.json`
+> 
+> This repo is kept for reference but will not receive updates.
+
+---
+
 A Node.js toolkit that integrates Google Calendar events, Apple Reminders, and Getting Things Done (GTD) methodology to create an organized daily workflow in Obsidian.
 
 ## ⚠️ Active Development Notice
