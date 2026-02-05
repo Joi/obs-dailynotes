@@ -7,39 +7,35 @@ id: note:obs-dailynotes-readme
 
 # Obsidian Daily Notes & GTD System
 
-> ## ⚠️ DEPRECATED - January 2026
+> ## ⛔ DEPRECATED
 > 
-> **This repository has been superseded by the Python-based GTD tool in `amplifier-bundle-gtd`.**
+> **This repository is archived and no longer maintained.**
 > 
-> All functionality has been ported to Python:
-> - Reminders sync → `gtd sync_reminders` (uses EventKit, ~2s vs 30s+)
-> - Notes sync → `gtd sync_notes`
-> - Dashboard generation → `gtd generate_dashboard`
-> - Daily notes → `gtd generate_daily_note`
-> - Presentations tracking → `gtd pres_list`, `gtd pres_add`, etc.
-> - Reading queue → `gtd read_list`, `gtd read_add`, etc.
-> - Morning routine → `gtd morning_routine` (~3s total)
+> All functionality has been superseded by the Python-based GTD tool in [`amplifier-bundle-gtd`](https://github.com/Joi/amplifier-bundle-joi).
 > 
-> **To use the new system:**
+> | Old (this repo) | New (amplifier-bundle-gtd) |
+> |-----------------|----------------------------|
+> | Reminders sync (30s+) | `gtd sync_reminders` (~2s, uses EventKit) |
+> | Notes sync | `gtd sync_notes` |
+> | Dashboard | `gtd generate_dashboard` |
+> | Daily notes | `gtd generate_daily_note` |
+> | Presentations | `gtd pres_list`, `pres_add`, etc. |
+> | Reading queue | `gtd read_list`, `read_add`, etc. |
+> | Morning routine | `gtd morning_routine` (~3s total) |
+> 
+> **To migrate:**
 > ```bash
 > amplifier run --bundle gtd
 > > gtd morning_routine
 > ```
 > 
-> **Data files are unchanged** - still in `~/switchboard/data/`:
-> - `presentations.json`
-> - `reading-queue.json`
-> - `reminders/reminders_cache.json`
+> **Data files are unchanged** - still in `~/switchboard/data/`.
 > 
-> This repo is kept for reference but will not receive updates.
+> **No issues, PRs, or updates will be accepted.** This repository exists only for historical reference.
 
 ---
 
 A Node.js toolkit that integrates Google Calendar events, Apple Reminders, and Getting Things Done (GTD) methodology to create an organized daily workflow in Obsidian.
-
-## ⚠️ Active Development Notice
-
-This codebase is under active development with frequent refactoring and restructuring. If you're interested in contributing, please open an issue or reach out first so we can coordinate efforts and avoid conflicts.
 
 ## What This Does
 
