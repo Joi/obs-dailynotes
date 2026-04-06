@@ -6,9 +6,6 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 cd /Users/<Owner>/obs-dailynotes
 
-# Build/update the People index (non-fatal if People folder is empty)
-npm run people:index >/dev/null 2>&1 || true
-
 # Pull latest Reminders snapshot (cache + agendas + full mirror)
 # Make non-fatal so daily note generation still proceeds if Reminders sync fails
 npm run reminders:pull >/dev/null 2>&1 || true

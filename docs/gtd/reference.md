@@ -72,9 +72,6 @@ npm run reminders:pull
 ### Weekly Commands
 
 ```bash
-# Rebuild people index
-npm run people:index
-
 # Full system refresh
 npm run reminders:pull && npm run gtd:morning
 ```
@@ -234,7 +231,7 @@ reminders:                   # For agenda
 |---------|----------|
 | Empty dashboard | Add GTD tags to tasks |
 | Tasks not syncing | Check for `<!--reminders-id-->` |
-| People not linking | Run `npm run people:index` |
+| People not linking | Run `npm run people:index`, then check person page frontmatter and aliases |
 | Old data showing | Run `npm run reminders:pull` |
 | Sync conflicts | Check `.env` settings |
 | Missing views | Run `npm run gtd:morning` |

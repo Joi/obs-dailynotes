@@ -176,9 +176,6 @@ npm run gtd:sync
 
 # Pull fresh reminders (anytime)
 npm run reminders:pull
-
-# Rebuild people index
-npm run people:index
 ```
 
 ### Advanced Commands
@@ -213,7 +210,7 @@ npm run reminders:pull && npm run gtd:morning
 
 ### People Not Linking
 
-1. Run `npm run people:index` to rebuild index
+1. Run `npm run people:index` to rebuild the index
 2. Check person page has correct frontmatter:
    ```yaml
    ---

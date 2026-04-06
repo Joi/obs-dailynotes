@@ -643,7 +643,7 @@ The `tools/` directory contains automation scripts:
 
 **Person Page Links:**
 
-- Run `pnpm run people:index` to rebuild index
+- Run `pnpm run people:index` to rebuild index after person page changes
 - Verify email addresses in frontmatter
 
 **Gmail Authentication and Enrichment:**
