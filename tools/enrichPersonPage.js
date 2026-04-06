@@ -135,43 +135,20 @@ if (shouldCreateList) {
   }
 }
 
-// Build new frontmatter YAML
-function buildYaml(obj) {
-  let yaml = "---\n";
+function orderFrontmatterFields(frontmatter) {
+  const ordered = {};
+  const priorityKeys = ["tags", "name", "emails", "aliases", "reminders"];
+  const otherKeys = Object.keys(frontmatter).filter(
+    (key) => !priorityKeys.includes(key),
+  );
 
-  // Order matters for readability
-  const order = ["tags", "name", "emails", "aliases", "reminders"];
-  const otherKeys = Object.keys(obj).filter((k) => !order.includes(k));
-  const allKeys = [...order.filter((k) => obj[k] !== undefined), ...otherKeys];
-
-  for (const key of allKeys) {
-    const value = obj[key];
-
-    if (Array.isArray(value)) {
-      if (value.length === 0) {
-        yaml += `${key}: []\n`;
-      } else if (value.length === 1 && key !== "tags") {
-        yaml += `${key}:\n  - ${value[0]}\n`;
-      } else {
-        yaml += `${key}:\n`;
-        value.forEach((item) => {
-          yaml += `  - ${item}\n`;
-        });
-      }
-    } else if (typeof value === "object" && value !== null) {
-      yaml += `${key}:\n`;
-      Object.entries(value).forEach(([k, v]) => {
-        yaml += `  ${k}: ${typeof v === "string" ? `"${v}"` : v}\n`;
-      });
-    } else if (typeof value === "boolean") {
-      yaml += `${key}: ${value}\n`;
-    } else {
-      yaml += `${key}: ${value}\n`;
+  for (const key of [...priorityKeys, ...otherKeys]) {
+    if (frontmatter[key] !== undefined) {
+      ordered[key] = frontmatter[key];
     }
   }
 
-  yaml += "---\n";
-  return yaml;
+  return ordered;
 }
 
 function hasRemindersAgendaBlock(text) {
@@ -180,36 +157,80 @@ function hasRemindersAgendaBlock(text) {
   );
 }
 
-// Build the new content
-let newContent = buildYaml(fm);
+function serializeRemindersConfig(reminders) {
+  if (!reminders || typeof reminders !== "object") return null;
+
+  const lines = ["reminders:"];
+  for (const [key, value] of Object.entries(reminders)) {
+    if (value === undefined) continue;
+
+    if (typeof value === "string") {
+      lines.push(`  ${key}: ${JSON.stringify(value)}`);
+    } else {
+      lines.push(`  ${key}: ${String(value)}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+function restoreQuotedRemindersConfig(text, reminders) {
+  const serializedReminders = serializeRemindersConfig(reminders);
+  if (!serializedReminders) return text;
+
+  const frontmatterMatch = text.match(/^---\n([\s\S]*?)\n---/);
+  if (!frontmatterMatch) return text;
+
+  const frontmatter = frontmatterMatch[1];
+  const body = text.slice(frontmatterMatch[0].length);
+  const nextFrontmatter = frontmatter.includes("reminders:")
+    ? frontmatter.replace(
+        /^reminders:\n(?:  .*(?:\n|$))*/m,
+        serializedReminders,
+      )
+    : `${frontmatter}\n${serializedReminders}`;
+
+  return `---\n${nextFrontmatter}\n---${body}`;
+}
+
+// Build the new body content, then serialize frontmatter with gray-matter so
+// values that require quoting stay valid YAML.
+let bodyContent = "";
 
 // Add reminders agenda section if person has a list and one is not already present
 if (fm.reminders && fm.reminders.listName && !hasRemindersAgendaBlock(body)) {
-  newContent += "\n<!-- BEGIN REMINDERS AGENDA -->\n";
-  newContent += "## Agenda (from Apple Reminders)\n\n";
-  newContent += "<!-- END REMINDERS AGENDA -->\n\n";
+  bodyContent += "<!-- BEGIN REMINDERS AGENDA -->\n";
+  bodyContent += "## Agenda (from Apple Reminders)\n\n";
+  bodyContent += "<!-- END REMINDERS AGENDA -->\n\n";
 }
 
 // Add basic structure if body is empty or minimal
 if (body.trim() === "" || body.trim() === `# ${personName}`) {
-  newContent += `# ${personName}\n\n`;
-  newContent += "## Overview\n\n";
-  newContent += "## Background\n\n";
+  bodyContent += `# ${personName}\n\n`;
+  bodyContent += "## Overview\n\n";
+  bodyContent += "## Background\n\n";
   if (fm.emails && fm.emails.length > 0) {
-    newContent += "## Contact\n";
+    bodyContent += "## Contact\n";
     fm.emails.forEach((email) => {
-      newContent += `- Email: ${email}\n`;
+      bodyContent += `- Email: ${email}\n`;
     });
-    newContent += "\n";
+    bodyContent += "\n";
   }
-  newContent += "## Notes\n\n";
+  bodyContent += "## Notes\n\n";
 } else {
   // Preserve existing body content
   if (!body.includes(`# ${personName}`)) {
-    newContent += `# ${personName}\n\n`;
+    bodyContent += `# ${personName}\n\n`;
   }
-  newContent += body;
+  bodyContent += body;
 }
+
+const newContent = restoreQuotedRemindersConfig(
+  matter.stringify(bodyContent, orderFrontmatterFields(fm), {
+    lineWidth: 0,
+  }),
+  fm.reminders,
+);
 
 // Write the updated content
 function normalizeSpacing(text) {
@@ -220,8 +241,15 @@ function normalizeSpacing(text) {
   t = t.replace(/\s+$/m, "").trimEnd() + "\n";
   return t;
 }
-fs.writeFileSync(fullPath, normalizeSpacing(newContent));
-console.log(`✓ Updated ${personName}'s page`);
+const normalizedNewContent = normalizeSpacing(newContent);
+const pageChanged = normalizedNewContent !== content;
+
+if (pageChanged) {
+  fs.writeFileSync(fullPath, normalizedNewContent);
+  console.log(`✓ Updated ${personName}'s page`);
+} else {
+  console.log(`✓ ${personName}'s page already up to date`);
+}
 
 // Create Apple Reminders list if needed
 if (shouldCreateList) {
@@ -261,16 +289,20 @@ if (shouldCreateList) {
 }
 
 // Update people index after mutating the page
-console.log("Updating people index...");
-try {
-  execFileSync("npm", ["run", "people:index"], {
-    cwd: path.join(__dirname, ".."),
-    stdio: "inherit",
-  });
-} catch (e) {
-  console.log(
-    "Note: Failed to update people index. Run manually: npm run people:index",
-  );
+if (pageChanged) {
+  console.log("Updating people index...");
+  try {
+    execFileSync("npm", ["run", "people:index"], {
+      cwd: path.join(__dirname, ".."),
+      stdio: "inherit",
+    });
+  } catch (e) {
+    console.log(
+      "Note: Failed to update people index. Run manually: npm run people:index",
+    );
+  }
+} else {
+  console.log("People index already up to date.");
 }
 
 console.log("\nDone! Next steps:");

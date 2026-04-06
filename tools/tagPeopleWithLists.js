@@ -36,11 +36,16 @@ const listsSet = new Set(allLists);
 
 // Load people index
 const peopleIndexPath = path.join(vaultRoot, "people.index.json");
-if (!fs.existsSync(peopleIndexPath)) {
-  console.error("People index not found. Run `npm run people:index` first.");
-  process.exit(1);
+let peopleIndex;
+try {
+  peopleIndex = JSON.parse(fs.readFileSync(peopleIndexPath, "utf8"));
+} catch (error) {
+  if (error && error.code === "ENOENT") {
+    console.error("People index not found. Run `npm run people:index` first.");
+    process.exit(1);
+  }
+  throw error;
 }
-const peopleIndex = JSON.parse(fs.readFileSync(peopleIndexPath, "utf8"));
 
 // Track updates
 const updates = {
@@ -51,7 +56,9 @@ const updates = {
 };
 
 function normalizeTagValue(tag) {
-  return String(tag).trim().replace(/^['"]|['"]$/g, "");
+  return String(tag)
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
 }
 
 function parseInlineTagsLine(line) {
@@ -105,12 +112,16 @@ for (const [name, info] of Object.entries(peopleIndex)) {
 
   if (hasPersonalList || hasSharedList) {
     // Read the person's page
-    if (!fs.existsSync(personPath)) {
-      updates.notFound.push(name);
-      continue;
+    let content;
+    try {
+      content = fs.readFileSync(personPath, "utf8");
+    } catch (error) {
+      if (error && error.code === "ENOENT") {
+        updates.notFound.push(name);
+        continue;
+      }
+      throw error;
     }
-
-    let content = fs.readFileSync(personPath, "utf8");
 
     // Parse frontmatter
     const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
@@ -293,15 +304,21 @@ if (updates.notFound.length > 0) {
   updates.notFound.forEach((name) => console.log(`  - ${name}`));
 }
 
+const updatedCount = updates.tagged.length + updates.sharedLists.length;
+
 // Update people index after mutating person pages
-console.log("\nUpdating people index...");
-try {
-  execFileSync("npm", ["run", "people:index"], {
-    cwd: path.join(__dirname, ".."),
-    stdio: "inherit",
-  });
-} catch (e) {
-  console.log("Failed to rebuild index");
+if (updatedCount > 0) {
+  console.log("\nUpdating people index...");
+  try {
+    execFileSync("npm", ["run", "people:index"], {
+      cwd: path.join(__dirname, ".."),
+      stdio: "inherit",
+    });
+  } catch (e) {
+    console.log("Failed to rebuild index");
+  }
+} else {
+  console.log("\nPeople index already up to date.");
 }
 
 console.log("\nDone!");

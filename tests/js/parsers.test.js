@@ -1,6 +1,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const matter = require("gray-matter");
 const { execFileSync } = require("child_process");
 
 const {
@@ -533,6 +534,50 @@ reminders:
     }
   });
 
+  test("enrichPersonPage keeps quoted frontmatter strings valid when rewriting", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "enrich-person-"));
+    const vaultRoot = path.join(tempRoot, "vault");
+    const dailyDir = path.join(vaultRoot, "dailynote");
+    const personPath = path.join(vaultRoot, "Jane Doe.md");
+
+    fs.mkdirSync(dailyDir, { recursive: true });
+    fs.writeFileSync(
+      personPath,
+      `---
+name: Jane Doe
+title: "Partner: Investments"
+tags:
+  - people
+---
+
+# Jane Doe
+
+## Notes
+`,
+    );
+
+    try {
+      execFileSync(
+        "node",
+        ["tools/enrichPersonPage.js", "Jane Doe.md", "--no-list"],
+        {
+          cwd: projectRoot,
+          env: {
+            ...process.env,
+            DAILY_NOTE_PATH: dailyDir,
+          },
+          encoding: "utf8",
+        },
+      );
+
+      const updated = fs.readFileSync(personPath, "utf8");
+      expect(() => matter(updated)).not.toThrow();
+      expect(matter(updated).data.title).toBe("Partner: Investments");
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   test("enrichPersonPage does not duplicate an existing reminders agenda block", () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "enrich-person-"));
     const vaultRoot = path.join(tempRoot, "vault");
@@ -609,7 +654,7 @@ tags:
 We were #listening closely during the meeting.
 `,
     );
-    fs.writeFileSync(npmPath, '#!/bin/sh\nexit 0\n');
+    fs.writeFileSync(npmPath, "#!/bin/sh\nexit 0\n");
     fs.chmodSync(npmPath, 0o755);
 
     try {
@@ -632,8 +677,83 @@ We were #listening closely during the meeting.
     }
   });
 
+  test("enrichPersonPage skips rebuilding the people index when no page changes", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "enrich-person-"));
+    const vaultRoot = path.join(tempRoot, "vault");
+    const dailyDir = path.join(vaultRoot, "dailynote");
+    const binDir = path.join(tempRoot, "bin");
+    const personPath = path.join(vaultRoot, "Jane Doe.md");
+    const npmPath = path.join(binDir, "npm");
+    const npmLogPath = path.join(tempRoot, "npm.log");
+
+    fs.mkdirSync(dailyDir, { recursive: true });
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(
+      personPath,
+      `---
+name: Jane Doe
+tags:
+  - people
+---
+
+# Jane Doe
+
+## Notes
+`,
+    );
+    fs.writeFileSync(
+      npmPath,
+      `#!/bin/sh
+echo "$@" >> "${npmLogPath}"
+exit 0
+`,
+    );
+    fs.chmodSync(npmPath, 0o755);
+
+    try {
+      const env = {
+        ...process.env,
+        DAILY_NOTE_PATH: dailyDir,
+        PATH: `${binDir}:${process.env.PATH}`,
+      };
+
+      execFileSync(
+        "node",
+        ["tools/enrichPersonPage.js", "Jane Doe.md", "--no-list"],
+        {
+          cwd: projectRoot,
+          env,
+          encoding: "utf8",
+        },
+      );
+
+      if (fs.existsSync(npmLogPath)) {
+        fs.unlinkSync(npmLogPath);
+      }
+
+      const firstPass = fs.readFileSync(personPath, "utf8");
+
+      execFileSync(
+        "node",
+        ["tools/enrichPersonPage.js", "Jane Doe.md", "--no-list"],
+        {
+          cwd: projectRoot,
+          env,
+          encoding: "utf8",
+        },
+      );
+
+      expect(fs.readFileSync(personPath, "utf8")).toBe(firstPass);
+      expect(fs.existsSync(npmLogPath)).toBe(false);
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   test("cleanupRemindersConfig removes only the exact list tag from inline tags", () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "cleanup-reminders-"));
+    const tempRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "cleanup-reminders-"),
+    );
     const vaultRoot = path.join(tempRoot, "vault");
     const dailyDir = path.join(vaultRoot, "dailynote");
     const binDir = path.join(tempRoot, "bin");
@@ -680,7 +800,7 @@ reminders:
       remindersPath,
       '#!/bin/sh\nif [ "$1" = "show-lists" ]; then\n  exit 0\nelse\n  exit 1\nfi\n',
     );
-    fs.writeFileSync(npmPath, '#!/bin/sh\nexit 0\n');
+    fs.writeFileSync(npmPath, "#!/bin/sh\nexit 0\n");
     fs.chmodSync(remindersPath, 0o755);
     fs.chmodSync(npmPath, 0o755);
 
@@ -700,6 +820,370 @@ reminders:
       expect(updated).not.toContain("<!-- BEGIN REMINDERS AGENDA -->");
       expect(updated).toContain("playlist");
       expect(updated).not.toMatch(/\blist\b/);
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("cleanupRemindersConfig preserves body list bullets while removing frontmatter list tags", () => {
+    const tempRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "cleanup-reminders-"),
+    );
+    const vaultRoot = path.join(tempRoot, "vault");
+    const dailyDir = path.join(vaultRoot, "dailynote");
+    const binDir = path.join(tempRoot, "bin");
+    const personPath = path.join(vaultRoot, "Jane Doe.md");
+    const remindersPath = path.join(binDir, "reminders");
+    const npmPath = path.join(binDir, "npm");
+
+    fs.mkdirSync(dailyDir, { recursive: true });
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(
+      personPath,
+      `---
+name: Jane Doe
+tags:
+  - list
+  - people
+reminders:
+  listName: "Jane Doe"
+---
+
+## Notes
+
+  - list
+  - keep me
+`,
+    );
+    fs.writeFileSync(
+      path.join(vaultRoot, "people.index.json"),
+      JSON.stringify(
+        {
+          "Jane Doe": {
+            name: "Jane Doe",
+            pagePath: "Jane Doe.md",
+            reminders: {
+              listName: "Jane Doe",
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    fs.writeFileSync(
+      remindersPath,
+      '#!/bin/sh\nif [ "$1" = "show-lists" ]; then\n  exit 0\nelse\n  exit 1\nfi\n',
+    );
+    fs.writeFileSync(npmPath, "#!/bin/sh\nexit 0\n");
+    fs.chmodSync(remindersPath, 0o755);
+    fs.chmodSync(npmPath, 0o755);
+
+    try {
+      execFileSync("node", ["tools/cleanupRemindersConfig.js"], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          DAILY_NOTE_PATH: dailyDir,
+          PATH: `${binDir}:${process.env.PATH}`,
+        },
+        encoding: "utf8",
+      });
+
+      const updated = fs.readFileSync(personPath, "utf8");
+      expect(updated).toMatch(/^---\nname: Jane Doe\ntags:\n  - people\n---/m);
+      expect(updated).toContain("## Notes\n\n  - list\n  - keep me\n");
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("cleanupRemindersConfig preserves non-tag frontmatter arrays when removing the list tag", () => {
+    const tempRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "cleanup-reminders-"),
+    );
+    const vaultRoot = path.join(tempRoot, "vault");
+    const dailyDir = path.join(vaultRoot, "dailynote");
+    const binDir = path.join(tempRoot, "bin");
+    const personPath = path.join(vaultRoot, "Jane Doe.md");
+    const remindersPath = path.join(binDir, "reminders");
+    const npmPath = path.join(binDir, "npm");
+
+    fs.mkdirSync(dailyDir, { recursive: true });
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(
+      personPath,
+      `---
+name: Jane Doe
+aliases:
+  - list
+tags:
+  - list
+reminders:
+  listName: "Jane Doe"
+---
+
+# Jane Doe
+`,
+    );
+    fs.writeFileSync(
+      path.join(vaultRoot, "people.index.json"),
+      JSON.stringify(
+        {
+          "Jane Doe": {
+            name: "Jane Doe",
+            pagePath: "Jane Doe.md",
+            reminders: {
+              listName: "Jane Doe",
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    fs.writeFileSync(
+      remindersPath,
+      '#!/bin/sh\nif [ "$1" = "show-lists" ]; then\n  exit 0\nelse\n  exit 1\nfi\n',
+    );
+    fs.writeFileSync(npmPath, "#!/bin/sh\nexit 0\n");
+    fs.chmodSync(remindersPath, 0o755);
+    fs.chmodSync(npmPath, 0o755);
+
+    try {
+      execFileSync("node", ["tools/cleanupRemindersConfig.js"], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          DAILY_NOTE_PATH: dailyDir,
+          PATH: `${binDir}:${process.env.PATH}`,
+        },
+        encoding: "utf8",
+      });
+
+      const updated = fs.readFileSync(personPath, "utf8");
+      expect(updated).toContain("aliases:\n  - list\n");
+      expect(updated).not.toContain("\ntags:\n---");
+      expect(updated).not.toContain("reminders:");
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("tagPeopleWithLists skips rebuilding the people index when no pages change", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tag-people-"));
+    const vaultRoot = path.join(tempRoot, "vault");
+    const dailyDir = path.join(vaultRoot, "dailynote");
+    const binDir = path.join(tempRoot, "bin");
+    const personPath = path.join(vaultRoot, "Jane Doe.md");
+    const remindersPath = path.join(binDir, "reminders");
+    const npmPath = path.join(binDir, "npm");
+    const npmLogPath = path.join(tempRoot, "npm.log");
+
+    fs.mkdirSync(dailyDir, { recursive: true });
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(
+      personPath,
+      `---
+name: Jane Doe
+tags:
+  - people
+  - list
+reminders:
+  listName: "Jane Doe"
+---
+
+# Jane Doe
+`,
+    );
+    fs.writeFileSync(
+      path.join(vaultRoot, "people.index.json"),
+      JSON.stringify(
+        {
+          "Jane Doe": {
+            name: "Jane Doe",
+            pagePath: "Jane Doe.md",
+            reminders: {
+              listName: "Jane Doe",
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    fs.writeFileSync(
+      remindersPath,
+      '#!/bin/sh\nif [ "$1" = "show-lists" ]; then\n  printf "Jane Doe\\n"\nelse\n  exit 1\nfi\n',
+    );
+    fs.writeFileSync(
+      npmPath,
+      `#!/bin/sh
+echo "$@" >> "${npmLogPath}"
+exit 0
+`,
+    );
+    fs.chmodSync(remindersPath, 0o755);
+    fs.chmodSync(npmPath, 0o755);
+
+    try {
+      execFileSync("node", ["tools/tagPeopleWithLists.js"], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          DAILY_NOTE_PATH: dailyDir,
+          PATH: `${binDir}:${process.env.PATH}`,
+        },
+        encoding: "utf8",
+      });
+
+      expect(fs.existsSync(npmLogPath)).toBe(false);
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("cleanupRemindersConfig removes a trailing block list tag at the end of frontmatter", () => {
+    const tempRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "cleanup-reminders-"),
+    );
+    const vaultRoot = path.join(tempRoot, "vault");
+    const dailyDir = path.join(vaultRoot, "dailynote");
+    const binDir = path.join(tempRoot, "bin");
+    const personPath = path.join(vaultRoot, "Jane Doe.md");
+    const remindersPath = path.join(binDir, "reminders");
+    const npmPath = path.join(binDir, "npm");
+
+    fs.mkdirSync(dailyDir, { recursive: true });
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(
+      personPath,
+      `---
+name: Jane Doe
+reminders:
+  listName: "Jane Doe"
+tags:
+  - people
+  - list
+---
+
+# Jane Doe
+`,
+    );
+    fs.writeFileSync(
+      path.join(vaultRoot, "people.index.json"),
+      JSON.stringify(
+        {
+          "Jane Doe": {
+            name: "Jane Doe",
+            pagePath: "Jane Doe.md",
+            reminders: {
+              listName: "Jane Doe",
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    fs.writeFileSync(
+      remindersPath,
+      '#!/bin/sh\nif [ "$1" = "show-lists" ]; then\n  exit 0\nelse\n  exit 1\nfi\n',
+    );
+    fs.writeFileSync(npmPath, "#!/bin/sh\nexit 0\n");
+    fs.chmodSync(remindersPath, 0o755);
+    fs.chmodSync(npmPath, 0o755);
+
+    try {
+      execFileSync("node", ["tools/cleanupRemindersConfig.js"], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          DAILY_NOTE_PATH: dailyDir,
+          PATH: `${binDir}:${process.env.PATH}`,
+        },
+        encoding: "utf8",
+      });
+
+      const updated = fs.readFileSync(personPath, "utf8");
+      expect(updated).toMatch(/^---\nname: Jane Doe\ntags:\n  - people\n---/m);
+      expect(updated).not.toContain("  - list\n---");
+      expect(updated).not.toContain("reminders:");
+    } finally {
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("cleanupRemindersConfig skips rebuilding the people index when no pages change", () => {
+    const tempRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "cleanup-reminders-"),
+    );
+    const vaultRoot = path.join(tempRoot, "vault");
+    const dailyDir = path.join(vaultRoot, "dailynote");
+    const binDir = path.join(tempRoot, "bin");
+    const personPath = path.join(vaultRoot, "Jane Doe.md");
+    const remindersPath = path.join(binDir, "reminders");
+    const npmPath = path.join(binDir, "npm");
+    const npmLogPath = path.join(tempRoot, "npm.log");
+
+    fs.mkdirSync(dailyDir, { recursive: true });
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(
+      personPath,
+      `---
+name: Jane Doe
+tags:
+  - people
+  - list
+reminders:
+  listName: "Jane Doe"
+---
+
+# Jane Doe
+`,
+    );
+    fs.writeFileSync(
+      path.join(vaultRoot, "people.index.json"),
+      JSON.stringify(
+        {
+          "Jane Doe": {
+            name: "Jane Doe",
+            pagePath: "Jane Doe.md",
+            reminders: {
+              listName: "Jane Doe",
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    fs.writeFileSync(
+      remindersPath,
+      '#!/bin/sh\nif [ "$1" = "show-lists" ]; then\n  printf "Jane Doe\\n"\nelse\n  exit 1\nfi\n',
+    );
+    fs.writeFileSync(
+      npmPath,
+      `#!/bin/sh
+echo "$@" >> "${npmLogPath}"
+exit 0
+`,
+    );
+    fs.chmodSync(remindersPath, 0o755);
+    fs.chmodSync(npmPath, 0o755);
+
+    try {
+      execFileSync("node", ["tools/cleanupRemindersConfig.js"], {
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          DAILY_NOTE_PATH: dailyDir,
+          PATH: `${binDir}:${process.env.PATH}`,
+        },
+        encoding: "utf8",
+      });
+
+      expect(fs.existsSync(npmLogPath)).toBe(false);
     } finally {
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }

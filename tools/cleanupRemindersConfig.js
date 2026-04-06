@@ -36,15 +36,21 @@ const listsSet = new Set(allLists);
 
 // Load people index
 const peopleIndexPath = path.join(vaultRoot, "people.index.json");
-if (!fs.existsSync(peopleIndexPath)) {
-  console.error("People index not found. Run `npm run people:index` first.");
-  process.exit(1);
+let peopleIndex;
+try {
+  peopleIndex = JSON.parse(fs.readFileSync(peopleIndexPath, "utf8"));
+} catch (error) {
+  if (error && error.code === "ENOENT") {
+    console.error("People index not found. Run `npm run people:index` first.");
+    process.exit(1);
+  }
+  throw error;
 }
 
-const peopleIndex = JSON.parse(fs.readFileSync(peopleIndexPath, "utf8"));
-
 function normalizeTagValue(tag) {
-  return String(tag).trim().replace(/^['"]|['"]$/g, "");
+  return String(tag)
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
 }
 
 function removeInlineTag(line, targetTag) {
@@ -61,12 +67,72 @@ function removeInlineTag(line, targetTag) {
   return `${prefix}${remainingTags.join(", ")}${suffix}`;
 }
 
-function removeExactListTag(content) {
-  let nextContent = content.replace(/  - list\n/g, "");
-  nextContent = nextContent.replace(/^tags:\s*\[.*\]\s*$/m, (line) =>
-    removeInlineTag(line, "list"),
-  );
-  return nextContent;
+function parseInlineTagsLine(line) {
+  const match = line.match(/^tags:\s*\[(.*)\]\s*$/);
+  if (!match) return null;
+
+  return match[1]
+    .split(",")
+    .map((tag) => normalizeTagValue(tag))
+    .filter(Boolean);
+}
+
+function splitFrontmatterDocument(content) {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---([\s\S]*)$/);
+  if (!match) return null;
+
+  return {
+    frontmatter: match[1],
+    body: match[2],
+  };
+}
+
+function removeExactListTag(frontmatter) {
+  const lines = frontmatter.split(/\n/);
+  const nextLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (!line.startsWith("tags:")) {
+      nextLines.push(line);
+      continue;
+    }
+
+    const inlineTags = parseInlineTagsLine(line);
+    if (inlineTags) {
+      const nextLine = removeInlineTag(line, "list");
+      if ((parseInlineTagsLine(nextLine) || []).length > 0) {
+        nextLines.push(nextLine);
+      }
+      continue;
+    }
+
+    const tagLines = [];
+    let removedListTag = false;
+    let j = i + 1;
+    while (j < lines.length && lines[j].startsWith("  ")) {
+      const tagLine = lines[j];
+      if (
+        tagLine.startsWith("  - ") &&
+        normalizeTagValue(tagLine.replace(/^\s*-\s*/, "")) === "list"
+      ) {
+        removedListTag = true;
+      } else {
+        tagLines.push(tagLine);
+      }
+      j += 1;
+    }
+
+    if (tagLines.length > 0 || !removedListTag) {
+      nextLines.push(line);
+      nextLines.push(...tagLines);
+    }
+
+    i = j - 1;
+  }
+
+  return nextLines.join("\n");
 }
 
 let cleaned = 0;
@@ -76,7 +142,6 @@ for (const [name, info] of Object.entries(peopleIndex)) {
   if (!info.reminders) continue;
 
   const personPath = path.join(vaultRoot, info.pagePath);
-  if (!fs.existsSync(personPath)) continue;
 
   // Check if this person actually has a list
   let hasActualList = false;
@@ -108,19 +173,36 @@ for (const [name, info] of Object.entries(peopleIndex)) {
     // Remove reminders config and list tag
     console.log(`Cleaning ${name} (no actual list)`);
 
-    let content = fs.readFileSync(personPath, "utf8");
+    let content;
+    try {
+      content = fs.readFileSync(personPath, "utf8");
+    } catch (error) {
+      if (error && error.code === "ENOENT") continue;
+      throw error;
+    }
 
-    // Remove reminders section from frontmatter
-    content = content.replace(/\nreminders:\n(?:  [^\n]+\n)+/g, "\n");
+    const parsed = splitFrontmatterDocument(content);
+    if (parsed) {
+      let frontmatter = parsed.frontmatter.replace(
+        /(^|\n)reminders:\n(?:  [^\n]+(?:\n|$))+/g,
+        "$1",
+      );
+      frontmatter = removeExactListTag(frontmatter)
+        .replace(/\n{3,}/g, "\n\n")
+        .replace(/\n+$/, "");
 
-    // Remove list tag
-    content = removeExactListTag(content);
+      const body = parsed.body.replace(
+        /\n<!-- BEGIN REMINDERS AGENDA -->[\s\S]*?<!-- END REMINDERS AGENDA -->\n/g,
+        "",
+      );
 
-    // Remove empty agenda sections
-    content = content.replace(
-      /\n<!-- BEGIN REMINDERS AGENDA -->[\s\S]*?<!-- END REMINDERS AGENDA -->\n/g,
-      "",
-    );
+      content = `---\n${frontmatter}\n---${body}`;
+    } else {
+      content = content.replace(
+        /\n<!-- BEGIN REMINDERS AGENDA -->[\s\S]*?<!-- END REMINDERS AGENDA -->\n/g,
+        "",
+      );
+    }
 
     fs.writeFileSync(personPath, content);
     cleaned++;
@@ -133,14 +215,18 @@ console.log(`\nCleaned ${cleaned} pages without actual lists`);
 console.log(`Kept ${kept} pages with actual lists`);
 
 // Rebuild people index after mutating person pages
-console.log("\nRebuilding people index...");
-try {
-  execFileSync("npm", ["run", "people:index"], {
-    cwd: path.join(__dirname, ".."),
-    stdio: "inherit",
-  });
-} catch (e) {
-  console.log("Failed to rebuild index");
+if (cleaned > 0) {
+  console.log("\nRebuilding people index...");
+  try {
+    execFileSync("npm", ["run", "people:index"], {
+      cwd: path.join(__dirname, ".."),
+      stdio: "inherit",
+    });
+  } catch (e) {
+    console.log("Failed to rebuild index");
+  }
+} else {
+  console.log("\nPeople index already up to date.");
 }
 
 console.log("\nDone!");
